@@ -1,0 +1,2252 @@
+"""
+Command-line interface for LectureForge.
+"""
+
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
+
+import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm, Prompt
+from rich.table import Table
+from rich import box
+
+from lecture_forge.__version__ import __version__
+from lecture_forge.agents.content_analyzer import ContentAnalyzerAgent
+from lecture_forge.agents.content_collector import ContentCollectorAgent
+from lecture_forge.agents.content_writer import ContentWriterAgent
+from lecture_forge.agents.curriculum_designer import CurriculumDesignerAgent
+from lecture_forge.agents.diagram_generator import DiagramGeneratorAgent
+from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
+from lecture_forge.agents.image_collector import ImageCollectorAgent
+from lecture_forge.config import Config
+from lecture_forge.models.lecture import Lecture
+from lecture_forge.utils import logger
+from lecture_forge.utils.token_tracker import get_tracker
+
+console = Console()
+
+
+def display_token_usage(usage_summary: dict):
+    """
+    Display token usage and cost estimate.
+
+    Args:
+        usage_summary: Token usage summary from tracker
+    """
+    console.print(f"\n💰 [bold]Token Usage & Cost Estimate:[/bold]")
+
+    # Total tokens
+    total_tokens = usage_summary.get("total_tokens", 0)
+    prompt_tokens = usage_summary.get("prompt_tokens", 0)
+    completion_tokens = usage_summary.get("completion_tokens", 0)
+    api_calls = usage_summary.get("api_calls", 0)
+
+    console.print(f"   • Total Tokens: {total_tokens:,}")
+    console.print(f"     - Input: {prompt_tokens:,} tokens")
+    console.print(f"     - Output: {completion_tokens:,} tokens")
+    console.print(f"   • API Calls: {api_calls}")
+
+    # Tokens by model
+    tokens_by_model = usage_summary.get("tokens_by_model", {})
+    if tokens_by_model:
+        console.print(f"\n   [bold]By Model:[/bold]")
+        for model, tokens in tokens_by_model.items():
+            console.print(f"     • {model}:")
+            console.print(f"       - Input: {tokens['prompt_tokens']:,} tokens")
+            console.print(f"       - Output: {tokens['completion_tokens']:,} tokens")
+            console.print(f"       - Total: {tokens['total_tokens']:,} tokens")
+
+    # Cost estimate
+    cost_info = usage_summary.get("cost_estimate", {})
+    total_cost = cost_info.get("total", 0.0)
+    input_cost = cost_info.get("input", 0.0)
+    output_cost = cost_info.get("output", 0.0)
+    by_model = cost_info.get("by_model", {})
+
+    console.print(f"\n   [bold cyan]Estimated Cost:[/bold cyan]")
+    console.print(f"     • Total: [bold green]${total_cost:.4f}[/bold green]")
+    console.print(f"       - Input cost: ${input_cost:.4f}")
+    console.print(f"       - Output cost: ${output_cost:.4f}")
+
+    if by_model:
+        console.print(f"\n     [bold]By Model:[/bold]")
+        for model, cost in by_model.items():
+            console.print(f"       • {model}: ${cost:.4f}")
+
+    # Pricing info
+    console.print(f"\n   [dim]ℹ️  Pricing (as of 2026-02-07):[/dim]")
+    console.print(f"   [dim]   • gpt-4o-mini: $0.150/1M input, $0.600/1M output[/dim]")
+    console.print(f"   [dim]   • gpt-4o: $2.50/1M input, $10.00/1M output[/dim]")
+
+
+def print_banner():
+    """Print welcome banner."""
+    banner = """
+    ╔═══════════════════════════════════════════════════════╗
+    ║                                                       ║
+    ║            📚 LectureForge Pro v{version}                 ║
+    ║                                                       ║
+    ║     AI-Powered Lecture Material Generator             ║
+    ║                                                       ║
+    ╚═══════════════════════════════════════════════════════╝
+    """.format(
+        version=__version__
+    )
+    console.print(banner, style="bold blue")
+
+
+def print_basic_help():
+    """Print basic help information when no command is provided."""
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + "\n\n"
+        "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
+        "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
+        "[dim]Cost: ~$0.10 per lecture | Time: 3-5 minutes[/dim]",
+        border_style="cyan"
+    ))
+
+    console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
+    console.print("  [cyan]lecture-forge create[/cyan]                    Interactive lecture creation (images ON by default)")
+    console.print("  [cyan]lecture-forge create --no-image-search[/cyan] Disable image search (faster)")
+    console.print("  [cyan]lecture-forge chat[/cyan]                      Q&A with knowledge base")
+
+    # Commands Table
+    console.print("\n[bold yellow]📖 Commands:[/bold yellow]")
+    table = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
+    table.add_column("Command", style="cyan", width=12)
+    table.add_column("Description")
+    table.add_column("Example", style="dim")
+
+    table.add_row(
+        "create",
+        "Generate lecture materials",
+        "lecture-forge create"
+    )
+    table.add_row(
+        "chat",
+        "Interactive Q&A mode",
+        "lecture-forge chat"
+    )
+    table.add_row(
+        "improve",
+        "Enhance existing lecture",
+        "lecture-forge improve file.html"
+    )
+    table.add_row(
+        "cleanup",
+        "Manage knowledge bases",
+        "lecture-forge cleanup"
+    )
+    console.print(table)
+
+    # Common Options
+    console.print("\n[bold yellow]⚙️  Common Options:[/bold yellow]")
+    opt_table = Table(show_header=False, box=None, padding=(0, 2))
+    opt_table.add_column("Option", style="green")
+    opt_table.add_column("Description")
+
+    opt_table.add_row("--image-search", "Enable Pexels image search (default: ON)")
+    opt_table.add_row("--quality-level", "Set quality: lenient(70) | balanced(80) | strict(90)")
+    opt_table.add_row("--config, -c", "Use YAML config file")
+    opt_table.add_row("--help", "Show detailed help for any command")
+    console.print(opt_table)
+
+    console.print("\n[bold yellow]💡 Examples:[/bold yellow]")
+    console.print("  [dim]# Create lecture with high quality and images[/dim]")
+    console.print("  $ [cyan]lecture-forge create --image-search --quality-level strict[/cyan]")
+    console.print()
+    console.print("  [dim]# Create from config file[/dim]")
+    console.print("  $ [cyan]lecture-forge create -c my_lecture.yaml[/cyan]")
+    console.print()
+    console.print("  [dim]# Convert lecture to presentation slides[/dim]")
+    console.print("  $ [cyan]lecture-forge improve outputs/lecture.html --to-slides[/cyan]")
+    console.print()
+    console.print("  [dim]# Q&A with specific knowledge base[/dim]")
+    console.print("  $ [cyan]lecture-forge chat -kb data/vector_db/my_lecture[/cyan]")
+
+    console.print("\n[bold yellow]📚 More Help:[/bold yellow]")
+    console.print("  [cyan]lecture-forge --help[/cyan]           Full documentation")
+    console.print("  [cyan]lecture-forge create --help[/cyan]    Create command details")
+    console.print("  [cyan]lecture-forge chat --help[/cyan]      Chat command details")
+
+    console.print("\n[dim]💰 Average cost: $0.10 per 60-min lecture using GPT-4o-mini[/dim]")
+    console.print("[dim]🖼️  Image search enabled by default (use --no-image-search to disable)[/dim]")
+    console.print("[dim]📸 PDF image extraction enabled by default (use --no-include-pdf-images to disable)[/dim]")
+    console.print("[dim]📍 Location-based image matching automatically enabled (PDF image usage +750%)[/dim]\n")
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.version_option(version=__version__)
+def cli(ctx):
+    """
+    LectureForge Pro - AI-Powered Lecture Material Generator.
+
+    Generate comprehensive lecture materials from PDFs, URLs, and web searches
+    using AI-powered multi-agent system.
+
+    \b
+    🎯 Core Features:
+      • Multi-source content collection (PDF text, URLs, web search)
+      • High-quality images from Pexels/Unsplash (PDF images disabled by default)
+      • Location-based image matching (PDF image usage +750%)
+      • RAG-based knowledge base with interactive Q&A
+      • Automatic code example and diagram generation
+      • Quality assurance with iterative improvement (6 dimensions)
+      • Beautiful HTML output with syntax highlighting
+      • Presentation slides generation (Reveal.js)
+      • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)
+
+    \b
+    📚 Available Commands:
+      create   - Generate lecture materials from sources
+      chat     - Interactive Q&A with knowledge base
+      improve  - Enhance existing lecture quality
+      cleanup  - Manage and delete knowledge bases
+
+    \b
+    🚀 Quick Start:
+      $ lecture-forge create                           # Interactive mode (recommended)
+      $ lecture-forge create --image-search            # With Pexels image search
+      $ lecture-forge create -c config.yaml            # From config file
+      $ lecture-forge chat                             # Q&A mode
+
+    \b
+    💡 Common Options:
+      --image-search              Enable Pexels image search (recommended)
+      --quality-level strict      Set high quality threshold (90/100)
+      --include-pdf-images        Extract PDF images (default: ON, location-based)
+      --help                      Show detailed help
+
+    \b
+    📖 Examples:
+      # Create high-quality lecture with images
+      $ lecture-forge create --image-search --quality-level strict
+
+      # Create from YAML config
+      $ lecture-forge create -c lecture_config.yaml
+
+      # Q&A with generated knowledge base
+      $ lecture-forge chat -kb data/vector_db/my_lecture
+
+    \b
+    📊 Performance:
+      • Processing time: 3-5 minutes (typical 60-min lecture)
+      • Cost: ~$0.10 (using GPT-4o-mini)
+      • Quality: 80+ score (auto-improved)
+
+    \b
+    🔗 Links:
+      GitHub: https://github.com/yourusername/lecture-forge
+      Issues: https://github.com/yourusername/lecture-forge/issues
+      Docs: Run 'lecture-forge <command> --help' for command details
+    """
+    if ctx.invoked_subcommand is None:
+        # Show basic help when no command is provided
+        print_basic_help()
+
+
+@cli.command()
+@click.option(
+    "--config", "-c",
+    type=click.Path(exists=True),
+    help="Configuration YAML file with lecture parameters"
+)
+@click.option(
+    "--interactive", "-i",
+    is_flag=True,
+    help="Enable interactive Q&A mode during generation"
+)
+@click.option(
+    "--image-search/--no-image-search",
+    default=True,
+    help="Enable image search from web sources (Pexels, default: enabled)"
+)
+@click.option(
+    "--quality-level",
+    type=click.Choice(["lenient", "balanced", "strict"]),
+    default="balanced",
+    help="Quality threshold: lenient(70), balanced(80), strict(90)",
+    show_default=True
+)
+@click.option(
+    "--output", "-o",
+    type=str,
+    help="Output file name without extension (auto-generated if not provided)"
+)
+@click.option(
+    "--include-pdf-images/--no-include-pdf-images",
+    default=True,
+    help="Extract images from PDFs with location-based matching (default: enabled since v0.2.0)",
+    show_default=True
+)
+@click.option(
+    "--auto-describe-images/--no-auto-describe-images",
+    default=True,
+    help="Automatically generate descriptions for PDF images using GPT-4o-mini (only if --include-pdf-images is enabled)",
+    show_default=True
+)
+def create(
+    config: Optional[str],
+    interactive: bool,
+    image_search: bool,
+    quality_level: str,
+    output: Optional[str],
+    include_pdf_images: bool,
+    auto_describe_images: bool,
+):
+    """
+    Create a new lecture material from various sources.
+
+    Generate comprehensive lecture materials using AI-powered multi-agent system.
+    Supports PDF files, URLs, web searches, and image collection.
+
+    \b
+    Input Sources:
+      • PDF files (text extraction only by default)
+      • Web URLs (automatic scraping)
+      • Web search (via Serper API)
+      • Image search (Pexels API - recommended for relevant images)
+
+    \b
+    Output:
+      • HTML file with lecture content
+      • Knowledge base (ChromaDB) for Q&A
+      • Embedded code examples and diagrams
+      • Token usage and cost estimate
+
+    \b
+    Examples:
+      # Interactive mode (recommended for first use)
+      $ lecture-forge create
+
+      # From config file
+      $ lecture-forge create -c my_lecture.yaml
+
+      # With image search enabled
+      $ lecture-forge create -c config.yaml --image-search
+
+      # High quality threshold
+      $ lecture-forge create --quality-level strict
+
+      # Custom output name
+      $ lecture-forge create -o "AI_Basics_2024"
+
+      # Disable PDF images (faster, web images only)
+      $ lecture-forge create --no-include-pdf-images
+
+      # High quality with image search (recommended)
+      $ lecture-forge create --quality-level strict --image-search
+
+    \b
+    Config File Format (YAML):
+      topic: "Introduction to Machine Learning"
+      duration: 90
+      audience_level: "intermediate"
+      pdfs:
+        - "ml_paper.pdf"
+        - "tutorial.pdf"
+      urls:
+        - "https://example.com/ml-guide"
+      keywords:
+        - "machine learning basics"
+        - "supervised learning"
+
+    \b
+    Quality Levels:
+      • lenient  (70): Fast, accepts lower quality
+      • balanced (80): Recommended, good quality
+      • strict   (90): High quality, may take longer
+
+    \b
+    Cost:
+      Typical 60-min lecture: ~$0.05-0.10 (using GPT-4o-mini)
+        • Text generation: ~$0.05
+        • Search images (Pexels/Unsplash): Free
+        • PDF image extraction: DISABLED by default (poor relevance)
+      Execution time: 3-5 minutes
+    """
+    print_banner()
+
+    console.print("\n[bold]Starting lecture generation...[/bold]\n")
+
+    # Collect inputs
+    if config:
+        console.print(f"Loading configuration from: {config}")
+
+        # Load from YAML config file
+        import yaml
+
+        try:
+            with open(config, "r", encoding="utf-8") as f:
+                inputs = yaml.safe_load(f)
+
+            # Validate required fields
+            required_fields = ["topic", "duration", "audience_level"]
+            missing_fields = [f for f in required_fields if f not in inputs]
+
+            if missing_fields:
+                console.print(
+                    f"[red]❌ Error: Missing required fields in config: {', '.join(missing_fields)}[/red]\n"
+                )
+                console.print("[yellow]Required fields: topic, duration, audience_level[/yellow]\n")
+                sys.exit(1)
+
+            # Set defaults for optional fields
+            inputs.setdefault("pdfs", [])
+            inputs.setdefault("urls", [])
+            inputs.setdefault("keywords", [])
+            inputs.setdefault("hada_keywords", [])
+            inputs.setdefault("image_keywords", [])
+
+            console.print("[green]✓ Configuration loaded successfully[/green]\n")
+            console.print(f"[cyan]Topic:[/cyan] {inputs['topic']}")
+            console.print(f"[cyan]Duration:[/cyan] {inputs['duration']} minutes")
+            console.print(f"[cyan]Audience:[/cyan] {inputs['audience_level']}\n")
+
+        except yaml.YAMLError as e:
+            console.print(f"[red]❌ Error parsing YAML config: {e}[/red]\n")
+            sys.exit(1)
+        except FileNotFoundError:
+            console.print(f"[red]❌ Config file not found: {config}[/red]\n")
+            sys.exit(1)
+        except Exception as e:
+            console.print(f"[red]❌ Error loading config: {e}[/red]\n")
+            sys.exit(1)
+    else:
+        inputs = collect_inputs_interactive()
+
+    # Apply settings
+    inputs["interactive_mode"] = interactive
+    inputs["image_search"] = image_search
+    inputs["quality_level"] = quality_level
+    inputs["output_name"] = output
+    inputs["include_pdf_images"] = include_pdf_images
+    inputs["auto_describe_images"] = auto_describe_images
+
+    # Generate lecture
+    try:
+        result = generate_lecture(inputs)
+
+        console.print("\n[bold green]✅ Lecture generated successfully![/bold green]\n")
+        console.print(f"📄 [bold]HTML File:[/bold] {result['html_path']}")
+        console.print(f"🗄️  [bold]Knowledge Base:[/bold] {result['vector_db_path']}")
+        console.print(f"\n📊 [bold]Statistics:[/bold]")
+        console.print(f"   • Sections: {result['sections_count']}")
+        console.print(f"   • Words: {result['total_words']:,}")
+        console.print(f"   • Code blocks: {result['code_blocks']}")
+        console.print(f"   • Diagrams: {result['diagrams']}")
+        console.print(f"   • Images: {result['images']}")
+
+        # Display quality metrics
+        if 'quality_score' in result and result['quality_score'] > 0:
+            score = result['quality_score']
+            color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
+            console.print(f"   • Quality score: [{color}]{score:.1f}/100[/{color}]")
+
+            if 'quality_iterations' in result:
+                iterations = result['quality_iterations']
+                if iterations > 0:
+                    console.print(f"   • Quality improvements: {iterations} iteration(s)")
+
+        # Display token usage and cost estimate
+        if 'token_usage' in result:
+            display_token_usage(result['token_usage'])
+
+        console.print(f"\n[dim]💡 Open the HTML file in a browser to view the lecture![/dim]\n")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error during generation: {e}[/bold red]")
+        logger.exception("Lecture generation failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    "--knowledge-base", "-kb",
+    type=click.Path(exists=True),
+    help="Path to knowledge base directory (e.g., data/vector_db/my_lecture)",
+)
+def chat(knowledge_base: Optional[str]):
+    """
+    Start interactive Q&A mode with knowledge base.
+
+    Chat with AI about the content in your generated lecture using RAG
+    (Retrieval Augmented Generation). The AI will answer questions based
+    on the knowledge base created during lecture generation.
+
+    \b
+    Features:
+      • Context-aware answers from your lecture content
+      • Source citations with references
+      • Conversation history support
+      • Commands: /exit, /clear, /sources
+
+    \b
+    Examples:
+      # Interactive selection from available knowledge bases
+      $ lecture-forge chat
+
+      # Direct path to knowledge base
+      $ lecture-forge chat -kb data/vector_db/AI_Basics_20260207
+
+      # Use tab completion for paths
+      $ lecture-forge chat -kb data/vector_db/<TAB>
+
+    \b
+    Q&A Commands:
+      /exit     - Exit chat mode
+      /clear    - Clear conversation history
+      /sources  - Show all sources in knowledge base
+      /help     - Show available commands
+
+    \b
+    Example Session:
+      You: What is supervised learning?
+      AI: Supervised learning is a type of machine learning where...
+
+          Sources:
+          - ml_basics.pdf (page 12)
+          - https://example.com/ml-guide
+
+    \b
+    Note:
+      Knowledge base is created automatically during 'lecture-forge create'
+      and stored in data/vector_db/ directory.
+    """
+    from lecture_forge.agents.qa_agent import QAAgent
+
+    # If no knowledge base provided, list available ones
+    if not knowledge_base:
+        knowledge_base = select_knowledge_base()
+        if not knowledge_base:
+            console.print("[yellow]No knowledge base selected. Exiting.[/yellow]\n")
+            return
+
+    # Start Q&A agent
+    try:
+        qa_agent = QAAgent(knowledge_base)
+        qa_agent.start_chat()
+    except Exception as e:
+        console.print(f"[bold red]❌ Error starting Q&A mode: {e}[/bold red]")
+        logger.exception("Q&A mode failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("lecture_path", type=click.Path(exists=True))
+@click.option(
+    "--threshold", "-t",
+    type=int,
+    default=80,
+    help="Quality threshold (0-100)",
+    show_default=True
+)
+@click.option(
+    "--max-iterations", "-m",
+    type=int,
+    default=3,
+    help="Maximum revision iterations",
+    show_default=True
+)
+def improve(lecture_path: str, threshold: int, max_iterations: int):
+    """
+    Re-evaluate and improve existing lecture.
+
+    Load a previously generated HTML lecture file, evaluate its quality,
+    and apply iterative improvements until it meets the specified threshold.
+
+    \b
+    Process:
+      1. Parse HTML to extract lecture content
+      2. Evaluate quality across 6 dimensions
+      3. Identify issues and improvement areas
+      4. Apply revisions (auto-fix or manual)
+      5. Re-evaluate and iterate
+
+    \b
+    Quality Dimensions:
+      • Content Completeness (25%)
+      • Logical Flow (20%)
+      • Time Alignment (10%)
+      • Level Appropriateness (20%)
+      • Visual Quality (15%)
+      • Technical Accuracy (10%)
+
+    \b
+    Examples:
+      # Re-evaluate with default threshold (80)
+      $ lecture-forge improve outputs/my_lecture.html
+
+      # Higher quality threshold
+      $ lecture-forge improve outputs/lecture.html -t 90
+
+      # Limit iterations to prevent long processing
+      $ lecture-forge improve outputs/lecture.html -m 2
+
+      # Strict quality with more iterations
+      $ lecture-forge improve outputs/lecture.html -t 90 -m 5
+
+    \b
+    Output:
+      • Updated HTML file (overwrites original)
+      • Quality report with scores
+      • List of applied improvements
+      • Token usage and cost
+
+    \b
+    Note:
+      Original file is overwritten. Make a backup if needed:
+      $ cp outputs/lecture.html outputs/lecture_backup.html
+    """
+    from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
+    from lecture_forge.agents.revision_agent import RevisionAgent
+    from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
+
+    console.print("\n[bold blue]🔄 Improving Lecture[/bold blue]")
+    console.print(f"File: {lecture_path}\n")
+
+    try:
+        # Parse HTML to extract lecture data
+        lecture = parse_html_to_lecture(lecture_path)
+
+        if not lecture:
+            console.print("[red]❌ Failed to parse lecture file[/red]\n")
+            return
+
+        console.print(f"[cyan]Lecture:[/cyan] {lecture.title}")
+        console.print(f"[cyan]Sections:[/cyan] {len(lecture.sections)}")
+        console.print(f"[cyan]Word count:[/cyan] {lecture.total_word_count}\n")
+
+        # Quality evaluation loop
+        evaluator = QualityEvaluatorAgent()
+        revision_agent = RevisionAgent()
+        iteration = 0
+
+        while iteration < max_iterations:
+            console.print(f"[bold]Iteration {iteration + 1}/{max_iterations}[/bold]")
+
+            # Evaluate
+            with console.status("[cyan]Evaluating quality...[/cyan]"):
+                evaluation = evaluator.evaluate(lecture, threshold)
+
+            # Display results
+            console.print(f"\n[bold]Quality Score: {evaluation.overall_score:.1f}/100[/bold]")
+            console.print(f"Status: {evaluation.get_quality_level()}\n")
+
+            # Show dimension scores
+            table = Table(title="Dimension Scores", show_header=True)
+            table.add_column("Dimension", style="cyan")
+            table.add_column("Score", style="yellow", justify="right")
+
+            for dim, score in evaluation.dimension_scores.items():
+                color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
+                table.add_row(dim.replace("_", " ").title(), f"[{color}]{score:.1f}[/{color}]")
+
+            console.print(table)
+            console.print()
+
+            # Check if passed
+            if evaluation.passed:
+                console.print("[green]✅ Lecture meets quality standards![/green]\n")
+                break
+
+            # Show issues
+            if evaluation.issues:
+                console.print(f"[yellow]Issues found: {len(evaluation.issues)}[/yellow]")
+                for i, issue in enumerate(evaluation.issues[:5], 1):  # Show top 5
+                    severity_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
+                        issue.severity, "white"
+                    )
+                    console.print(
+                        f"  [{severity_color}]{i}. [{issue.severity.upper()}] {issue.description}[/{severity_color}]"
+                    )
+                    console.print(f"     💡 {issue.suggestion}")
+                console.print()
+
+            # Ask user if they want to continue
+            if iteration == 0:
+                if not Confirm.ask("[bold]Apply automatic improvements?[/bold]", default=True):
+                    console.print("[yellow]Improvement cancelled[/yellow]\n")
+                    return
+
+            # Apply revisions
+            with console.status("[cyan]Applying improvements...[/cyan]"):
+                lecture = revision_agent.revise(lecture, evaluation)
+
+            console.print("[green]✓ Improvements applied[/green]\n")
+            iteration += 1
+
+        # Save improved lecture
+        if iteration > 0:
+            output_path = lecture_path.replace(".html", "_improved.html")
+            html_assembler = HTMLAssemblerAgent()
+
+            with console.status("[cyan]Generating improved HTML...[/cyan]"):
+                html_assembler.assemble(lecture, output_path=output_path)
+
+            console.print(f"[green]✅ Improved lecture saved: {output_path}[/green]")
+            console.print(f"[cyan]Final score: {evaluation.overall_score:.1f}/100[/cyan]\n")
+        else:
+            console.print("[green]No improvements needed![/green]\n")
+
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+        logger.exception("Improvement failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    "--all", "-a",
+    is_flag=True,
+    help="Delete ALL knowledge bases without confirmation (DANGEROUS)",
+)
+def cleanup(all: bool):
+    """
+    Delete knowledge bases to free up disk space.
+
+    Manage ChromaDB vector databases created during lecture generation.
+    Interactive mode allows selective deletion, while --all flag removes
+    everything (use with caution).
+
+    \b
+    What Gets Deleted:
+      • Vector DB directories (data/vector_db/*)
+      • Embeddings and metadata
+      • Text chunks and indexes
+
+    \b
+    What's Preserved:
+      • Generated HTML lecture files (outputs/)
+      • Original source files (PDFs, etc.)
+      • Configuration files
+
+    \b
+    Examples:
+      # Interactive selection (recommended)
+      $ lecture-forge cleanup
+
+      # Delete all (dangerous - no confirmation!)
+      $ lecture-forge cleanup --all
+
+    \b
+    Interactive Mode:
+      1. Shows list of all knowledge bases
+      2. Displays size and creation date
+      3. Allows selection of which to delete
+      4. Confirms before deletion
+
+    \b
+    Typical Sizes:
+      • 60-min lecture: ~50MB vector DB
+      • 180-min lecture: ~150MB vector DB
+
+    \b
+    Note:
+      Knowledge bases are needed for 'lecture-forge chat' command.
+      Deleting a KB means you can't do Q&A for that lecture anymore.
+
+    \b
+    Warning:
+      Using --all flag deletes EVERYTHING without confirmation!
+      Make sure you have backups if needed.
+    """
+    import shutil
+
+    console.print("\n[bold red]🗑️  Knowledge Base Cleanup[/bold red]")
+    console.print("━" * 50 + "\n")
+
+    # Get vector DB directory
+    vector_db_dir = Path(Config.VECTOR_DB_PATH)
+
+    if not vector_db_dir.exists():
+        console.print(f"[yellow]⚠️  No knowledge bases found at {vector_db_dir}[/yellow]\n")
+        return
+
+    # List all available knowledge bases
+    kb_dirs = [d for d in vector_db_dir.iterdir() if d.is_dir()]
+
+    if not kb_dirs:
+        console.print(f"[yellow]⚠️  No knowledge bases found in {vector_db_dir}[/yellow]\n")
+        return
+
+    # Sort by modification time (newest first)
+    kb_dirs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+
+    if all:
+        # Delete all - requires confirmation
+        console.print(f"[bold red]⚠️  WARNING: This will delete ALL {len(kb_dirs)} knowledge bases![/bold red]\n")
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Name", style="green")
+        table.add_column("Size", style="yellow")
+        table.add_column("Modified", style="cyan")
+
+        total_size = 0
+        for kb_dir in kb_dirs:
+            size = get_dir_size(kb_dir)
+            total_size += size
+            name = kb_dir.name
+            modified = datetime.fromtimestamp(kb_dir.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            table.add_row(name, format_size(size), modified)
+
+        console.print(table)
+        console.print(f"\n[bold]Total size: {format_size(total_size)}[/bold]\n")
+
+        if not Confirm.ask("[bold red]Are you SURE you want to delete ALL knowledge bases?[/bold red]", default=False):
+            console.print("\n[green]✓ Cancelled[/green]\n")
+            return
+
+        # Delete all
+        deleted_count = 0
+        for kb_dir in kb_dirs:
+            try:
+                shutil.rmtree(kb_dir)
+                deleted_count += 1
+                console.print(f"[red]✗[/red] Deleted: {kb_dir.name}")
+            except Exception as e:
+                console.print(f"[yellow]⚠️  Failed to delete {kb_dir.name}: {e}[/yellow]")
+
+        console.print(f"\n[green]✓ Deleted {deleted_count} knowledge base(s)[/green]")
+        console.print(f"[green]✓ Freed up {format_size(total_size)}[/green]\n")
+
+    else:
+        # Interactive deletion
+        console.print("[bold cyan]📚 Available Knowledge Bases[/bold cyan]\n")
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("No.", style="cyan", width=4)
+        table.add_column("Name", style="green")
+        table.add_column("Size", style="yellow")
+        table.add_column("Modified", style="cyan")
+
+        for i, kb_dir in enumerate(kb_dirs, 1):
+            size = get_dir_size(kb_dir)
+            name = kb_dir.name
+            modified = datetime.fromtimestamp(kb_dir.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            table.add_row(str(i), name, format_size(size), modified)
+
+        console.print(table)
+        console.print()
+
+        # Let user select which to delete
+        console.print("[dim]💡 Tip: You can select multiple numbers separated by commas (e.g., 1,3,5)[/dim]")
+        console.print("[dim]💡 Tip: Use '--all' flag to delete all at once[/dim]\n")
+
+        choice = Prompt.ask(
+            "[bold]Select knowledge base number(s) to delete[/bold] (or press Enter to cancel)",
+            default="",
+        )
+
+        if not choice:
+            console.print("\n[green]✓ Cancelled[/green]\n")
+            return
+
+        # Parse selection
+        try:
+            selected_indices = [int(x.strip()) - 1 for x in choice.split(",")]
+            selected_kbs = [kb_dirs[i] for i in selected_indices if 0 <= i < len(kb_dirs)]
+
+            if not selected_kbs:
+                console.print("\n[yellow]⚠️  No valid selections[/yellow]\n")
+                return
+
+            # Show what will be deleted
+            console.print("\n[bold red]⚠️  The following will be deleted:[/bold red]\n")
+            total_size = 0
+            for kb_dir in selected_kbs:
+                size = get_dir_size(kb_dir)
+                total_size += size
+                console.print(f"  • {kb_dir.name} ({format_size(size)})")
+
+            console.print(f"\n[bold]Total size to free: {format_size(total_size)}[/bold]\n")
+
+            # Confirm
+            if not Confirm.ask("[bold]Proceed with deletion?[/bold]", default=False):
+                console.print("\n[green]✓ Cancelled[/green]\n")
+                return
+
+            # Delete selected
+            deleted_count = 0
+            for kb_dir in selected_kbs:
+                try:
+                    shutil.rmtree(kb_dir)
+                    deleted_count += 1
+                    console.print(f"[red]✗[/red] Deleted: {kb_dir.name}")
+                except Exception as e:
+                    console.print(f"[yellow]⚠️  Failed to delete {kb_dir.name}: {e}[/yellow]")
+
+            console.print(f"\n[green]✓ Deleted {deleted_count} knowledge base(s)[/green]")
+            console.print(f"[green]✓ Freed up {format_size(total_size)}[/green]\n")
+
+        except (ValueError, IndexError) as e:
+            console.print(f"\n[red]❌ Invalid selection: {e}[/red]\n")
+
+
+def get_dir_size(path: Path) -> int:
+    """Calculate total size of directory in bytes."""
+    total = 0
+    try:
+        for entry in path.rglob("*"):
+            if entry.is_file():
+                total += entry.stat().st_size
+    except Exception:
+        pass
+    return total
+
+
+def format_size(bytes: int) -> str:
+    """Format bytes as human-readable size."""
+    for unit in ["B", "KB", "MB", "GB"]:
+        if bytes < 1024.0:
+            return f"{bytes:.1f} {unit}"
+        bytes /= 1024.0
+    return f"{bytes:.1f} TB"
+
+
+def select_knowledge_base() -> Optional[str]:
+    """
+    List available knowledge bases and let user select one.
+
+    Returns:
+        Path to selected knowledge base, or None if cancelled
+    """
+    import shutil
+
+    while True:  # Loop to allow returning after deletion
+        # Get vector DB directory
+        vector_db_dir = Path(Config.VECTOR_DB_PATH)
+
+        if not vector_db_dir.exists():
+            console.print(f"[yellow]⚠️  No knowledge bases found at {vector_db_dir}[/yellow]")
+            console.print("[dim]Generate a lecture first to create a knowledge base[/dim]\n")
+            return None
+
+        # List all available knowledge bases
+        kb_dirs = [d for d in vector_db_dir.iterdir() if d.is_dir()]
+
+        if not kb_dirs:
+            console.print(f"[yellow]⚠️  No knowledge bases found in {vector_db_dir}[/yellow]")
+            console.print("[dim]Generate a lecture first to create a knowledge base[/dim]\n")
+            return None
+
+        # Sort by modification time (newest first)
+        kb_dirs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+
+        # Display available knowledge bases
+        console.print("\n[bold cyan]📚 Available Knowledge Bases[/bold cyan]")
+        console.print("━" * 50 + "\n")
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("No.", style="cyan", width=4)
+        table.add_column("Name", style="green")
+        table.add_column("Size", style="yellow")
+        table.add_column("Modified", style="cyan")
+
+        for i, kb_dir in enumerate(kb_dirs, 1):
+            name = kb_dir.name
+            size = get_dir_size(kb_dir)
+            modified = datetime.fromtimestamp(kb_dir.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            table.add_row(str(i), name, format_size(size), modified)
+
+        console.print(table)
+        console.print()
+
+        # Show options
+        console.print("[dim]💡 Options:[/dim]")
+        console.print("[dim]   • Enter a number to select a knowledge base[/dim]")
+        console.print("[dim]   • Type 'delete' or 'd' to delete knowledge bases[/dim]")
+        console.print("[dim]   • Press Enter to cancel[/dim]\n")
+
+        # Let user select
+        choice = Prompt.ask(
+            "[bold]Your choice[/bold]",
+            default="",
+        )
+
+        if not choice:
+            return None
+
+        # Handle delete option
+        if choice.lower() in ['delete', 'd']:
+            delete_result = handle_kb_deletion_interactive(kb_dirs)
+            if delete_result == "continue":
+                continue  # Return to KB selection
+            else:
+                return None  # User cancelled
+
+        # Handle number selection
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(kb_dirs):
+                selected_kb = kb_dirs[idx]
+                console.print(f"\n[green]✓ Selected: {selected_kb.name}[/green]\n")
+                return str(selected_kb)
+            else:
+                console.print(f"[red]Invalid selection. Please choose 1-{len(kb_dirs)}[/red]")
+                continue
+        except ValueError:
+            console.print("[red]Invalid input. Please enter a number, 'delete', or press Enter[/red]")
+            continue
+
+
+def handle_kb_deletion_interactive(kb_dirs: list) -> str:
+    """
+    Handle interactive knowledge base deletion.
+
+    Args:
+        kb_dirs: List of knowledge base directories
+
+    Returns:
+        "continue" to return to selection, "cancelled" if user cancelled
+    """
+    import shutil
+
+    console.print("\n[bold red]🗑️  Delete Knowledge Bases[/bold red]")
+    console.print("━" * 50 + "\n")
+
+    # Show deletion options
+    console.print("[dim]💡 Tip: You can select multiple numbers separated by commas (e.g., 1,3,5)[/dim]")
+    console.print("[dim]💡 Tip: Type 'all' to delete all knowledge bases[/dim]\n")
+
+    choice = Prompt.ask(
+        "[bold]Enter number(s) to delete, 'all', or press Enter to go back[/bold]",
+        default="",
+    )
+
+    if not choice:
+        console.print("\n[green]✓ Returning to knowledge base selection[/green]\n")
+        return "continue"
+
+    # Handle 'all' option
+    if choice.lower() == 'all':
+        console.print(f"\n[bold red]⚠️  WARNING: This will delete ALL {len(kb_dirs)} knowledge bases![/bold red]\n")
+
+        # Show what will be deleted
+        total_size = 0
+        for kb_dir in kb_dirs:
+            size = get_dir_size(kb_dir)
+            total_size += size
+            console.print(f"  • {kb_dir.name} ({format_size(size)})")
+
+        console.print(f"\n[bold]Total size to free: {format_size(total_size)}[/bold]\n")
+
+        if not Confirm.ask("[bold red]Are you SURE you want to delete ALL knowledge bases?[/bold red]", default=False):
+            console.print("\n[green]✓ Cancelled[/green]\n")
+            return "continue"
+
+        # Delete all
+        deleted_count = 0
+        for kb_dir in kb_dirs:
+            try:
+                shutil.rmtree(kb_dir)
+                deleted_count += 1
+                console.print(f"[red]✗[/red] Deleted: {kb_dir.name}")
+            except Exception as e:
+                console.print(f"[yellow]⚠️  Failed to delete {kb_dir.name}: {e}[/yellow]")
+
+        console.print(f"\n[green]✓ Deleted {deleted_count} knowledge base(s)[/green]")
+        console.print(f"[green]✓ Freed up {format_size(total_size)}[/green]\n")
+
+        # Check if any remain
+        remaining = [d for d in Path(Config.VECTOR_DB_PATH).iterdir() if d.is_dir()]
+        if remaining:
+            return "continue"
+        else:
+            console.print("[yellow]No knowledge bases remaining. Please generate a lecture first.[/yellow]\n")
+            return "cancelled"
+
+    # Handle number selection
+    try:
+        selected_indices = [int(x.strip()) - 1 for x in choice.split(",")]
+        selected_kbs = [kb_dirs[i] for i in selected_indices if 0 <= i < len(kb_dirs)]
+
+        if not selected_kbs:
+            console.print("\n[yellow]⚠️  No valid selections[/yellow]\n")
+            return "continue"
+
+        # Show what will be deleted
+        console.print("\n[bold red]⚠️  The following will be deleted:[/bold red]\n")
+        total_size = 0
+        for kb_dir in selected_kbs:
+            size = get_dir_size(kb_dir)
+            total_size += size
+            console.print(f"  • {kb_dir.name} ({format_size(size)})")
+
+        console.print(f"\n[bold]Total size to free: {format_size(total_size)}[/bold]\n")
+
+        # Confirm
+        if not Confirm.ask("[bold]Proceed with deletion?[/bold]", default=False):
+            console.print("\n[green]✓ Cancelled[/green]\n")
+            return "continue"
+
+        # Delete selected
+        deleted_count = 0
+        for kb_dir in selected_kbs:
+            try:
+                shutil.rmtree(kb_dir)
+                deleted_count += 1
+                console.print(f"[red]✗[/red] Deleted: {kb_dir.name}")
+            except Exception as e:
+                console.print(f"[yellow]⚠️  Failed to delete {kb_dir.name}: {e}[/yellow]")
+
+        console.print(f"\n[green]✓ Deleted {deleted_count} knowledge base(s)[/green]")
+        console.print(f"[green]✓ Freed up {format_size(total_size)}[/green]\n")
+
+        return "continue"
+
+    except (ValueError, IndexError) as e:
+        console.print(f"\n[red]❌ Invalid selection: {e}[/red]\n")
+        return "continue"
+
+
+def find_pdf_files(max_depth: int = 2) -> list:
+    """
+    Find PDF files in current directory and subdirectories.
+
+    Args:
+        max_depth: Maximum depth to search (default: 2)
+
+    Returns:
+        List of PDF file paths with size and modification time
+    """
+    import os
+    from pathlib import Path
+    from datetime import datetime
+
+    pdf_files = []
+    current_dir = Path.cwd()
+
+    # Search for PDF files
+    for depth in range(max_depth + 1):
+        if depth == 0:
+            pattern = "*.pdf"
+        else:
+            pattern = "*/" * depth + "*.pdf"
+
+        for pdf_path in current_dir.glob(pattern):
+            if pdf_path.is_file():
+                try:
+                    stat = pdf_path.stat()
+                    size_mb = stat.st_size / (1024 * 1024)
+                    mtime = datetime.fromtimestamp(stat.st_mtime)
+
+                    pdf_files.append({
+                        "path": str(pdf_path),
+                        "relative_path": str(pdf_path.relative_to(current_dir)),
+                        "size_mb": size_mb,
+                        "modified": mtime,
+                        "name": pdf_path.name
+                    })
+                except (OSError, ValueError):
+                    continue
+
+    # Sort by modification time (newest first)
+    pdf_files.sort(key=lambda x: x["modified"], reverse=True)
+
+    return pdf_files
+
+
+@cli.command()
+@click.argument("lecture_path", type=click.Path(exists=True))
+@click.option(
+    "--enhance-pdf-images",
+    is_flag=True,
+    help="Generate descriptions for PDF images using page text (costs ~$0.04 per 400 images)"
+)
+@click.option(
+    "--source-pdf",
+    type=click.Path(exists=True),
+    help="Source PDF file (required for --enhance-pdf-images)"
+)
+@click.option(
+    "--to-slides",
+    is_flag=True,
+    help="Convert lecture to presentation slides format (Reveal.js)"
+)
+def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool):
+    """
+    Improve existing lecture quality with optional enhancements.
+
+    Apply post-generation improvements to enhance lecture quality:
+    - Generate descriptions for PDF images using page text inference
+    - Re-match images with better descriptions
+    - Update HTML with additional images
+    - Convert lecture to presentation slides format
+
+    \b
+    Enhancement Options:
+      --enhance-pdf-images: Generate descriptions for PDF-extracted images
+                            Uses GPT-4o-mini to infer image content from page text
+                            Cost: ~$0.04 per 400 images (384 pages)
+                            Expected improvement: +50% PDF image usage
+
+      --to-slides:          Convert lecture HTML to Reveal.js presentation slides
+                            Creates a separate slides.html file optimized for presentations
+                            Automatically splits content into slides
+                            Preserves images, code blocks, and diagrams
+
+    \b
+    Examples:
+      # Enhance PDF images with descriptions
+      $ lecture-forge improve outputs/lecture.html \\
+          --enhance-pdf-images \\
+          --source-pdf "AI Engineering Guidebook.pdf"
+
+      # Convert to presentation slides
+      $ lecture-forge improve outputs/lecture.html --to-slides
+
+      # Combine both enhancements
+      $ lecture-forge improve outputs/lecture.html \\
+          --enhance-pdf-images --source-pdf "doc.pdf" --to-slides
+
+    \b
+    Note:
+      - As of v0.1.0, auto-describe is enabled by default during creation
+      - This command is for legacy lectures or re-enhancement
+      - HTML must be generated by lecture-forge (contains metadata)
+      - Source PDF required for --enhance-pdf-images
+      - Original lecture file will be backed up before modification
+    """
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]🔧 LectureForge - Lecture Improvement[/bold cyan]",
+        border_style="cyan"
+    ))
+    console.print()
+
+    lecture_path = Path(lecture_path)
+
+    if not lecture_path.exists():
+        console.print(f"[red]❌ Lecture file not found: {lecture_path}[/red]")
+        return
+
+    if enhance_pdf_images:
+        if not source_pdf:
+            console.print("[red]❌ --source-pdf required when using --enhance-pdf-images[/red]")
+            console.print("   Example: --source-pdf 'document.pdf'")
+            return
+
+        source_pdf = Path(source_pdf)
+        if not source_pdf.exists():
+            console.print(f"[red]❌ Source PDF not found: {source_pdf}[/red]")
+            return
+
+        # Run PDF image enhancement
+        console.print("[bold]Step 1: Enhancing PDF Images[/bold]")
+        console.print("━" * 50)
+
+        # Find image directory from HTML metadata
+        image_dir = _find_image_dir_from_html(lecture_path)
+
+        if not image_dir:
+            console.print("[red]❌ Could not find image directory from HTML metadata[/red]")
+            console.print("   Make sure the HTML was generated by lecture-forge")
+            return
+
+        console.print(f"   PDF: {source_pdf.name}")
+        console.print(f"   Images: {image_dir}")
+        console.print()
+
+        # Confirm cost
+        console.print("[yellow]⚠️  This will use GPT-4o-mini API (estimated cost: $0.40)[/yellow]")
+        if not Confirm.ask("   Proceed with image enhancement?", default=True):
+            console.print("\n[green]✓ Cancelled[/green]")
+            return
+
+        # Run enhancement
+        from lecture_forge.tools.pdf_image_describer import PDFImageDescriber
+
+        describer = PDFImageDescriber()
+
+        with console.status("[bold green]Generating image descriptions..."):
+            result = describer.enhance_images(
+                pdf_path=str(source_pdf),
+                image_dir=str(image_dir)
+            )
+
+        if not result["success"]:
+            console.print(f"[red]❌ Enhancement failed: {result.get('error', 'Unknown error')}[/red]")
+            return
+
+        console.print(f"[green]✅ Enhanced {result['enhanced_count']} images[/green]")
+        console.print(f"[green]💰 Actual cost: ${result['estimated_cost']:.4f}[/green]")
+        console.print()
+
+        # Step 2: Reload and re-generate HTML with new descriptions
+        console.print("[bold]Step 2: Re-matching Images[/bold]")
+        console.print("━" * 50)
+        console.print("   This feature is coming soon!")
+        console.print("   Descriptions have been saved to:")
+        console.print(f"   {result['descriptions_file']}")
+        console.print()
+        console.print("[yellow]💡 Tip: For now, you can regenerate the lecture to use new descriptions[/yellow]")
+
+    if to_slides:
+        # Run slides conversion
+        console.print("[bold]Converting to Presentation Slides[/bold]")
+        console.print("━" * 50)
+        console.print()
+
+        slides_path = lecture_path.parent / f"{lecture_path.stem}_slides.html"
+
+        with console.status("[bold green]Generating slides..."):
+            success = _convert_to_slides(lecture_path, slides_path)
+
+        if success:
+            console.print(f"[green]✅ Slides created: {slides_path}[/green]")
+            console.print(f"[green]   Open in browser and press 's' for speaker notes[/green]")
+            console.print()
+        else:
+            console.print(f"[red]❌ Slides conversion failed[/red]")
+
+    if not enhance_pdf_images and not to_slides:
+        console.print("[yellow]No improvement options specified[/yellow]")
+        console.print("Use --enhance-pdf-images to generate PDF image descriptions")
+        console.print("Use --to-slides to convert to presentation format")
+
+
+def _find_image_dir_from_html(html_path: Path) -> Path:
+    """Extract image directory path from HTML metadata comments."""
+    try:
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        # Look for metadata comment: <!-- image_dir: data/images/session_xxx -->
+        import re
+        match = re.search(r'<!-- image_dir: (.+?) -->', html_content)
+
+        if match:
+            image_dir = Path(match.group(1))
+            if image_dir.exists():
+                return image_dir
+
+        # Fallback: try to infer from filename
+        # e.g., AI_Engineering_20260208_111335.html -> data/images/AI_Engineering_20260208_105934/
+        filename = html_path.stem
+        parts = filename.rsplit("_", 2)
+        if len(parts) >= 3:
+            topic_part = parts[0]
+            date_part = parts[1]
+
+            # Search for matching directories
+            image_base = Path(Config.DATA_DIR) / "images"
+            if image_base.exists():
+                for img_dir in image_base.iterdir():
+                    if img_dir.is_dir() and topic_part in img_dir.name and date_part[:8] in img_dir.name:
+                        return img_dir
+
+    except Exception as e:
+        logger.error(f"Failed to extract image dir from HTML: {e}")
+
+    return None
+
+
+def select_pdf_files() -> list:
+    """
+    Display PDF files and allow user to select them interactively.
+
+    Returns:
+        List of selected PDF file paths
+    """
+    console.print("\n[bold cyan]📄 Available PDF Files[/bold cyan]")
+    console.print("━" * 80 + "\n")
+
+    # Find PDF files
+    pdf_files = find_pdf_files(max_depth=2)
+
+    if not pdf_files:
+        console.print("[yellow]No PDF files found in current directory.[/yellow]\n")
+        return []
+
+    # Display PDF files in a table
+    table = Table(
+        show_header=True,
+        header_style="bold cyan",
+        box=box.ROUNDED,
+        title=f"[bold]Found {len(pdf_files)} PDF file(s)[/bold]",
+        title_style="bold green"
+    )
+
+    table.add_column("#", style="dim", width=4, justify="right")
+    table.add_column("File Name", style="cyan", no_wrap=False)
+    table.add_column("Path", style="dim", no_wrap=False)
+    table.add_column("Size", justify="right", style="yellow")
+    table.add_column("Modified", style="dim")
+
+    for idx, pdf in enumerate(pdf_files, 1):
+        size_str = f"{pdf['size_mb']:.1f} MB" if pdf['size_mb'] >= 1 else f"{pdf['size_mb']*1024:.0f} KB"
+        modified_str = pdf['modified'].strftime("%Y-%m-%d %H:%M")
+
+        table.add_row(
+            str(idx),
+            pdf['name'],
+            pdf['relative_path'],
+            size_str,
+            modified_str
+        )
+
+    console.print(table)
+    console.print()
+
+    # Selection prompt
+    console.print("[bold]Selection Options:[/bold]")
+    console.print("  • Enter numbers (e.g., [cyan]1,3,5[/cyan] or [cyan]1-3[/cyan])")
+    console.print("  • Enter [cyan]all[/cyan] to select all files")
+    console.print("  • Press [cyan]Enter[/cyan] to skip")
+    console.print()
+
+    selection = Prompt.ask(
+        "[bold]Select PDF files[/bold]",
+        default=""
+    )
+
+    if not selection:
+        return []
+
+    selection = selection.strip().lower()
+
+    # Handle 'all' selection
+    if selection == "all":
+        selected_files = [pdf['relative_path'] for pdf in pdf_files]
+        console.print(f"[green]✓ Selected all {len(selected_files)} files[/green]\n")
+        return selected_files
+
+    # Parse selection
+    selected_indices = set()
+
+    try:
+        for part in selection.split(','):
+            part = part.strip()
+
+            # Handle range (e.g., "1-3")
+            if '-' in part:
+                start, end = part.split('-')
+                start_idx = int(start.strip())
+                end_idx = int(end.strip())
+
+                if start_idx < 1 or end_idx > len(pdf_files):
+                    console.print(f"[red]✗ Invalid range: {part}[/red]")
+                    continue
+
+                selected_indices.update(range(start_idx, end_idx + 1))
+
+            # Handle single number
+            else:
+                idx = int(part)
+                if idx < 1 or idx > len(pdf_files):
+                    console.print(f"[red]✗ Invalid number: {idx}[/red]")
+                    continue
+
+                selected_indices.add(idx)
+
+    except ValueError:
+        console.print(f"[red]✗ Invalid selection format: {selection}[/red]")
+        console.print("[yellow]Please use numbers (e.g., 1,3,5 or 1-3)[/yellow]\n")
+        return []
+
+    # Get selected files
+    selected_files = [pdf_files[idx - 1]['relative_path'] for idx in sorted(selected_indices)]
+
+    if selected_files:
+        console.print(f"[green]✓ Selected {len(selected_files)} file(s):[/green]")
+        for file in selected_files:
+            console.print(f"  • {file}")
+        console.print()
+
+    return selected_files
+
+
+def collect_inputs_interactive() -> dict:
+    """Collect inputs interactively from user."""
+    console.print("[bold cyan]📝 Lecture Information[/bold cyan]")
+    console.print("━" * 50 + "\n")
+
+    inputs = {}
+
+    # Basic information
+    inputs["topic"] = Prompt.ask("[bold]Lecture Topic[/bold]")
+    inputs["duration"] = int(Prompt.ask("[bold]Duration (minutes)[/bold]", default="180"))
+    inputs["audience_level"] = Prompt.ask(
+        "[bold]Audience Level[/bold]",
+        choices=["beginner", "intermediate", "advanced"],
+        default="intermediate",
+    )
+
+    console.print("\n[bold cyan]📂 Content Sources[/bold cyan]")
+    console.print("━" * 50 + "\n")
+
+    # PDF files
+    console.print("[bold]PDF Files:[/bold]")
+    console.print("  [1] Browse and select from current directory")
+    console.print("  [2] Enter file paths manually")
+    console.print("  [3] Skip PDF files")
+    console.print()
+
+    pdf_choice = Prompt.ask(
+        "[bold]Choose option[/bold]",
+        choices=["1", "2", "3"],
+        default="1"
+    )
+
+    if pdf_choice == "1":
+        # Browse and select PDF files
+        inputs["pdfs"] = select_pdf_files()
+
+        # Allow adding more files manually
+        if inputs["pdfs"]:
+            add_more = Confirm.ask(
+                "\n[bold]Add more PDF files manually?[/bold]",
+                default=False
+            )
+            if add_more:
+                console.print("[dim]💡 Tip: For filenames with spaces, just type without quotes[/dim]")
+                pdf_input = Prompt.ask("[bold]Additional PDF files[/bold] (comma-separated)")
+                if pdf_input:
+                    additional = [p.strip().strip('"').strip("'") for p in pdf_input.split(",")]
+                    inputs["pdfs"].extend(additional)
+
+    elif pdf_choice == "2":
+        # Manual input
+        console.print("[dim]💡 Tip: For filenames with spaces, just type without quotes[/dim]")
+        console.print("[dim]   Example: AI Engineering Guidebook.pdf[/dim]")
+        pdf_input = Prompt.ask("[bold]PDF files[/bold] (comma-separated)")
+        if pdf_input:
+            inputs["pdfs"] = [p.strip().strip('"').strip("'") for p in pdf_input.split(",")]
+        else:
+            inputs["pdfs"] = []
+
+    else:
+        # Skip
+        inputs["pdfs"] = []
+
+    # URLs
+    url_input = Prompt.ask("[bold]URLs[/bold] (comma-separated, or press Enter to skip)")
+    if url_input:
+        inputs["urls"] = [u.strip().strip('"').strip("'") for u in url_input.split(",")]
+    else:
+        inputs["urls"] = []
+
+    # Search keywords
+    keyword_input = Prompt.ask(
+        "[bold]Search keywords[/bold] (comma-separated, or press Enter to skip)"
+    )
+    if keyword_input:
+        inputs["keywords"] = [k.strip().strip('"').strip("'") for k in keyword_input.split(",")]
+    else:
+        inputs["keywords"] = []
+
+    # Hada.io deep search keywords
+    console.print("\n[dim]💡 Deep Crawling: Hada.io search will crawl article links too[/dim]")
+    hada_keyword_input = Prompt.ask(
+        "[bold]Hada.io search keywords[/bold] (comma-separated, or press Enter to skip)"
+    )
+    if hada_keyword_input:
+        inputs["hada_keywords"] = [k.strip().strip('"').strip("'") for k in hada_keyword_input.split(",")]
+    else:
+        inputs["hada_keywords"] = []
+
+    # Image search keywords (if enabled via flag)
+    image_keyword_input = Prompt.ask(
+        "[bold]Image search keywords[/bold] (comma-separated, or press Enter to skip)"
+    )
+    if image_keyword_input:
+        inputs["image_keywords"] = [k.strip().strip('"').strip("'") for k in image_keyword_input.split(",")]
+    else:
+        inputs["image_keywords"] = []
+
+    return inputs
+
+
+def parse_html_to_lecture(html_path: str):
+    """
+    Parse HTML file back to Lecture object.
+
+    Args:
+        html_path: Path to HTML file
+
+    Returns:
+        Lecture object or None if parsing fails
+    """
+    from bs4 import BeautifulSoup
+    from lecture_forge.models.lecture import Lecture, SectionContent, CodeBlock, MermaidDiagram
+
+    try:
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extract metadata
+        title = soup.find("h1")
+        title_text = title.get_text() if title else "Untitled Lecture"
+
+        # Extract learning objectives
+        objectives_div = soup.find("div", class_="bg-blue-50")
+        objectives = []
+        if objectives_div:
+            obj_items = objectives_div.find_all("li")
+            objectives = [item.get_text() for item in obj_items]
+
+        # Extract sections
+        sections = []
+        for section_elem in soup.find_all("section", id=True):
+            section_id = section_elem.get("id")
+
+            # Get section title
+            h2 = section_elem.find("h2")
+            if not h2:
+                continue
+
+            section_title = h2.get_text()
+            # Remove section number (e.g., "1. Title" -> "Title")
+            if ". " in section_title:
+                section_title = section_title.split(". ", 1)[1]
+
+            # Get content (all text except code blocks and diagrams)
+            content_parts = []
+            for elem in section_elem.find_all(["p", "h3", "ul", "ol"]):
+                content_parts.append(elem.get_text())
+
+            markdown_content = "\n\n".join(content_parts)
+
+            # Extract code blocks
+            code_blocks = []
+            for pre in section_elem.find_all("pre"):
+                code = pre.find("code")
+                if code:
+                    code_blocks.append(
+                        CodeBlock(language="python", code=code.get_text(), caption=None)
+                    )
+
+            # Extract diagrams
+            diagrams = []
+            for i, mermaid_div in enumerate(section_elem.find_all("div", class_="mermaid")):
+                diagrams.append(
+                    MermaidDiagram(
+                        id=f"{section_id}_diagram_{i}",
+                        title=f"Diagram {i + 1}",
+                        mermaid_code=mermaid_div.get_text().strip(),
+                        diagram_type="flowchart",
+                    )
+                )
+
+            section = SectionContent(
+                section_id=section_id,
+                title=section_title,
+                markdown_content=markdown_content,
+                code_blocks=code_blocks,
+                images=[],
+                diagrams=diagrams,
+                word_count=len(markdown_content.split()),
+            )
+
+            sections.append(section)
+
+        # Create lecture object
+        lecture = Lecture(
+            title=title_text,
+            topic=title_text,
+            duration=180,  # Default
+            audience_level="intermediate",  # Default
+            learning_objectives=objectives,
+            sections=sections,
+            total_word_count=sum(s.word_count for s in sections),
+            total_images=0,
+            total_diagrams=sum(len(s.diagrams) for s in sections),
+        )
+
+        return lecture
+
+    except Exception as e:
+        logger.error(f"Failed to parse HTML: {e}")
+        return None
+
+
+def generate_lecture(inputs: dict) -> dict:
+    """
+    Generate lecture using the multi-agent pipeline.
+
+    Args:
+        inputs: Dictionary with lecture parameters
+
+    Returns:
+        Dictionary with generation results
+    """
+    # Reset token tracker
+    tracker = get_tracker()
+    tracker.reset()
+
+    # Generate collection name from topic
+    # Sanitize topic name for ChromaDB (ASCII only: alphanumeric, underscore, hyphen)
+    import re
+    topic_safe = inputs["topic"].replace(" ", "_").replace("/", "_").replace("\\", "_")
+    # Remove non-ASCII characters (한글 등)
+    topic_safe = re.sub(r'[^a-zA-Z0-9_-]', '', topic_safe)
+    # If empty after sanitization, use default
+    if not topic_safe or len(topic_safe) < 3:
+        topic_safe = "lecture"
+    # Ensure it starts with alphanumeric
+    if not topic_safe[0].isalnum():
+        topic_safe = "lec_" + topic_safe
+    # Limit length (ChromaDB max: 63 chars, reserve 16 for timestamp)
+    topic_safe = topic_safe[:47]
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    collection_name = f"{topic_safe}_{timestamp}"
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        # Phase 1: Content Collection
+        task1 = progress.add_task("[cyan]📚 Phase 1: Collecting content...", total=None)
+        content_agent = ContentCollectorAgent(collection_name=collection_name)
+        content_result = content_agent.collect(
+            {
+                "pdfs": inputs.get("pdfs", []),
+                "urls": inputs.get("urls", []),
+                "keywords": inputs.get("keywords", []),
+                "hada_keywords": inputs.get("hada_keywords", []),
+            }
+        )
+        progress.update(task1, completed=True)
+        console.print(
+            f"   ✅ Content collected: {content_result['metadata']['total_docs']} docs, "
+            f"{content_result['metadata']['total_chunks']} chunks"
+        )
+
+        # Phase 2: Image Collection
+        task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=None)
+        image_agent = ImageCollectorAgent(
+            session_id=collection_name,
+            vector_store=content_agent.vector_store  # Share vector store for RAG integration
+        )
+
+        # PDF images now recommended with location-based matching (v0.2.0+)
+        pdf_sources = inputs.get("pdfs", []) if inputs.get("include_pdf_images", True) else []
+
+        if not inputs.get("include_pdf_images", True) and inputs.get("pdfs", []):
+            console.print("   ⏭️  [dim]Skipping PDF image extraction (disabled by --no-include-pdf-images)[/dim]")
+        elif inputs.get("include_pdf_images", True) and inputs.get("pdfs", []):
+            console.print("   📸 [cyan]Extracting PDF images with location-based matching[/cyan]")
+
+        image_result = image_agent.collect(
+            {
+                "pdfs": pdf_sources,
+                "urls": inputs.get("urls", []),
+                "image_keywords": inputs.get("image_keywords", []),
+            },
+            max_images_per_keyword=3,
+            auto_describe_images=inputs.get("auto_describe_images", True),
+        )
+        progress.update(task2, completed=True)
+        console.print(f"   ✅ Images collected: {image_result['total_collected']}")
+
+        # Phase 3a: Content Analysis
+        task3a = progress.add_task("[cyan]🔍 Phase 3a: Analyzing content...", total=None)
+        analyzer = ContentAnalyzerAgent(vector_store=content_agent.vector_store)
+        analysis_result = analyzer.analyze(
+            collection_result=content_result,
+            image_result=image_result,
+            topic=inputs["topic"],
+        )
+        progress.update(task3a, completed=True)
+        console.print(
+            f"   ✅ Analysis complete: {len(analysis_result.key_topics)} topics, "
+            f"{len(analysis_result.entities)} entities"
+        )
+
+        # Phase 3b: Curriculum Design
+        task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=None)
+        designer = CurriculumDesignerAgent()
+        curriculum = designer.design(
+            analysis_result=analysis_result,
+            topic=inputs["topic"],
+            duration=inputs["duration"],
+            audience_level=inputs["audience_level"],
+        )
+        progress.update(task3b, completed=True)
+        console.print(
+            f"   ✅ Curriculum designed: {len(curriculum.sections)} sections, "
+            f"{curriculum.total_estimated_time} min"
+        )
+
+        # Phase 4a: Content Writing
+        task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
+        writer = ContentWriterAgent(vector_store=content_agent.vector_store)
+        section_contents = writer.write_all_sections(
+            curriculum=curriculum,
+            available_images=image_result.get("images", []),
+        )
+        progress.update(task4a, completed=True)
+        total_words = sum(s.word_count for s in section_contents)
+        total_code_blocks = sum(len(s.code_blocks) for s in section_contents)
+        console.print(
+            f"   ✅ Content written: {len(section_contents)} sections, "
+            f"{total_words} words, {total_code_blocks} code blocks"
+        )
+
+        # Phase 4b: Diagram Generation
+        task4b = progress.add_task("[cyan]📊 Phase 4b: Generating diagrams...", total=None)
+        diagram_gen = DiagramGeneratorAgent()
+        section_contents = diagram_gen.generate_diagrams(section_contents)
+        progress.update(task4b, completed=True)
+        total_diagrams = sum(len(s.diagrams) for s in section_contents)
+        console.print(f"   ✅ Diagrams generated: {total_diagrams}")
+
+        # Phase 4c: HTML Assembly
+        task4c = progress.add_task("[cyan]🎨 Phase 4c: Assembling HTML...", total=None)
+        lecture = Lecture(
+            title=f"{inputs['topic']} - {inputs['audience_level'].capitalize()} Level",
+            topic=inputs["topic"],
+            duration=inputs["duration"],
+            audience_level=inputs["audience_level"],
+            learning_objectives=curriculum.learning_objectives,
+            sections=section_contents,
+            total_word_count=total_words,
+            total_images=sum(len(s.images) for s in section_contents),
+            total_diagrams=total_diagrams,
+            vector_db_path=str(content_agent.vector_store.db_path),
+            created_at=datetime.now().isoformat(),
+        )
+
+        html_assembler = HTMLAssemblerAgent()
+        html_path = html_assembler.assemble(lecture, output_path=inputs.get("output_name"))
+        progress.update(task4c, completed=True)
+        console.print(f"   ✅ HTML assembled: {html_path}")
+
+        # Phase 5: Quality Assurance (optional but enabled by default)
+        quality_threshold = {"lenient": 70, "balanced": 80, "strict": 90}.get(
+            inputs.get("quality_level", "balanced"), 80
+        )
+        max_iterations = 3
+
+        # Import quality agents
+        from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
+        from lecture_forge.agents.revision_agent import RevisionAgent
+
+        evaluator = QualityEvaluatorAgent()
+        revision_agent = RevisionAgent()
+
+        task5 = progress.add_task(
+            f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...",
+            total=None
+        )
+
+        iteration = 0
+        previous_score = 0
+        improved_lecture = lecture
+        quality_improved = False
+        final_evaluation = None  # Initialize to avoid UnboundLocalError
+
+        while iteration < max_iterations:
+            # Evaluate quality
+            evaluation = evaluator.evaluate(improved_lecture, quality_threshold)
+            final_evaluation = evaluation  # Save for later use
+
+            console.print(
+                f"\n   📊 Quality evaluation (iteration {iteration + 1}):"
+                f" {evaluation.overall_score:.1f}/100"
+            )
+
+            # Check if passed
+            if evaluation.passed:
+                console.print(f"   ✅ Quality threshold met ({quality_threshold})!")
+                if iteration > 0:
+                    quality_improved = True
+                break
+
+            # Check improvement (prevent infinite loop and degradation)
+            if iteration > 0:
+                improvement = evaluation.overall_score - previous_score
+
+                if improvement < 2:
+                    console.print(
+                        f"   ⚠️  Minimal improvement (+{improvement:.1f}). "
+                        "Stopping to prevent degradation."
+                    )
+                    break
+
+                if improvement < 0:
+                    console.print(
+                        f"   ❌ Quality degraded ({improvement:.1f}). "
+                        "Keeping previous version."
+                    )
+                    # Revert to previous version (would need to be saved)
+                    break
+
+            # Show top issues
+            if evaluation.issues and iteration == 0:
+                console.print(f"   ⚠️  {len(evaluation.issues)} issues found:")
+                for issue in evaluation.issues[:3]:  # Show top 3
+                    severity_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
+                        issue.severity, "⚪"
+                    )
+                    console.print(
+                        f"      {severity_icon} [{issue.severity}] {issue.dimension}: "
+                        f"{issue.description[:80]}..."
+                    )
+
+            # Apply revisions
+            console.print(f"   🔧 Applying automatic improvements...")
+            revised_lecture = revision_agent.revise(improved_lecture, evaluation)
+
+            # Re-evaluate to check actual improvement
+            final_evaluation = evaluator.evaluate(revised_lecture, quality_threshold)
+            actual_improvement = final_evaluation.overall_score - evaluation.overall_score
+
+            console.print(
+                f"   → After revision: {final_evaluation.overall_score:.1f}/100 "
+                f"(+{actual_improvement:.1f})"
+            )
+
+            if actual_improvement > 0:
+                improved_lecture = revised_lecture
+                previous_score = final_evaluation.overall_score
+                quality_improved = True
+
+                # Update word count stats
+                total_words = improved_lecture.total_word_count
+                total_diagrams = sum(len(s.diagrams) for s in improved_lecture.sections)
+            else:
+                console.print(f"   ⚠️  Revision did not improve quality. Stopping.")
+                break
+
+            iteration += 1
+
+        # Regenerate HTML if improved
+        if quality_improved:
+            console.print(f"   🎨 Regenerating HTML with improvements...")
+            html_path = html_assembler.assemble(improved_lecture, output_path=inputs.get("output_name"))
+            lecture = improved_lecture
+
+        progress.update(task5, completed=True)
+
+        if iteration >= max_iterations:
+            console.print(f"   ⚠️  Reached max iterations ({max_iterations})")
+
+        if final_evaluation:
+            console.print(f"   📊 Final quality score: {final_evaluation.overall_score:.1f}/100\n")
+
+    # Get token usage summary
+    token_usage = tracker.get_summary()
+
+    return {
+        "html_path": html_path,
+        "vector_db_path": str(content_agent.vector_store.db_path),
+        "sections_count": len(lecture.sections),
+        "total_words": lecture.total_word_count,
+        "code_blocks": sum(len(s.code_blocks) for s in lecture.sections),
+        "diagrams": sum(len(s.diagrams) for s in lecture.sections),
+        "images": sum(len(s.images) for s in lecture.sections),
+        "quality_score": final_evaluation.overall_score if final_evaluation else 0,
+        "quality_iterations": iteration,
+        "token_usage": token_usage,
+    }
+
+
+def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
+    """Convert lecture HTML to Reveal.js presentation slides.
+
+    Args:
+        lecture_html_path: Path to the lecture HTML file
+        output_path: Path for the output slides HTML
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from bs4 import BeautifulSoup
+        import re
+
+        # Read the lecture HTML
+        with open(lecture_html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # Extract lecture metadata
+        title_tag = soup.find("h1", class_="lecture-title")
+        title = title_tag.text.strip() if title_tag else "Lecture Slides"
+
+        subtitle_tag = soup.find("p", class_="lecture-subtitle")
+        subtitle = subtitle_tag.text.strip() if subtitle_tag else ""
+
+        # Extract sections
+        sections = []
+        section_elements = soup.find_all("section", class_="lecture-section")
+
+        for section_elem in section_elements:
+            section_title_tag = section_elem.find("h2", class_="section-title")
+            section_title = section_title_tag.text.strip() if section_title_tag else "Section"
+
+            # Extract content blocks
+            content_blocks = []
+
+            # Find all subsections (h3), paragraphs, code blocks, images, diagrams
+            for elem in section_elem.find_all(["h3", "p", "pre", "img", "div"]):
+                if elem.name == "h3":
+                    content_blocks.append({"type": "subsection", "content": elem.text.strip()})
+                elif elem.name == "p" and not elem.find_parent("li"):
+                    text = elem.text.strip()
+                    if text and len(text) > 10:  # Filter out short paragraphs
+                        content_blocks.append({"type": "paragraph", "content": text})
+                elif elem.name == "pre":
+                    code_elem = elem.find("code")
+                    if code_elem:
+                        code = code_elem.text.strip()
+                        language = ""
+                        if "class" in code_elem.attrs:
+                            for cls in code_elem["class"]:
+                                if cls.startswith("language-"):
+                                    language = cls.replace("language-", "")
+                                    break
+                        content_blocks.append({"type": "code", "content": code, "language": language})
+                elif elem.name == "img" and "section-image" in elem.get("class", []):
+                    img_src = elem.get("src", "")
+                    img_alt = elem.get("alt", "")
+                    caption = ""
+                    caption_elem = elem.find_next_sibling("p", class_="image-caption")
+                    if caption_elem:
+                        caption = caption_elem.text.strip()
+                    content_blocks.append({"type": "image", "src": img_src, "alt": img_alt, "caption": caption})
+                elif elem.name == "div" and "mermaid" in elem.get("class", []):
+                    mermaid_code = elem.text.strip()
+                    content_blocks.append({"type": "diagram", "content": mermaid_code})
+
+            sections.append({
+                "title": section_title,
+                "blocks": content_blocks
+            })
+
+        # Generate Reveal.js HTML
+        slides_html = _generate_reveal_html(title, subtitle, sections)
+
+        # Write to output file
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(slides_html)
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Error converting to slides: {e}")
+        return False
+
+
+def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> str:
+    """Generate Reveal.js HTML from lecture content.
+
+    Args:
+        title: Lecture title
+        subtitle: Lecture subtitle
+        sections: List of section dictionaries
+
+    Returns:
+        Complete HTML string for Reveal.js presentation
+    """
+    slides_content = []
+
+    # Title slide
+    slides_content.append(f"""
+    <section data-transition="zoom">
+        <h1>{title}</h1>
+        {f'<p>{subtitle}</p>' if subtitle else ''}
+        <p><small>Generated by LectureForge</small></p>
+    </section>
+    """)
+
+    # Section slides
+    for section in sections:
+        section_title = section["title"]
+        blocks = section["blocks"]
+
+        # Section title slide
+        slides_content.append(f"""
+    <section data-transition="convex">
+        <h2>{section_title}</h2>
+    </section>
+        """)
+
+        # Content slides - group content into logical slides
+        current_slide_content = []
+        slide_item_count = 0
+        max_items_per_slide = 3  # Maximum content blocks per slide
+
+        for block in blocks:
+            block_type = block["type"]
+
+            if block_type == "subsection":
+                # Subsection starts a new slide
+                if current_slide_content:
+                    slides_content.append(_create_content_slide(current_slide_content))
+                    current_slide_content = []
+                    slide_item_count = 0
+                current_slide_content.append(f"<h3>{block['content']}</h3>")
+                slide_item_count += 1
+
+            elif block_type == "paragraph":
+                current_slide_content.append(f"<p>{block['content']}</p>")
+                slide_item_count += 1
+
+            elif block_type == "code":
+                # Code blocks take a full slide
+                if current_slide_content:
+                    slides_content.append(_create_content_slide(current_slide_content))
+                    current_slide_content = []
+                    slide_item_count = 0
+
+                language = block.get("language", "")
+                slides_content.append(f"""
+    <section>
+        <pre><code class="language-{language}" data-trim data-noescape>
+{block['content']}
+        </code></pre>
+    </section>
+                """)
+
+            elif block_type == "image":
+                # Images take a full slide
+                if current_slide_content:
+                    slides_content.append(_create_content_slide(current_slide_content))
+                    current_slide_content = []
+                    slide_item_count = 0
+
+                caption = block.get("caption", "")
+                slides_content.append(f"""
+    <section>
+        <img src="{block['src']}" alt="{block['alt']}" style="max-height: 500px; max-width: 90%;">
+        {f'<p><small>{caption}</small></p>' if caption else ''}
+    </section>
+                """)
+
+            elif block_type == "diagram":
+                # Diagrams take a full slide
+                if current_slide_content:
+                    slides_content.append(_create_content_slide(current_slide_content))
+                    current_slide_content = []
+                    slide_item_count = 0
+
+                slides_content.append(f"""
+    <section>
+        <div class="mermaid">
+{block['content']}
+        </div>
+    </section>
+                """)
+
+            # Check if we should start a new slide
+            if slide_item_count >= max_items_per_slide:
+                slides_content.append(_create_content_slide(current_slide_content))
+                current_slide_content = []
+                slide_item_count = 0
+
+        # Add remaining content
+        if current_slide_content:
+            slides_content.append(_create_content_slide(current_slide_content))
+
+    # End slide
+    slides_content.append("""
+    <section data-transition="zoom">
+        <h2>Thank You!</h2>
+        <p>Questions?</p>
+    </section>
+    """)
+
+    # Complete HTML template
+    html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} - Slides</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css">
+    <style>
+        .reveal h1, .reveal h2, .reveal h3 {{
+            text-transform: none;
+        }}
+        .reveal p {{
+            text-align: left;
+        }}
+        .reveal pre {{
+            width: 100%;
+        }}
+        .reveal code {{
+            max-height: 500px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+{''.join(slides_content)}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({{ startOnLoad: true }});
+        Reveal.initialize({{
+            hash: true,
+            transition: 'slide',
+            plugins: [ RevealHighlight, RevealMarkdown, RevealNotes ],
+            slideNumber: true,
+            controls: true,
+            progress: true,
+            center: true,
+            mouseWheel: false
+        }});
+    </script>
+</body>
+</html>
+    """
+
+    return html_template
+
+
+def _create_content_slide(content_items: List[str]) -> str:
+    """Create a content slide from a list of HTML elements.
+
+    Args:
+        content_items: List of HTML strings
+
+    Returns:
+        Complete section HTML
+    """
+    return f"""
+    <section>
+{''.join(content_items)}
+    </section>
+    """
+
+
+def main():
+    """Main entry point."""
+    try:
+        cli()
+    except KeyboardInterrupt:
+        console.print("\n\n[yellow]⚠️  Interrupted by user[/yellow]")
+        sys.exit(0)
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error: {e}[/bold red]")
+        logger.exception("Unexpected error")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

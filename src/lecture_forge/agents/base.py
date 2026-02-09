@@ -1,0 +1,63 @@
+"""
+Base agent class for common functionality.
+"""
+
+from typing import Any, Dict, List
+
+from langchain_openai import ChatOpenAI
+
+from lecture_forge.config import Config
+from lecture_forge.utils.token_tracker import track_tokens
+
+
+class BaseAgent:
+    """Base class for all agents."""
+
+    def __init__(self, model: str = None, temperature: float = None):
+        """
+        Initialize base agent.
+
+        Args:
+            model: LLM model name (default: Config.DEFAULT_MODEL)
+            temperature: Temperature for LLM (default: Config.TEMPERATURE)
+        """
+        self.model = model or Config.DEFAULT_MODEL
+        self.temperature = temperature or Config.TEMPERATURE
+        self.llm = self._create_llm()
+        self.agent_name = self.__class__.__name__
+
+    def _create_llm(self) -> ChatOpenAI:
+        """Create LLM instance."""
+        return ChatOpenAI(
+            model=self.model,
+            temperature=self.temperature,
+            openai_api_key=Config.OPENAI_API_KEY,
+        )
+
+    def invoke_llm(self, prompt: str, phase: str = "unknown"):
+        """
+        Invoke LLM and track token usage.
+
+        Args:
+            prompt: Prompt to send to LLM
+            phase: Current generation phase
+
+        Returns:
+            LLM response
+        """
+        response = self.llm.invoke(prompt)
+
+        # Track token usage
+        if hasattr(response, "response_metadata"):
+            metadata = response.response_metadata
+            if "token_usage" in metadata:
+                usage = metadata["token_usage"]
+                track_tokens(
+                    model=self.model,
+                    prompt_tokens=usage.get("prompt_tokens", 0),
+                    completion_tokens=usage.get("completion_tokens", 0),
+                    phase=phase,
+                    agent=self.agent_name,
+                )
+
+        return response

@@ -1,0 +1,59 @@
+# LectureForge Configuration File Example
+# Copy this file to config.yaml and customize your settings
+
+# ===== Required Fields =====
+
+# Main topic for the lecture
+topic: "Deep Learning Fundamentals"
+
+# Lecture duration in minutes
+duration: 180
+
+# Target audience level: beginner, intermediate, or advanced
+audience_level: "intermediate"
+
+# ===== Optional Fields =====
+
+# PDF files to process (provide full paths or relative paths)
+pdfs:
+  - "./papers/deep_learning.pdf"
+  - "./books/neural_networks_chapter3.pdf"
+
+# URLs to scrape for content
+urls:
+  - "https://example.com/machine-learning-guide"
+  - "https://blog.example.com/neural-networks-basics"
+
+# Keywords for web search (using Serper API)
+keywords:
+  - "deep learning tutorial"
+  - "neural networks basics"
+  - "backpropagation algorithm"
+
+# Keywords for Hada.io deep crawling
+hada_keywords:
+  - "딥러닝 최신 동향"
+  - "신경망 아키텍처"
+
+# Keywords for image search (Unsplash/Pexels)
+image_keywords:
+  - "neural network architecture"
+  - "deep learning visualization"
+  - "machine learning diagram"
+
+# ===== Output Settings =====
+
+# Optional: Custom output filename (without extension)
+# If not specified, will be auto-generated from topic and timestamp
+output_name: "deep_learning_lecture"
+
+# ===== Quality Settings =====
+
+# Enable quality check and revision loop
+quality_check: true
+
+# Quality threshold (0-100)
+quality_threshold: 80
+
+# ===== Example Usage =====
+# lecture-forge create --config config.yaml

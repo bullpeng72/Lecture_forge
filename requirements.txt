@@ -1,0 +1,59 @@
+# ===== LectureForge Requirements =====
+# Fast installation (~3-5 minutes)
+# Heavy optional packages are commented out - uncomment if needed
+
+# ===== Core Framework =====
+langchain>=0.1.0,<0.3.0
+langchain-openai>=0.0.5,<0.3.0
+langchain-core>=0.1.0,<0.3.0
+openai>=1.12.0,<2.0.0
+
+# ===== Vector Database =====
+chromadb>=0.4.22,<0.6.0
+
+# ===== PDF Processing =====
+pymupdf>=1.23.0,<2.0.0
+
+# ===== Web Scraping =====
+beautifulsoup4>=4.12.0,<5.0.0
+requests>=2.31.0,<3.0.0
+
+# ===== Image Processing (Basic) =====
+pillow>=10.2.0,<11.0.0
+imagehash>=4.3.0,<5.0.0
+
+# ===== HTML Generation =====
+jinja2>=3.1.3,<4.0.0
+markdown>=3.5.0,<4.0.0
+pygments>=2.17.0,<3.0.0
+
+# ===== CLI =====
+click>=8.1.7,<9.0.0
+rich>=13.7.0,<14.0.0
+
+# ===== Utilities =====
+python-dotenv>=1.0.0,<2.0.0
+pydantic>=2.5.0,<3.0.0
+pyyaml>=6.0.1,<7.0.0
+
+# ===== Optional (Uncomment if needed) =====
+
+# Advanced Web Scraping (~5 min install)
+# playwright>=1.41.0,<2.0.0
+# lxml>=5.1.0,<6.0.0
+# Note: After installing, run: playwright install
+
+# Advanced Image Processing (~3 min install)
+# opencv-python>=4.9.0,<5.0.0
+
+# Semantic Embeddings (~15 min install, 2GB+ download - includes PyTorch!)
+# sentence-transformers>=2.3.0,<3.0.0
+
+# Additional Tools
+# crewai-tools>=0.12.0,<0.20.0
+# langchain-community>=0.0.20,<0.3.0
+# pdfplumber>=0.10.0,<1.0.0
+# rapidfuzz>=3.0.0,<4.0.0
+# tiktoken>=0.5.0,<1.0.0
+# httpx>=0.24.0,<1.0.0
+# tenacity>=8.0.0,<9.0.0

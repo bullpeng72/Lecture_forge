@@ -1,0 +1,148 @@
+/* Custom styles for LectureForge */
+
+/* Prose styling for markdown content */
+.prose {
+    color: #374151;
+    line-height: 1.75;
+}
+
+.prose h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: #1f2937;
+}
+
+.prose h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #374151;
+}
+
+.prose p {
+    margin-bottom: 1.25rem;
+}
+
+.prose ul, .prose ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.prose li {
+    margin-bottom: 0.5rem;
+}
+
+.prose code {
+    background-color: #f3f4f6;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-family: 'Courier New', monospace;
+}
+
+.prose pre {
+    background-color: #1e293b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+}
+
+.prose pre code {
+    background-color: transparent;
+    padding: 0;
+    color: #e2e8f0;
+}
+
+.prose blockquote {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1rem;
+    margin-left: 0;
+    font-style: italic;
+    color: #6b7280;
+}
+
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+}
+
+.prose th {
+    background-color: #f3f4f6;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #d1d5db;
+}
+
+.prose td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Mermaid diagram styling */
+.mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+/* Search box */
+#searchBox:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Code block improvements */
+pre[class*="language-"] {
+    margin: 1.5rem 0;
+    border-radius: 0.5rem;
+}
+
+/* Image hover effect */
+figure img {
+    transition: transform 0.3s ease;
+}
+
+figure img:hover {
+    transform: scale(1.02);
+}
+
+/* Print styles */
+@media print {
+    nav, aside, #searchBox {
+        display: none;
+    }
+
+    main {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    section {
+        page-break-inside: avoid;
+    }
+
+    h2 {
+        page-break-after: avoid;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
+
+    nav, aside {
+        background-color: #111827;
+    }
+
+    .prose {
+        color: #e5e7eb;
+    }
+}

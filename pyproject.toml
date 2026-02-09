@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lecture-forge"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-powered lecture material generator using CrewAI"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["ai", "education", "lecture", "crewai", "multiagent"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Education",
     "Topic :: Education",
     "License :: OSI Approved :: MIT License",

@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
@@ -30,6 +35,13 @@ class UnsplashSearchTool:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Unsplash API call failed (attempt {retry_state.attempt_number}/3), retrying..."
+        ),
+    )
     def run(
         self,
         query: str,
@@ -39,7 +51,7 @@ class UnsplashSearchTool:
         download: bool = True,
     ) -> Dict:
         """
-        Search for images on Unsplash.
+        Search for images on Unsplash with automatic retry on failures.
 
         Args:
             query: Search query
@@ -205,6 +217,13 @@ class PexelsSearchTool:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Pexels API call failed (attempt {retry_state.attempt_number}/3), retrying..."
+        ),
+    )
     def run(
         self,
         query: str,
@@ -214,7 +233,7 @@ class PexelsSearchTool:
         download: bool = True,
     ) -> Dict:
         """
-        Search for images on Pexels.
+        Search for images on Pexels with automatic retry on failures.
 
         Args:
             query: Search query

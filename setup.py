@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.1.0",
+    version="0.2.0",
     author="Your Name",
     author_email="your.email@example.com",
     description="AI-powered lecture material generator using CrewAI",
@@ -18,7 +18,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Education",
         "Topic :: Education",
         "License :: OSI Approved :: MIT License",

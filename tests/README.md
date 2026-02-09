@@ -1,191 +1,137 @@
 # LectureForge Tests
 
-This directory contains the test suite for LectureForge.
+This directory contains tests for the LectureForge project.
+
+## Setup
+
+Install development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+## Running Tests
+
+### Run all tests
+```bash
+pytest
+```
+
+### Run with coverage report
+```bash
+pytest --cov=lecture_forge --cov-report=html
+```
+
+### Run specific test file
+```bash
+pytest tests/unit/agents/test_content_writer.py -v
+```
+
+### Run tests in a specific directory
+```bash
+pytest tests/unit/ -v
+```
+
+### Run tests with detailed output
+```bash
+pytest -v --tb=long
+```
 
 ## Test Structure
 
 ```
 tests/
-├── conftest.py              # Pytest fixtures and configuration
-├── unit/                    # Unit tests for individual components
-│   ├── test_config.py       # Configuration tests
-│   ├── test_chunker.py      # Text chunking tests
-│   └── test_retriever.py    # RAG retriever tests
-├── integration/             # Integration tests for workflows
-│   ├── test_knowledge_pipeline.py      # Knowledge base workflow
-│   └── test_content_collection.py      # Content collection workflow
-└── fixtures/                # Test data and fixtures
-```
-
-## Running Tests
-
-### Install Test Dependencies
-
-```bash
-# Install all dependencies including dev tools
-pip install -e ".[dev]"
-
-# Or install from requirements-dev.txt
-pip install -r requirements-dev.txt
-```
-
-### Run All Tests
-
-```bash
-# Run all tests with coverage
-pytest
-
-# Run with verbose output
-pytest -v
-
-# Run with coverage report
-pytest --cov=lecture_forge --cov-report=html
-```
-
-### Run Specific Test Categories
-
-```bash
-# Unit tests only
-pytest tests/unit/ -v
-
-# Integration tests only
-pytest tests/integration/ -v
-
-# Run tests by marker
-pytest -m unit
-pytest -m integration
-pytest -m "not slow"
-```
-
-### Run Specific Test Files
-
-```bash
-# Single file
-pytest tests/unit/test_config.py -v
-
-# Specific test function
-pytest tests/unit/test_config.py::test_config_validate_with_valid_keys -v
-```
-
-## Test Markers
-
-Tests are marked with the following markers:
-
-- `@pytest.mark.unit` - Fast unit tests
-- `@pytest.mark.integration` - Integration tests (may be slower)
-- `@pytest.mark.slow` - Slow tests (large datasets, network calls)
-
-## Environment Variables
-
-Tests use mock API keys set in `conftest.py`. For integration tests that make real API calls:
-
-```bash
-# Copy .env.example to .env.test
-cp .env.example .env.test
-
-# Set real API keys for integration testing
-export OPENAI_API_KEY=sk-...
-export SERPER_API_KEY=...
+├── conftest.py              # Shared fixtures and configuration
+├── unit/                    # Unit tests
+│   ├── agents/             # Agent tests
+│   │   ├── test_content_collector.py
+│   │   ├── test_content_writer.py
+│   │   └── test_curriculum_designer.py
+│   ├── test_chunker.py     # Text chunking tests
+│   ├── test_config.py      # Configuration tests
+│   └── test_retriever.py   # RAG retriever tests
+└── integration/            # Integration tests
+    ├── test_knowledge_pipeline.py
+    └── test_content_collection.py
 ```
 
 ## Writing New Tests
 
-### Unit Test Example
+### Unit Tests
 
+1. Create test file in `tests/unit/` with `test_` prefix
+2. Use fixtures from `conftest.py` for common setup
+3. Mock external dependencies (APIs, LLMs, databases)
+4. Test one component in isolation
+
+Example:
 ```python
-# tests/unit/test_my_module.py
-import pytest
-from lecture_forge.my_module import MyClass
-
-def test_my_function():
-    """Test description."""
-    result = MyClass().my_function()
-    assert result == expected_value
+def test_my_function(mock_llm):
+    result = my_function()
+    assert result is not None
 ```
 
-### Integration Test Example
+### Integration Tests
 
-```python
-# tests/integration/test_my_workflow.py
-import pytest
+1. Create test file in `tests/integration/`
+2. Test multiple components working together
+3. May use real dependencies (vector DB, file system)
+4. Slower but more realistic
 
-@pytest.mark.integration
-class TestMyWorkflow:
-    """Test complete workflow."""
+## Available Fixtures
 
-    def test_end_to_end(self, temp_dir, mock_llm):
-        """Test end-to-end workflow."""
-        # Setup
-        # Execute
-        # Assert
-        pass
-```
+- `test_env_vars`: Sets up test environment variables
+- `temp_dir`: Temporary directory for test files
+- `mock_llm`: Mocked LLM with sample responses
+- `mock_vector_store`: Mocked ChromaDB vector store
+- `sample_curriculum`: Sample curriculum data
+- `sample_images`: Sample image metadata
 
-## Coverage Report
+See `conftest.py` for full list of fixtures.
 
-After running tests with coverage:
+## Coverage Goals
 
-```bash
-pytest --cov=lecture_forge --cov-report=html
-```
-
-Open `htmlcov/index.html` in a browser to view detailed coverage report.
+- **Unit tests**: 80%+ coverage
+- **Integration tests**: Cover critical workflows
+- **Smoke tests**: Basic functionality for all agents
 
 ## Continuous Integration
 
-Tests automatically run on:
-- Push to `main` or `develop` branches
+Tests should be run automatically on:
 - Pull requests
-- See `.github/workflows/test.yml`
+- Commits to main branch
+- Before releases
 
-## Current Test Coverage
-
-- **Unit Tests**: Config, Chunker, Retriever
-- **Integration Tests**: Knowledge pipeline, Content collection
-
-## TODO: Tests to Add
-
-- [ ] Agent tests (Content Writer, Quality Evaluator, etc.)
-- [ ] Tool tests (PDF parser, Web scraper, Image search)
-- [ ] CLI tests
-- [ ] HTML generation tests
-- [ ] Quality evaluation tests
-- [ ] End-to-end lecture generation test
-
-## Troubleshooting
-
-### Tests Fail with Import Errors
-
-```bash
-# Make sure package is installed in editable mode
-pip install -e .
+Setup CI with GitHub Actions:
+```yaml
+# .github/workflows/test.yml
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-dev.txt
+      - run: pytest --cov=lecture_forge
 ```
 
-### Tests Fail with Missing Dependencies
+## Current Test Status
 
-```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
-```
+✅ **Completed** (Week 1 - Feb 2026):
+- Unit tests for chunker, config, retriever
+- Smoke tests for 3 critical agents (ContentCollector, ContentWriter, CurriculumDesigner)
+- Integration tests for knowledge pipeline
 
-### ChromaDB Errors
+⏳ **TODO**:
+- Remaining 7 agent tests
+- Tool tests (PDF parser, web scraper, image search)
+- Quality assurance system tests
+- Performance/benchmark tests
+- End-to-end pipeline tests
 
-```bash
-# Clear test databases
-rm -rf tests/temp_*
-```
-
-## Best Practices
-
-1. **Test Isolation**: Each test should be independent
-2. **Mock External APIs**: Use fixtures to mock OpenAI, Serper, etc.
-3. **Use Fixtures**: Reuse common test data via conftest.py
-4. **Clear Test Names**: Use descriptive test function names
-5. **Fast Tests**: Keep unit tests fast (< 1s each)
-6. **Mark Slow Tests**: Use `@pytest.mark.slow` for tests > 5s
-
-## Resources
-
-- [Pytest Documentation](https://docs.pytest.org/)
-- [Coverage.py Documentation](https://coverage.readthedocs.io/)
-- [Testing Best Practices](https://docs.python-guide.org/writing/tests/)
+**Current Coverage**: ~15% (estimated)
+**Target Coverage**: 80%+

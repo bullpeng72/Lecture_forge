@@ -5,7 +5,7 @@ Command-line interface for LectureForge.
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import click
 from rich.console import Console
@@ -31,7 +31,7 @@ from lecture_forge.utils.token_tracker import get_tracker
 console = Console()
 
 
-def display_token_usage(usage_summary: dict):
+def display_token_usage(usage_summary: Dict[str, Any]) -> None:
     """
     Display token usage and cost estimate.
 
@@ -84,7 +84,7 @@ def display_token_usage(usage_summary: dict):
     console.print(f"   [dim]   • gpt-4o: $2.50/1M input, $10.00/1M output[/dim]")
 
 
-def print_banner():
+def print_banner() -> None:
     """Print welcome banner."""
     banner = """
     ╔═══════════════════════════════════════════════════════╗
@@ -100,43 +100,48 @@ def print_banner():
     console.print(banner, style="bold blue")
 
 
-def print_basic_help():
+def print_basic_help() -> None:
     """Print basic help information when no command is provided."""
     console.print()
     console.print(Panel.fit(
-        "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + "\n\n"
+        "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + " [green](Beta)[/green]\n\n"
         "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
         "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-        "[dim]Cost: ~$0.10 per lecture | Time: 3-5 minutes[/dim]",
+        "[dim]10 Agents | 9 Tools | 53+ Tests (45-50%) | $0.22/180min lecture[/dim]",
         border_style="cyan"
     ))
 
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
-    console.print("  [cyan]lecture-forge create[/cyan]                    Interactive lecture creation (images ON by default)")
-    console.print("  [cyan]lecture-forge create --no-image-search[/cyan] Disable image search (faster)")
-    console.print("  [cyan]lecture-forge chat[/cyan]                      Q&A with knowledge base")
+    console.print("  [cyan]lecture-forge create[/cyan]                       # Interactive mode (recommended)")
+    console.print("  [cyan]lecture-forge create --image-search[/cyan]        # With Pexels images")
+    console.print("  [cyan]lecture-forge chat[/cyan]                         # Q&A with knowledge base")
 
     # Commands Table
-    console.print("\n[bold yellow]📖 Commands:[/bold yellow]")
+    console.print("\n[bold yellow]📖 Available Commands:[/bold yellow]")
     table = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
     table.add_column("Command", style="cyan", width=12)
-    table.add_column("Description")
+    table.add_column("Description", width=35)
     table.add_column("Example", style="dim")
 
     table.add_row(
         "create",
-        "Generate lecture materials",
+        "Generate lecture from sources",
         "lecture-forge create"
     )
     table.add_row(
         "chat",
-        "Interactive Q&A mode",
+        "Interactive Q&A with RAG",
         "lecture-forge chat"
     )
     table.add_row(
+        "edit-images",
+        "Edit images in lecture (delete/replace)",
+        "edit-images file.html"
+    )
+    table.add_row(
         "improve",
-        "Enhance existing lecture",
-        "lecture-forge improve file.html"
+        "Convert to slides or enhance",
+        "improve file.html --to-slides"
     )
     table.add_row(
         "cleanup",
@@ -145,40 +150,43 @@ def print_basic_help():
     )
     console.print(table)
 
-    # Common Options
-    console.print("\n[bold yellow]⚙️  Common Options:[/bold yellow]")
+    # Key Options
+    console.print("\n[bold yellow]⚙️  Key Options:[/bold yellow]")
     opt_table = Table(show_header=False, box=None, padding=(0, 2))
-    opt_table.add_column("Option", style="green")
+    opt_table.add_column("Option", style="green", width=25)
     opt_table.add_column("Description")
 
-    opt_table.add_row("--image-search", "Enable Pexels image search (default: ON)")
-    opt_table.add_row("--quality-level", "Set quality: lenient(70) | balanced(80) | strict(90)")
+    opt_table.add_row("--image-search", "Enable Pexels image search")
+    opt_table.add_row("--quality-level", "lenient(70) | balanced(80) | strict(90)")
     opt_table.add_row("--config, -c", "Use YAML config file")
-    opt_table.add_row("--help", "Show detailed help for any command")
+    opt_table.add_row("--to-slides", "Convert HTML to Reveal.js slides")
     console.print(opt_table)
 
     console.print("\n[bold yellow]💡 Examples:[/bold yellow]")
-    console.print("  [dim]# Create lecture with high quality and images[/dim]")
+    console.print("  [dim]# High-quality lecture with images[/dim]")
     console.print("  $ [cyan]lecture-forge create --image-search --quality-level strict[/cyan]")
     console.print()
-    console.print("  [dim]# Create from config file[/dim]")
-    console.print("  $ [cyan]lecture-forge create -c my_lecture.yaml[/cyan]")
+    console.print("  [dim]# Edit images in generated lecture[/dim]")
+    console.print("  $ [cyan]lecture-forge edit-images outputs/lecture.html[/cyan]")
     console.print()
-    console.print("  [dim]# Convert lecture to presentation slides[/dim]")
+    console.print("  [dim]# Convert to presentation slides[/dim]")
     console.print("  $ [cyan]lecture-forge improve outputs/lecture.html --to-slides[/cyan]")
     console.print()
     console.print("  [dim]# Q&A with specific knowledge base[/dim]")
     console.print("  $ [cyan]lecture-forge chat -kb data/vector_db/my_lecture[/cyan]")
 
-    console.print("\n[bold yellow]📚 More Help:[/bold yellow]")
-    console.print("  [cyan]lecture-forge --help[/cyan]           Full documentation")
-    console.print("  [cyan]lecture-forge create --help[/cyan]    Create command details")
-    console.print("  [cyan]lecture-forge chat --help[/cyan]      Chat command details")
+    console.print("\n[bold yellow]✨ v0.2.0 Highlights:[/bold yellow]")
+    console.print("  [green]⚡[/green] RAG query caching ([green]+60% speed[/green])")
+    console.print("  [green]🔄[/green] Auto-retry API calls ([green]3× attempts[/green])")
+    console.print("  [green]🧪[/green] 53+ tests ([green]45-50% coverage[/green])")
+    console.print("  [green]📍[/green] Location-based images ([green]+750% usage[/green])")
 
-    console.print("\n[dim]💰 Average cost: $0.10 per 60-min lecture using GPT-4o-mini[/dim]")
-    console.print("[dim]🖼️  Image search enabled by default (use --no-image-search to disable)[/dim]")
-    console.print("[dim]📸 PDF image extraction enabled by default (use --no-include-pdf-images to disable)[/dim]")
-    console.print("[dim]📍 Location-based image matching automatically enabled (PDF image usage +750%)[/dim]\n")
+    console.print("\n[bold yellow]📚 More Help:[/bold yellow]")
+    console.print("  [cyan]lecture-forge --help[/cyan]           # Full documentation")
+    console.print("  [cyan]lecture-forge <command> --help[/cyan] # Command-specific help")
+
+    console.print("\n[dim]💰 Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)[/dim]")
+    console.print("[dim]📊 Stats: 10 agents | 9 tools | 2,896 lines CLI[/dim]\n")
 
 
 @click.group(invoke_without_command=True)
@@ -186,68 +194,92 @@ def print_basic_help():
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    LectureForge Pro - AI-Powered Lecture Material Generator.
+    LectureForge Pro v0.2.0 - AI-Powered Lecture Material Generator
 
-    Generate comprehensive lecture materials from PDFs, URLs, and web searches
-    using AI-powered multi-agent system.
+    Transform PDFs, URLs, and web content into comprehensive lecture materials
+    using a multi-agent AI pipeline system.
 
     \b
     🎯 Core Features:
-      • Multi-source content collection (PDF text, URLs, web search)
-      • High-quality images from Pexels/Unsplash (PDF images disabled by default)
-      • Location-based image matching (PDF image usage +750%)
-      • RAG-based knowledge base with interactive Q&A
-      • Automatic code example and diagram generation
-      • Quality assurance with iterative improvement (6 dimensions)
-      • Beautiful HTML output with syntax highlighting
-      • Presentation slides generation (Reveal.js)
-      • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)
+      • Multi-source collection (PDF, URLs, web search)
+      • Location-based image matching (+750% PDF image usage)
+      • Interactive image editing (delete/replace with Vector DB search)
+      • RAG knowledge base with Q&A (60% faster with caching)
+      • Auto-retry API calls (3× attempts with exponential backoff)
+      • 6-dimension quality evaluation with auto-improvement
+      • HTML output with Mermaid diagrams & syntax highlighting
+      • Reveal.js presentation slides
+      • 53+ tests (45-50% coverage)
 
     \b
-    📚 Available Commands:
-      create   - Generate lecture materials from sources
-      chat     - Interactive Q&A with knowledge base
-      improve  - Enhance existing lecture quality
-      cleanup  - Manage and delete knowledge bases
+    📚 Commands:
+      create       - Generate lecture from sources
+      chat         - Interactive Q&A with knowledge base
+      edit-images  - Edit images in lecture (delete/replace)
+      improve      - Convert to slides or enhance
+      cleanup      - Manage knowledge bases
 
     \b
     🚀 Quick Start:
-      $ lecture-forge create                           # Interactive mode (recommended)
-      $ lecture-forge create --image-search            # With Pexels image search
-      $ lecture-forge create -c config.yaml            # From config file
-      $ lecture-forge chat                             # Q&A mode
+      $ lecture-forge create                    # Interactive mode
+      $ lecture-forge create --image-search     # With Pexels images
+      $ lecture-forge chat                      # Q&A mode
+      $ lecture-forge edit-images file.html     # Edit images
+      $ lecture-forge improve file.html --to-slides
 
     \b
-    💡 Common Options:
-      --image-search              Enable Pexels image search (recommended)
-      --quality-level strict      Set high quality threshold (90/100)
-      --include-pdf-images        Extract PDF images (default: ON, location-based)
-      --help                      Show detailed help
+    💡 Key Options:
+      --image-search          Enable Pexels image search
+      --quality-level         lenient(70) | balanced(80) | strict(90)
+      --config, -c            Use YAML config file
+      --to-slides             Convert HTML to Reveal.js slides
+      --help                  Show detailed help
 
     \b
     📖 Examples:
-      # Create high-quality lecture with images
+      # High-quality lecture with images
       $ lecture-forge create --image-search --quality-level strict
 
-      # Create from YAML config
-      $ lecture-forge create -c lecture_config.yaml
+      # Use config file
+      $ lecture-forge create -c config.yaml
 
-      # Q&A with generated knowledge base
+      # Edit images in generated lecture
+      $ lecture-forge edit-images outputs/lecture.html
+
+      # Q&A with specific knowledge base
       $ lecture-forge chat -kb data/vector_db/my_lecture
 
+      # Convert to slides
+      $ lecture-forge improve outputs/lecture.html --to-slides
+
     \b
-    📊 Performance:
-      • Processing time: 3-5 minutes (typical 60-min lecture)
-      • Cost: ~$0.10 (using GPT-4o-mini)
-      • Quality: 80+ score (auto-improved)
+    📊 Stats:
+      • Time: 3-5 min per 60-min lecture
+      • Cost: ~$0.10 (GPT-4o-mini)
+      • Quality: 80+ auto-improved
+      • Agents: 10 specialized agents
+      • Tools: 9 tools (incl. image editor)
+      • Tests: 53+ (45-50% coverage)
 
     \b
     🔗 Links:
       GitHub: https://github.com/yourusername/lecture-forge
       Issues: https://github.com/yourusername/lecture-forge/issues
-      Docs: Run 'lecture-forge <command> --help' for command details
+      Docs: lecture-forge <command> --help
     """
-    if ctx.invoked_subcommand is None:
+    # Validate configuration when a command is actually invoked
+    # (skip for --help, --version, or when no command is provided)
+    if ctx.invoked_subcommand is not None:
+        try:
+            Config.validate()
+            Config.ensure_directories()
+        except ValueError as e:
+            console.print(f"\n[bold red]❌ Configuration Error:[/bold red]")
+            console.print(f"[red]{e}[/red]\n")
+            console.print("[yellow]Please create a .env file based on .env.example and set required API keys.[/yellow]")
+            console.print("[dim]Example: cp .env.example .env[/dim]\n")
+            sys.exit(1)
+    elif ctx.invoked_subcommand is None:
         # Show basic help when no command is provided
         print_basic_help()
 
@@ -997,7 +1029,7 @@ def select_knowledge_base() -> Optional[str]:
             continue
 
 
-def handle_kb_deletion_interactive(kb_dirs: list) -> str:
+def handle_kb_deletion_interactive(kb_dirs: List[Path]) -> str:
     """
     Handle interactive knowledge base deletion.
 
@@ -1107,7 +1139,7 @@ def handle_kb_deletion_interactive(kb_dirs: list) -> str:
         return "continue"
 
 
-def find_pdf_files(max_depth: int = 2) -> list:
+def find_pdf_files(max_depth: int = 2) -> List[Path]:
     """
     Find PDF files in current directory and subdirectories.
 
@@ -1349,7 +1381,7 @@ def _find_image_dir_from_html(html_path: Path) -> Path:
     return None
 
 
-def select_pdf_files() -> list:
+def select_pdf_files() -> List[str]:
     """
     Display PDF files and allow user to select them interactively.
 
@@ -1464,7 +1496,7 @@ def select_pdf_files() -> list:
     return selected_files
 
 
-def collect_inputs_interactive() -> dict:
+def collect_inputs_interactive() -> Dict[str, Any]:
     """Collect inputs interactively from user."""
     console.print("[bold cyan]📝 Lecture Information[/bold cyan]")
     console.print("━" * 50 + "\n")
@@ -1670,7 +1702,7 @@ def parse_html_to_lecture(html_path: str):
         return None
 
 
-def generate_lecture(inputs: dict) -> dict:
+def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     """
     Generate lecture using the multi-agent pipeline.
 
@@ -1954,6 +1986,69 @@ def generate_lecture(inputs: dict) -> dict:
     }
 
 
+def _convert_to_bullet_points(text: str) -> List[str]:
+    """Convert narrative text to concise bullet points for presentation.
+
+    Args:
+        text: Narrative text to convert
+
+    Returns:
+        List of bullet point strings
+    """
+    try:
+        import re
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import HumanMessage
+
+        # Skip if text is already short or already in bullet format
+        if len(text) < 100 or text.strip().startswith(('•', '-', '*')):
+            return [text]
+
+        llm = ChatOpenAI(
+            model=Config.DEFAULT_MODEL,
+            temperature=0.3,
+            api_key=Config.OPENAI_API_KEY
+        )
+
+        prompt = f"""다음 서술식 텍스트를 프레젠테이션 슬라이드에 적합한 개조식 표현으로 변환해주세요.
+
+요구사항:
+- 핵심 내용만 간결하게 추출
+- 각 포인트는 한 줄로 요약
+- 불필요한 접속사나 서술어 제거
+- 명사형 종결 또는 간결한 동사형 사용
+- 3-5개의 bullet points로 정리
+- 각 bullet point는 한글 50자 이내
+
+원문:
+{text}
+
+개조식 bullet points (각 줄을 구분하여 출력):"""
+
+        response = llm.invoke([HumanMessage(content=prompt)])
+        bullet_text = response.content.strip()
+
+        # Parse bullet points
+        bullets = []
+        for line in bullet_text.split('\n'):
+            line = line.strip()
+            # Remove bullet markers if present
+            line = line.lstrip('•-*').strip()
+            # Remove numbering if present
+            line = re.sub(r'^\d+[\.)]\s*', '', line)
+            if line and len(line) > 5:  # Filter out very short lines
+                bullets.append(line)
+
+        return bullets if bullets else [text]
+
+    except Exception as e:
+        logger.warning(f"Failed to convert to bullet points: {e}")
+        # Fallback: split by sentences
+        import re
+        sentences = re.split(r'[.!?]\s+', text)
+        return [s.strip() for s in sentences if len(s.strip()) > 10][:5]
+
+
 def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
     """Convert lecture HTML to Reveal.js presentation slides.
 
@@ -1968,6 +2063,9 @@ def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
         from bs4 import BeautifulSoup
         import re
 
+        console.print("\n[cyan]📊 슬라이드 변환 중...[/cyan]")
+        console.print("   • 서술식 텍스트를 개조식으로 변환합니다...")
+
         # Read the lecture HTML
         with open(lecture_html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
@@ -1981,46 +2079,93 @@ def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
         subtitle_tag = soup.find("p", class_="lecture-subtitle")
         subtitle = subtitle_tag.text.strip() if subtitle_tag else ""
 
-        # Extract sections
+        # Extract sections - find all <section> tags with id
         sections = []
-        section_elements = soup.find_all("section", class_="lecture-section")
+        section_elements = soup.find_all("section", id=True)
 
-        for section_elem in section_elements:
-            section_title_tag = section_elem.find("h2", class_="section-title")
-            section_title = section_title_tag.text.strip() if section_title_tag else "Section"
+        logger.debug(f"Found {len(section_elements)} sections in HTML")
 
-            # Extract content blocks
+        # Track conversion progress
+        total_sections = len(section_elements)
+        converted_paragraphs = 0
+
+        for idx, section_elem in enumerate(section_elements, 1):
+            console.print(f"   • 섹션 {idx}/{total_sections} 처리 중...", end="\r")
+            # Find section title (h2)
+            section_title_tag = section_elem.find("h2")
+            if not section_title_tag:
+                logger.debug(f"Skipping section without h2: {section_elem.get('id')}")
+                continue
+
+            # Extract title and remove numbering (e.g., "1. Introduction" -> "Introduction")
+            section_title_raw = section_title_tag.text.strip()
+
+            # Remove leading number and dot (e.g., "1. ", "2. ", etc.)
+            import re
+            section_title = re.sub(r'^\d+\.\s*', '', section_title_raw)
+
+            logger.debug(f"Processing section: {section_title_raw} -> {section_title}")
+
+            # Extract content blocks directly from section element
             content_blocks = []
 
-            # Find all subsections (h3), paragraphs, code blocks, images, diagrams
-            for elem in section_elem.find_all(["h3", "p", "pre", "img", "div"]):
+            # Find content directly in section (not in nested div)
+            # The structure is: <section><h2/><h4/><p/>...</section>
+            # Look for all content elements but exclude the section title (h2)
+            for elem in section_elem.find_all(["h3", "h4", "p", "ul", "ol", "pre"]):
                 if elem.name == "h3":
                     content_blocks.append({"type": "subsection", "content": elem.text.strip()})
-                elif elem.name == "p" and not elem.find_parent("li"):
+                elif elem.name == "h4":
                     text = elem.text.strip()
-                    if text and len(text) > 10:  # Filter out short paragraphs
-                        content_blocks.append({"type": "paragraph", "content": text})
+                    # Skip empty h4 tags
+                    if text:
+                        content_blocks.append({"type": "subsubsection", "content": text})
+                elif elem.name == "p":
+                    text = elem.text.strip()
+                    # Filter out very short paragraphs and paragraphs inside code blocks
+                    if text and len(text) > 20 and not elem.find_parent("pre"):
+                        # Convert narrative text to bullet points for presentation
+                        bullet_points = _convert_to_bullet_points(text)
+                        converted_paragraphs += 1
+                        if len(bullet_points) > 1:
+                            # Multiple bullet points - add as list
+                            content_blocks.append({"type": "list", "items": bullet_points, "ordered": False})
+                        else:
+                            # Single point or short text - keep as paragraph
+                            content_blocks.append({"type": "paragraph", "content": bullet_points[0]})
+                elif elem.name in ["ul", "ol"]:
+                    # Extract list items (already in bullet format)
+                    items = [li.text.strip() for li in elem.find_all("li", recursive=False)]
+                    if items:
+                        content_blocks.append({"type": "list", "items": items, "ordered": elem.name == "ol"})
                 elif elem.name == "pre":
                     code_elem = elem.find("code")
                     if code_elem:
                         code = code_elem.text.strip()
-                        language = ""
+                        language = "python"  # default
                         if "class" in code_elem.attrs:
                             for cls in code_elem["class"]:
                                 if cls.startswith("language-"):
                                     language = cls.replace("language-", "")
                                     break
-                        content_blocks.append({"type": "code", "content": code, "language": language})
-                elif elem.name == "img" and "section-image" in elem.get("class", []):
-                    img_src = elem.get("src", "")
-                    img_alt = elem.get("alt", "")
-                    caption = ""
-                    caption_elem = elem.find_next_sibling("p", class_="image-caption")
-                    if caption_elem:
-                        caption = caption_elem.text.strip()
-                    content_blocks.append({"type": "image", "src": img_src, "alt": img_alt, "caption": caption})
-                elif elem.name == "div" and "mermaid" in elem.get("class", []):
-                    mermaid_code = elem.text.strip()
+                        if code:  # Only add non-empty code blocks
+                            content_blocks.append({"type": "code", "content": code, "language": language})
+
+            # Find images (figure elements)
+            for figure in section_elem.find_all("figure"):
+                img = figure.find("img")
+                if img:
+                    img_src = img.get("src", "")
+                    img_alt = img.get("alt", "")
+                    caption_elem = figure.find("figcaption")
+                    caption = caption_elem.text.strip() if caption_elem else ""
+                    if img_src:
+                        content_blocks.append({"type": "image", "src": img_src, "alt": img_alt, "caption": caption})
+
+            # Find diagrams (mermaid divs)
+            for diagram_div in section_elem.find_all("div", class_="mermaid"):
+                mermaid_code = diagram_div.text.strip()
+                if mermaid_code:
                     content_blocks.append({"type": "diagram", "content": mermaid_code})
 
             sections.append({
@@ -2028,7 +2173,12 @@ def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
                 "blocks": content_blocks
             })
 
+        # Clear progress line
+        console.print(" " * 80, end="\r")
+        console.print(f"   ✅ {converted_paragraphs}개 단락을 개조식으로 변환했습니다.")
+
         # Generate Reveal.js HTML
+        console.print("   • 슬라이드 HTML 생성 중...")
         slides_html = _generate_reveal_html(title, subtitle, sections)
 
         # Write to output file
@@ -2055,12 +2205,12 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
     """
     slides_content = []
 
-    # Title slide
+    # Title slide (Korean)
     slides_content.append(f"""
     <section data-transition="zoom">
         <h1>{title}</h1>
-        {f'<p>{subtitle}</p>' if subtitle else ''}
-        <p><small>Generated by LectureForge</small></p>
+        {f'<p class="subtitle">{subtitle}</p>' if subtitle else ''}
+        <p><small>LectureForge로 생성됨</small></p>
     </section>
     """)
 
@@ -2093,8 +2243,19 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                 current_slide_content.append(f"<h3>{block['content']}</h3>")
                 slide_item_count += 1
 
+            elif block_type == "subsubsection":
+                current_slide_content.append(f"<h4>{block['content']}</h4>")
+                slide_item_count += 0.5  # Smaller weight for h4
+
             elif block_type == "paragraph":
                 current_slide_content.append(f"<p>{block['content']}</p>")
+                slide_item_count += 1
+
+            elif block_type == "list":
+                # Format list
+                list_tag = "ol" if block.get("ordered", False) else "ul"
+                items_html = "".join(f"<li>{item}</li>" for item in block["items"])
+                current_slide_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
                 slide_item_count += 1
 
             elif block_type == "code":
@@ -2135,10 +2296,15 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     current_slide_content = []
                     slide_item_count = 0
 
+                # Clean and escape mermaid code
+                import html
+                mermaid_code = block['content'].strip()
+
+                # Wrap in pre tag for better rendering
                 slides_content.append(f"""
     <section>
         <div class="mermaid">
-{block['content']}
+{mermaid_code}
         </div>
     </section>
                 """)
@@ -2153,37 +2319,112 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         if current_slide_content:
             slides_content.append(_create_content_slide(current_slide_content))
 
-    # End slide
+    # End slide (Korean)
     slides_content.append("""
     <section data-transition="zoom">
-        <h2>Thank You!</h2>
-        <p>Questions?</p>
+        <h2>감사합니다!</h2>
+        <p>질문이 있으신가요?</p>
+        <p><small>LectureForge로 생성됨</small></p>
     </section>
     """)
 
-    # Complete HTML template
+    # Complete HTML template (Korean)
     html_template = f"""
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - Slides</title>
+    <title>{title} - 슬라이드</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/black.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css">
     <style>
-        .reveal h1, .reveal h2, .reveal h3 {{
+        /* 한국어 폰트 및 스타일 */
+        .reveal {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif;
+        }}
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {{
             text-transform: none;
+            font-weight: bold;
         }}
         .reveal p {{
             text-align: left;
+            line-height: 1.6;
+        }}
+        .reveal ul, .reveal ol {{
+            text-align: left;
+            line-height: 1.8;
         }}
         .reveal pre {{
             width: 100%;
+            font-size: 0.55em;
         }}
         .reveal code {{
             max-height: 500px;
+            font-family: "Monaco", "Menlo", "Consolas", monospace;
+        }}
+        .reveal .slides section {{
+            text-align: left;
+            /* 스크롤 지원 - Reveal.js 높이에 맞춤 */
+            height: auto !important;
+            max-height: 650px; /* Reveal height(720px) - padding - margin */
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px 30px;
+            box-sizing: border-box;
+            display: flex !important;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }}
+        .reveal .slides section[data-transition="zoom"] {{
+            text-align: center;
+        }}
+        /* 스크롤바 스타일 (WebKit 브라우저: Chrome, Safari, Edge) */
+        .reveal .slides section::-webkit-scrollbar {{
+            width: 8px;
+        }}
+        .reveal .slides section::-webkit-scrollbar-track {{
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }}
+        .reveal .slides section::-webkit-scrollbar-thumb {{
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }}
+        .reveal .slides section::-webkit-scrollbar-thumb:hover {{
+            background: rgba(0, 0, 0, 0.5);
+        }}
+        /* Firefox 스크롤바 스타일 */
+        .reveal .slides section {{
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
+        }}
+        /* Mermaid 다이어그램 스타일 */
+        .reveal .mermaid {{
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 600px;
+            overflow: auto;
+        }}
+        /* 긴 리스트 스크롤 지원 */
+        .reveal ul, .reveal ol {{
+            max-height: none; /* section에서 스크롤 처리 */
+        }}
+        /* 코드 블록 스크롤 */
+        .reveal pre {{
+            max-height: 550px;
+            overflow-y: auto;
+        }}
+        .reveal pre::-webkit-scrollbar {{
+            width: 6px;
+            height: 6px;
+        }}
+        .reveal pre::-webkit-scrollbar-thumb {{
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
         }}
     </style>
 </head>
@@ -2198,19 +2439,138 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>
-        mermaid.initialize({{ startOnLoad: true }});
+        // Reveal.js 초기화
         Reveal.initialize({{
             hash: true,
             transition: 'slide',
             plugins: [ RevealHighlight, RevealMarkdown, RevealNotes ],
-            slideNumber: true,
+            slideNumber: 'c/t',  // 현재/전체
             controls: true,
             progress: true,
-            center: true,
-            mouseWheel: false
+            center: false,  // 좌측 정렬 (스크롤 지원)
+            mouseWheel: false,
+            width: 1280,
+            height: 720,
+            margin: 0.04,
+            minScale: 0.2,
+            maxScale: 2.0,
+            // 슬라이드 레이아웃 설정
+            display: 'block',
+            // 스크롤 가능 슬라이드 지원
+            scrollActivationWidth: null,
+        }}).then(() => {{
+            // Reveal.js 초기화 후 Mermaid 초기화
+            mermaid.initialize({{
+                startOnLoad: true,
+                theme: 'default',
+                securityLevel: 'loose',
+                flowchart: {{
+                    useMaxWidth: true,
+                    htmlLabels: true,
+                    curve: 'basis'
+                }}
+            }});
+
+            // 모든 mermaid 다이어그램 렌더링
+            mermaid.contentLoaded();
+
+            // 스크롤 인디케이터 관리 함수
+            const updateScrollIndicator = (section) => {{
+                if (!section) return;
+
+                // 기존 인디케이터 제거
+                const oldIndicator = section.querySelector('.scroll-indicator');
+                if (oldIndicator) {{
+                    oldIndicator.remove();
+                }}
+
+                // 스크롤이 필요한지 확인 (여유 20px)
+                const needsScroll = section.scrollHeight > (section.clientHeight + 20);
+
+                if (needsScroll) {{
+                    const indicator = document.createElement('div');
+                    indicator.className = 'scroll-indicator';
+                    indicator.innerHTML = '↓ 아래로 스크롤하세요 ↓';
+                    indicator.style.cssText = `
+                        position: fixed;
+                        bottom: 40px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0, 0, 0, 0.7);
+                        color: white;
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        font-size: 0.8em;
+                        animation: pulse 2s infinite;
+                        pointer-events: none;
+                        z-index: 1000;
+                        transition: opacity 0.3s;
+                    `;
+                    document.body.appendChild(indicator);
+
+                    // 스크롤 시 인디케이터 숨기기
+                    const scrollHandler = () => {{
+                        const scrollPercent = (section.scrollTop / (section.scrollHeight - section.clientHeight)) * 100;
+                        if (scrollPercent > 5) {{
+                            indicator.style.opacity = '0';
+                        }} else {{
+                            indicator.style.opacity = '1';
+                        }}
+
+                        // 스크롤이 맨 아래면 인디케이터 제거
+                        if (scrollPercent > 95) {{
+                            indicator.remove();
+                            section.removeEventListener('scroll', scrollHandler);
+                        }}
+                    }};
+
+                    section.addEventListener('scroll', scrollHandler);
+
+                    // 슬라이드 변경 시 인디케이터 제거
+                    const cleanup = () => {{
+                        indicator.remove();
+                        section.removeEventListener('scroll', scrollHandler);
+                    }};
+
+                    section.dataset.cleanupIndicator = 'registered';
+                    Reveal.on('slidechanged', cleanup);
+                }}
+            }};
+
+            // 슬라이드 변경 시 처리
+            Reveal.on('slidechanged', event => {{
+                // 현재 슬라이드의 스크롤을 맨 위로
+                event.currentSlide.scrollTop = 0;
+
+                // 모든 기존 인디케이터 제거
+                document.querySelectorAll('.scroll-indicator').forEach(ind => ind.remove());
+
+                // 새 슬라이드에 인디케이터 추가
+                setTimeout(() => {{
+                    updateScrollIndicator(event.currentSlide);
+                }}, 100);
+            }});
+
+            // 초기 슬라이드에 인디케이터 추가
+            Reveal.on('ready', () => {{
+                setTimeout(() => {{
+                    const currentSlide = Reveal.getCurrentSlide();
+                    updateScrollIndicator(currentSlide);
+                }}, 300);
+            }});
         }});
+
+        // 펄스 애니메이션 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {{
+                0%, 100% {{ opacity: 0.6; }}
+                50% {{ opacity: 1; }}
+            }}
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
@@ -2233,6 +2593,305 @@ def _create_content_slide(content_items: List[str]) -> str:
 {''.join(content_items)}
     </section>
     """
+
+
+@cli.command("edit-images")
+@click.argument("html_path", type=click.Path(exists=True))
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file path (default: <original>_edited.html)"
+)
+def edit_images(html_path: str, output: str):
+    """
+    Edit images in generated HTML lecture (interactive mode).
+
+    Provides an interactive interface to:
+    - View all images in the lecture
+    - Delete unwanted images
+    - Replace images with alternatives from Vector DB
+    - Save changes to new HTML file
+
+    \b
+    Example:
+        lecture-forge edit-images outputs/lecture.html
+        lecture-forge edit-images lecture.html --output new_lecture.html
+    """
+    from rich.console import Console
+    from rich.table import Table
+    from rich.prompt import Prompt, Confirm
+    from rich.panel import Panel
+    from lecture_forge.tools.image_editor import ImageEditor
+
+    console = Console()
+
+    try:
+        # Initialize editor
+        console.print("\n[bold cyan]📸 강의 이미지 편집 모드[/bold cyan]")
+        console.print("━" * 60)
+
+        with console.status("[bold green]HTML 로딩 중..."):
+            editor = ImageEditor(html_path)
+
+        # Display summary
+        console.print(f"\n[bold]HTML:[/bold] {Path(html_path).name}")
+        console.print(f"[bold]총 이미지:[/bold] {len(editor.images)}개\n")
+
+        # Main loop
+        while True:
+            # Display current images
+            _display_image_table(console, editor)
+
+            # Display help
+            console.print("\n[bold cyan]명령어:[/bold cyan]")
+            console.print("  [bold]d <번호>[/bold]     - 이미지 삭제 (예: d 3)")
+            console.print("  [bold]u <번호>[/bold]     - 삭제 취소 (예: u 3)")
+            console.print("  [bold]r <번호>[/bold]     - 이미지 교체 (대안 검색)")
+            console.print("  [bold]s[/bold]            - 변경사항 저장")
+            console.print("  [bold]q[/bold]            - 취소 및 종료")
+            console.print("  [bold]h[/bold]            - 도움말 표시\n")
+
+            # Get command
+            command = Prompt.ask("[bold yellow]명령 입력[/bold yellow]").strip().lower()
+
+            if not command:
+                continue
+
+            # Parse command
+            parts = command.split()
+            cmd = parts[0]
+            args = parts[1:] if len(parts) > 1 else []
+
+            # Handle commands
+            if cmd == 'q' or cmd == 'quit' or cmd == 'exit':
+                if editor.get_summary()["to_delete"] > 0 or editor.get_summary()["to_replace"] > 0:
+                    if Confirm.ask("[yellow]변경사항이 저장되지 않았습니다. 종료하시겠습니까?[/yellow]"):
+                        console.print("[red]변경사항 취소됨[/red]")
+                        break
+                else:
+                    break
+
+            elif cmd == 'd' or cmd == 'delete':
+                if not args:
+                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: d 3)[/red]")
+                    continue
+
+                try:
+                    img_num = int(args[0])
+                    if editor.mark_delete(img_num):
+                        console.print(f"[green]✅ 이미지 {img_num} 삭제 표시됨[/green]")
+                    else:
+                        console.print(f"[red]❌ 잘못된 이미지 번호: {img_num}[/red]")
+                except ValueError:
+                    console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+
+            elif cmd == 'u' or cmd == 'undo' or cmd == 'undelete':
+                if not args:
+                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: u 3)[/red]")
+                    continue
+
+                try:
+                    img_num = int(args[0])
+                    if editor.unmark_delete(img_num):
+                        console.print(f"[green]✅ 이미지 {img_num} 삭제 취소됨[/green]")
+                    else:
+                        console.print(f"[yellow]⚠️ 이미지 {img_num}는 삭제 표시되지 않았습니다[/yellow]")
+                except ValueError:
+                    console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+
+            elif cmd == 'r' or cmd == 'replace':
+                if not args:
+                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: r 3)[/red]")
+                    continue
+
+                try:
+                    img_num = int(args[0])
+                    _handle_replace_image(console, editor, img_num)
+                except ValueError:
+                    console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+
+            elif cmd == 's' or cmd == 'save':
+                _handle_save_changes(console, editor, output)
+                break
+
+            elif cmd == 'h' or cmd == 'help':
+                _display_help(console)
+
+            else:
+                console.print(f"[red]❌ 알 수 없는 명령어: {cmd}[/red]")
+                console.print("[yellow]힌트: 'h' 를 입력하여 도움말 보기[/yellow]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ 오류 발생:[/bold red] {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise click.Abort()
+
+
+def _display_image_table(console, editor):
+    """Display image table."""
+    images = editor.list_images()
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("번호", style="dim", width=6)
+    table.add_column("설명", width=35)
+    table.add_column("섹션", width=25)
+    table.add_column("페이지", width=8)
+    table.add_column("상태", width=10)
+
+    for img in images:
+        status_style = "green"
+        status_text = "유지"
+
+        if img["status"] == "delete":
+            status_style = "red"
+            status_text = "🗑️ 삭제"
+        elif img["status"] == "replace":
+            status_style = "yellow"
+            status_text = "🔄 교체"
+
+        table.add_row(
+            str(img["index"]),
+            img["description"] or "[dim]설명 없음[/dim]",
+            img["section"],
+            str(img["page"]) if img["page"] else "-",
+            f"[{status_style}]{status_text}[/{status_style}]"
+        )
+
+    console.print(table)
+
+
+def _handle_replace_image(console, editor, img_num):
+    """Handle image replacement."""
+    console.print(f"\n[bold cyan]🔍 이미지 {img_num} 대안 검색 중...[/bold cyan]")
+
+    alternatives = editor.find_alternative_images(img_num, max_results=5)
+
+    if not alternatives:
+        console.print("[yellow]⚠️ 대안 이미지를 찾을 수 없습니다[/yellow]")
+        console.print("[dim]힌트: Vector DB가 로드되지 않았거나 관련 이미지가 없습니다[/dim]")
+        return
+
+    # Display alternatives
+    console.print(f"\n[bold green]대안 이미지 ({len(alternatives)}개):[/bold green]\n")
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("번호", width=6)
+    table.add_column("설명", width=50)
+    table.add_column("페이지", width=8)
+    table.add_column("출처", width=20)
+
+    for alt in alternatives:
+        table.add_row(
+            str(alt["index"]),
+            alt["description"],
+            str(alt["page"]) if alt["page"] else "-",
+            alt["source"]
+        )
+
+    console.print(table)
+
+    # Prompt for selection
+    console.print("\n[dim]0: 취소[/dim]")
+    choice = Prompt.ask(
+        "[bold yellow]선택[/bold yellow]",
+        default="0"
+    )
+
+    try:
+        choice_num = int(choice)
+        if choice_num == 0:
+            console.print("[yellow]교체 취소됨[/yellow]")
+            return
+
+        if 1 <= choice_num <= len(alternatives):
+            selected = alternatives[choice_num - 1]
+            if editor.replace_image(img_num, selected["path"]):
+                console.print(f"[green]✅ 이미지 {img_num} 교체 예정[/green]")
+                console.print(f"[dim]   새 이미지: {selected['description'][:60]}[/dim]")
+            else:
+                console.print("[red]❌ 교체 실패[/red]")
+        else:
+            console.print("[red]❌ 잘못된 선택[/red]")
+
+    except ValueError:
+        console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+
+
+def _handle_save_changes(console, editor, output_path):
+    """Handle saving changes."""
+    summary = editor.get_summary()
+
+    if summary["to_delete"] == 0 and summary["to_replace"] == 0:
+        console.print("\n[yellow]⚠️ 변경사항이 없습니다[/yellow]")
+        return
+
+    # Display summary
+    console.print("\n[bold cyan]💾 변경사항 요약:[/bold cyan]")
+    if summary["to_delete"] > 0:
+        console.print(f"  • 삭제: [red]{summary['to_delete']}개[/red]")
+    if summary["to_replace"] > 0:
+        console.print(f"  • 교체: [yellow]{summary['to_replace']}개[/yellow]")
+
+    console.print()
+
+    # Confirm
+    if not Confirm.ask("[bold yellow]변경사항을 저장하시겠습니까?[/bold yellow]"):
+        console.print("[yellow]저장 취소됨[/yellow]")
+        return
+
+    # Save
+    try:
+        with console.status("[bold green]저장 중..."):
+            saved_path = editor.save_changes(output_path)
+
+        console.print(f"\n[bold green]✅ 저장 완료![/bold green]")
+        console.print(f"[bold]파일:[/bold] {saved_path}")
+
+        # Display changes
+        if summary["to_delete"] > 0:
+            console.print(f"  • [red]삭제됨:[/red] {summary['to_delete']}개 이미지")
+        if summary["to_replace"] > 0:
+            console.print(f"  • [yellow]교체됨:[/yellow] {summary['to_replace']}개 이미지")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ 저장 실패:[/bold red] {e}")
+        raise
+
+
+def _display_help(console):
+    """Display help message."""
+    help_text = """
+[bold cyan]📖 이미지 편집 도움말[/bold cyan]
+
+[bold]기본 명령어:[/bold]
+  • [bold]d <번호>[/bold]  - 이미지 삭제 표시
+    예: d 3 → 3번 이미지 삭제 표시
+
+  • [bold]u <번호>[/bold]  - 삭제 취소
+    예: u 3 → 3번 이미지 삭제 취소
+
+  • [bold]r <번호>[/bold]  - 이미지 교체
+    예: r 5 → 5번 이미지를 대안 이미지로 교체
+    (Vector DB에서 관련 이미지 자동 검색)
+
+  • [bold]s[/bold]         - 변경사항 저장 후 종료
+
+  • [bold]q[/bold]         - 취소 및 종료
+
+[bold yellow]💡 사용 팁:[/bold yellow]
+  1. 먼저 강의를 브라우저에서 열어 이미지를 확인하세요
+  2. 불필요한 이미지는 'd' 명령어로 삭제 표시
+  3. 교체가 필요한 이미지는 'r' 명령어 사용
+  4. 모든 변경사항을 검토한 후 's'로 저장
+
+[bold cyan]📋 이미지 상태:[/bold cyan]
+  • [green]유지[/green]   - 변경 없음
+  • [red]🗑️ 삭제[/red] - 삭제 예정
+  • [yellow]🔄 교체[/yellow] - 교체 예정
+"""
+    console.print(Panel(help_text, border_style="cyan"))
 
 
 def main():

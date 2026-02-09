@@ -5,6 +5,7 @@ Diagram Generator Agent - Generates Mermaid diagrams.
 from typing import List, Optional
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.models.lecture import MermaidDiagram, SectionContent
 from lecture_forge.utils import logger
 from lecture_forge.utils.mermaid_validator import MermaidValidator, clean_mermaid_code
@@ -75,8 +76,13 @@ class DiagramGeneratorAgent(BaseAgent):
                     # Evaluate diagram quality
                     quality_score = self._evaluate_diagram_quality(mermaid_code)
 
-                    if quality_score["score"] >= 60 or attempt == max_retries - 1:
-                        logger.info(f"  ✅ Valid {diagram_type} diagram generated (attempt {attempt + 1}, quality: {quality_score['score']}/100)")
+                    # Quality threshold from config (.env)
+                    min_quality = Config.DIAGRAM_QUALITY_THRESHOLD
+                    if quality_score["score"] >= min_quality or attempt == max_retries - 1:
+                        if quality_score["score"] >= min_quality:
+                            logger.info(f"  ✅ Valid {diagram_type} diagram generated (attempt {attempt + 1}, quality: {quality_score['score']}/100)")
+                        else:
+                            logger.warning(f"  ⚠️ Accepting diagram on final attempt (quality: {quality_score['score']}/{min_quality})")
                         if quality_score["feedback"]:
                             logger.debug(f"     Quality notes: {', '.join(quality_score['feedback'][:2])}")
                         return MermaidDiagram(
@@ -86,7 +92,7 @@ class DiagramGeneratorAgent(BaseAgent):
                             diagram_type=diagram_type,
                         )
                     else:
-                        logger.warning(f"  ⚠️ Attempt {attempt + 1}: Quality too low ({quality_score['score']}/100)")
+                        logger.warning(f"  ⚠️ Attempt {attempt + 1}: Quality too low ({quality_score['score']}/{min_quality})")
                         logger.warning(f"     Issues: {', '.join(quality_score['feedback'])}")
                         # Continue to retry for better quality
                 else:
@@ -96,9 +102,10 @@ class DiagramGeneratorAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"  ❌ Attempt {attempt + 1} failed: {e}")
 
-        # All retries failed - use fallback
-        logger.warning(f"  🔄 Using fallback diagram after {max_retries} failed attempts")
-        return self._create_fallback_diagram(section)
+        # All retries failed - skip diagram instead of using low-quality fallback
+        logger.warning(f"  ⚠️ All {max_retries} attempts failed - skipping diagram for this section")
+        logger.info(f"     Tip: Diagrams work best for sections with clear processes or architectures")
+        return None  # Skip diagram instead of generating meaningless fallback
 
     def _call_llm_for_diagram(self, section: SectionContent, content_preview: str, attempt: int) -> str:
         """Call LLM to generate diagram with improved prompt - FLOWCHART ONLY."""
@@ -119,7 +126,7 @@ class DiagramGeneratorAgent(BaseAgent):
 - Follow the template EXACTLY
 """
 
-        prompt = f"""Create a COMPREHENSIVE FLOWCHART showing key concepts, processes, and their relationships.
+        prompt = f"""Create a DETAILED FLOWCHART using SPECIFIC TERMS from the content.
 
 **Section:** {section.title}
 **Type:** {section_type}
@@ -127,18 +134,29 @@ class DiagramGeneratorAgent(BaseAgent):
 **Content (first 3000 chars):**
 {content_preview}
 
+**🎯 YOUR TASK: Extract CONCRETE concepts from the content above and show their relationships.**
+
+DO NOT use vague labels like:
+❌ "개념 설명", "주요 특징", "작동 원리" (too abstract)
+❌ "대규모 언어 모델", "자연어 이해 향상" (disconnected concepts)
+
+INSTEAD, use SPECIFIC technical terms from the content:
+✅ "트랜스포머 아키텍처", "셀프 어텐션 계층", "인코더 블록"
+✅ "토큰화", "임베딩 생성", "어텐션 계산", "출력 레이어"
+✅ "데이터 수집", "전처리 파이프라인", "모델 훈련", "성능 평가"
+
 **🔒 MANDATORY RULES:**
 
 1. **Format**: MUST start with 'flowchart TD' or 'flowchart LR'
 2. **Node IDs**: Single uppercase letters (A, B, C, D, E, F, G, H, I, J)
-3. **Labels**: [간단한 한글 텍스트] - 2 to 8 words
-4. **Connections**: A --> B or A -->|label| B
-5. **Min nodes**: 6-8 (avoid simple linear flows)
+3. **Labels**: [구체적인 기술 용어] - Use ACTUAL terms from content
+4. **Connections**: A --> B or A -->|설명| B
+5. **Min nodes**: 6-8 (show the actual process/structure)
 6. **Max nodes**: 10
 7. **NO mindmaps, NO graphs** - ONLY flowcharts
-8. **Include decision points** (diamond shapes) where applicable: A{{조건?}}
-9. **Show feedback loops** for iterative processes when relevant
-10. **Use subprocesses** for complex steps when appropriate
+8. **Include decision points** where the content describes choices: A{{조건?}}
+9. **Show feedback loops** if the content describes iteration
+10. **CRITICAL**: Read the content carefully and extract REAL concepts
 
 **✅ SAFE LABEL FORMAT (USE THESE):**
 ```
@@ -189,19 +207,29 @@ ONLY use plain Korean text and spaces. NO special characters.
 - Create meaningful connections that show actual relationships
 - Avoid simple A→B→C→D linear flows
 
-**Example of GOOD complexity (aim for this level):**
+**❌ BAD Example (too abstract - DO NOT do this):**
 ```
 flowchart TD
-    A[시작] --> B{{데이터 품질 검증}}
-    B -->|통과| C[전처리 단계]
-    B -->|실패| H[오류 처리]
-    C --> D[모델 훈련]
-    D --> E{{성능 평가}}
-    E -->|목표 달성| F[배포 준비]
-    E -->|미달| G[하이퍼파라미터 조정]
-    G --> D
-    H --> A
+    A[대규모 언어 모델 LLM]
+    B[자연어 이해 향상]
+    C[다양한 응용 분야]
+    A --> B --> C
 ```
+Problem: Generic concepts, no real information, linear flow
+
+**✅ GOOD Example (specific and informative):**
+```
+flowchart TD
+    A[입력 텍스트 토큰화] --> B[토큰 임베딩 생성]
+    B --> C[위치 인코딩 추가]
+    C --> D[셀프 어텐션 레이어]
+    D --> E[피드포워드 네트워크]
+    E --> F{{추가 레이어 필요?}}
+    F -->|Yes| D
+    F -->|No| G[출력 레이어]
+    G --> H[확률 분포 생성]
+```
+Why good: Uses specific technical terms, shows actual process, has decision point and loop
 
 {strictness_note}
 

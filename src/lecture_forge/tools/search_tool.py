@@ -5,6 +5,11 @@ Search Tool - Performs web searches using Serper API.
 from typing import Dict, List
 
 import requests
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
@@ -21,9 +26,16 @@ class SerperSearchTool:
         self.api_key = Config.SERPER_API_KEY
         self.api_url = "https://google.serper.dev/search"
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Search API call failed (attempt {retry_state.attempt_number}/3), retrying..."
+        ),
+    )
     def run(self, query: str, num_results: int = 10) -> Dict:
         """
-        Search the web using Serper API.
+        Search the web using Serper API with automatic retry on failures.
 
         Args:
             query: Search query

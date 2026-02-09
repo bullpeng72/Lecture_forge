@@ -4,6 +4,7 @@ Configuration management for LectureForge.
 Loads settings from environment variables (.env file).
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -12,6 +13,9 @@ from dotenv import load_dotenv
 
 # Load .env file
 load_dotenv()
+
+# Module-level logger (uses standard logging, not rich)
+logger = logging.getLogger("lecture_forge.config")
 
 
 class Config:
@@ -40,6 +44,21 @@ class Config:
     IMAGE_FORMAT: str = os.getenv("IMAGE_FORMAT", "webp")
     IMAGE_MAX_WIDTH: int = int(os.getenv("IMAGE_MAX_WIDTH", "1200"))
 
+    # ===== Image Extraction & Quality =====
+    # Minimum dimensions for extracted images (filters out icons/logos)
+    IMAGE_MIN_WIDTH: int = int(os.getenv("IMAGE_MIN_WIDTH", "200"))
+    IMAGE_MIN_HEIGHT: int = int(os.getenv("IMAGE_MIN_HEIGHT", "200"))
+
+    # Quality thresholds (0.0 ~ 1.0)
+    # Extraction phase: Conservative filtering (reject obvious junk only)
+    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(
+        os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.25")
+    )
+    # Selection phase: Strict filtering (select best images for lecture)
+    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(
+        os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.30")
+    )
+
     # ===== Vector DB =====
     VECTOR_DB_PATH: Path = Path(os.getenv("VECTOR_DB_PATH", str(DATA_DIR / "vector_db")))
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
@@ -48,6 +67,9 @@ class Config:
     # ===== Quality Assurance =====
     QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
     MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
+
+    # Diagram quality threshold (0-100)
+    DIAGRAM_QUALITY_THRESHOLD: int = int(os.getenv("DIAGRAM_QUALITY_THRESHOLD", "70"))
 
     # ===== Logging =====
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -85,14 +107,14 @@ class Config:
 
         # Warnings for optional keys
         if not cls.UNSPLASH_ACCESS_KEY:
-            print("⚠️  UNSPLASH_ACCESS_KEY not set. Image search will be limited.")
+            logger.warning("UNSPLASH_ACCESS_KEY not set. Image search will be limited.")
         elif len(cls.UNSPLASH_ACCESS_KEY) < 10:
-            print("⚠️  UNSPLASH_ACCESS_KEY appears invalid (too short).")
+            logger.warning("UNSPLASH_ACCESS_KEY appears invalid (too short).")
 
         if not cls.PEXELS_API_KEY:
-            print("⚠️  PEXELS_API_KEY not set. Image search will be limited.")
+            logger.warning("PEXELS_API_KEY not set. Image search will be limited.")
         elif len(cls.PEXELS_API_KEY) < 10:
-            print("⚠️  PEXELS_API_KEY appears invalid (too short).")
+            logger.warning("PEXELS_API_KEY appears invalid (too short).")
 
     @classmethod
     def ensure_directories(cls) -> None:
@@ -102,13 +124,3 @@ class Config:
         cls.VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
         (cls.DATA_DIR / "images").mkdir(parents=True, exist_ok=True)
         (cls.DATA_DIR / "cache").mkdir(parents=True, exist_ok=True)
-
-
-# Validate configuration on import
-try:
-    Config.validate()
-    Config.ensure_directories()
-except ValueError as e:
-    print(f"\n❌ Configuration Error:\n{e}\n")
-    print("Please create a .env file based on .env.example and set required API keys.")
-    exit(1)

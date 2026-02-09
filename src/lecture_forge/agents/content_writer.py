@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.models.lecture import CodeBlock, ImageReference, SectionContent
@@ -896,9 +897,9 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                     # Quality check (Vision AI free)
                     quality_score = self._evaluate_image_quality_simple(full_img)
 
-                    if quality_score < 0.3:  # Minimum quality threshold
+                    if quality_score < Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
                         logger.debug(f"           ⏭️  Skip {full_img.get('id', 'unknown')} "
-                                   f"(quality: {quality_score:.2f})")
+                                   f"(quality: {quality_score:.2f}, threshold: {Config.IMAGE_SELECTION_QUALITY_THRESHOLD})")
                         continue
 
                     # Calculate final score
@@ -1043,12 +1044,15 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
     def _evaluate_image_quality_simple(self, image: dict) -> float:
         """
-        Simple image quality evaluation (Vision AI free).
+        Enhanced image quality evaluation (Vision AI free).
 
         Criteria:
         - Size: Is it large enough?
         - Aspect ratio: Is it in normal range?
         - File size: Not too small?
+        - Color distribution: Not a solid color box?
+        - Edge density: Has actual content?
+        - Compression ratio: Meaningful content vs empty space?
 
         Args:
             image: Image metadata dict
@@ -1061,44 +1065,307 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         width = image.get("width", 0)
         height = image.get("height", 0)
         size_bytes = image.get("size_bytes", 0)
+        img_path = image.get("path", "")
 
-        # 1. Size evaluation (40 points)
+        # 1. Size evaluation (25 points)
         if width >= 800 and height >= 600:
-            score += 0.4
+            score += 0.25
         elif width >= 600 and height >= 400:
-            score += 0.3
+            score += 0.20
         elif width >= 400 and height >= 300:
-            score += 0.2
+            score += 0.15
         elif width >= 200 and height >= 200:
-            score += 0.1
+            score += 0.08
         else:
             return 0.0  # Too small - reject immediately
 
-        # 2. Aspect ratio evaluation (30 points)
+        # 2. Aspect ratio evaluation (20 points)
         if width > 0 and height > 0:
             aspect_ratio = width / height
 
             # Normal range: 0.5 ~ 2.0 (portrait 2:1 ~ landscape 2:1)
             if 0.7 <= aspect_ratio <= 1.5:
-                score += 0.3  # Ideal ratio
+                score += 0.20  # Ideal ratio
             elif 0.5 <= aspect_ratio <= 2.0:
-                score += 0.2  # Acceptable range
+                score += 0.15  # Acceptable range
             elif 0.3 <= aspect_ratio <= 3.0:
-                score += 0.1  # Slightly extreme
+                score += 0.08  # Slightly extreme
             else:
                 return 0.0  # Too extreme - reject
 
-        # 3. File size evaluation (30 points)
+        # 3. File size evaluation (15 points)
         if size_bytes >= 100_000:  # >= 100KB
-            score += 0.3
+            score += 0.15
         elif size_bytes >= 50_000:  # >= 50KB
-            score += 0.2
+            score += 0.12
         elif size_bytes >= 10_000:  # >= 10KB
-            score += 0.1
+            score += 0.08
         else:
             score += 0.0  # Very small file (likely icon/logo)
 
+        # 4. Compression ratio check (15 points)
+        # Meaningful images have higher compression ratio (more details)
+        if width > 0 and height > 0 and size_bytes > 0:
+            pixels = width * height
+            bytes_per_pixel = size_bytes / pixels
+
+            # Good range: 0.1 ~ 2.0 bytes per pixel
+            # Too low = solid color or empty, Too high = uncompressed/bloated
+            if 0.2 <= bytes_per_pixel <= 1.5:
+                score += 0.15
+            elif 0.1 <= bytes_per_pixel <= 2.0:
+                score += 0.10
+            elif bytes_per_pixel < 0.05:
+                # Very low bytes per pixel = likely solid color box
+                logger.debug(f"           ⏭️  Low compression ratio: {bytes_per_pixel:.4f} bpp - likely empty/solid")
+                return 0.0  # Reject solid color images
+            else:
+                score += 0.05
+
+        # 5. Advanced content analysis (25 points) - Only if image file exists
+        if img_path and Path(img_path).exists():
+            try:
+                content_score = self._analyze_image_content(img_path)
+                score += content_score * 0.25
+            except Exception as e:
+                logger.debug(f"           ⚠️  Content analysis failed: {e}")
+                # If analysis fails, give benefit of doubt with partial score
+                score += 0.10
+
         return min(1.0, score)
+
+    def _analyze_image_content(self, img_path: str) -> float:
+        """
+        Analyze image content to filter out meaningless images.
+
+        Checks:
+        1. Color diversity (reject solid color boxes)
+        2. Edge density (reject empty/blank images)
+        3. Content complexity (entropy-based)
+
+        Args:
+            img_path: Path to image file
+
+        Returns:
+            Content quality score (0.0 ~ 1.0)
+        """
+        try:
+            from PIL import Image
+            import numpy as np
+
+            # Load image
+            img = Image.open(img_path)
+
+            # Convert to RGB if needed
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Resize for faster processing (max 400x400)
+            img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+
+            # Convert to numpy array
+            img_array = np.array(img)
+
+            # 1. Color diversity check (40 points)
+            color_score = self._check_color_diversity(img_array)
+
+            # 2. Edge density check (30 points)
+            edge_score = self._check_edge_density(img_array)
+
+            # 3. Content complexity check (30 points)
+            complexity_score = self._check_content_complexity(img_array)
+
+            # Weighted average
+            total_score = (
+                color_score * 0.40 +
+                edge_score * 0.30 +
+                complexity_score * 0.30
+            )
+
+            logger.debug(f"           📊 Content analysis: color={color_score:.2f}, "
+                        f"edge={edge_score:.2f}, complexity={complexity_score:.2f}, "
+                        f"total={total_score:.2f}")
+
+            return total_score
+
+        except Exception as e:
+            logger.debug(f"           ⚠️  Image content analysis error: {e}")
+            return 0.5  # Neutral score on error
+
+    def _check_color_diversity(self, img_array: "np.ndarray") -> float:
+        """
+        Check color diversity to reject solid color images.
+
+        Args:
+            img_array: Image as numpy array (H, W, 3)
+
+        Returns:
+            Color diversity score (0.0 ~ 1.0)
+        """
+        import numpy as np
+
+        # Calculate color histogram for each channel
+        hist_r = np.histogram(img_array[:, :, 0], bins=32, range=(0, 256))[0]
+        hist_g = np.histogram(img_array[:, :, 1], bins=32, range=(0, 256))[0]
+        hist_b = np.histogram(img_array[:, :, 2], bins=32, range=(0, 256))[0]
+
+        # Normalize histograms
+        hist_r = hist_r / hist_r.sum()
+        hist_g = hist_g / hist_g.sum()
+        hist_b = hist_b / hist_b.sum()
+
+        # Count non-zero bins (unique colors)
+        unique_colors = (
+            (hist_r > 0.001).sum() +
+            (hist_g > 0.001).sum() +
+            (hist_b > 0.001).sum()
+        ) / 3.0
+
+        # Check if color is concentrated in few bins (solid color)
+        max_concentration_r = hist_r.max()
+        max_concentration_g = hist_g.max()
+        max_concentration_b = hist_b.max()
+        avg_concentration = (max_concentration_r + max_concentration_g + max_concentration_b) / 3.0
+
+        # Scoring
+        score = 0.0
+
+        # 1. Unique colors (50%)
+        if unique_colors >= 20:  # Many colors
+            score += 0.5
+        elif unique_colors >= 10:
+            score += 0.3
+        elif unique_colors >= 5:
+            score += 0.15
+        else:  # Very few colors - likely solid/gradient
+            score += 0.0
+
+        # 2. Color concentration (50%)
+        if avg_concentration < 0.3:  # Well distributed
+            score += 0.5
+        elif avg_concentration < 0.5:
+            score += 0.3
+        elif avg_concentration < 0.7:
+            score += 0.15
+        else:  # Highly concentrated - solid color
+            return 0.0  # Reject immediately
+
+        return min(1.0, score)
+
+    def _check_edge_density(self, img_array: "np.ndarray") -> float:
+        """
+        Check edge density to detect actual content vs blank images.
+
+        Args:
+            img_array: Image as numpy array (H, W, 3)
+
+        Returns:
+            Edge density score (0.0 ~ 1.0)
+        """
+        import numpy as np
+        from PIL import Image, ImageFilter
+
+        try:
+            # Convert to grayscale
+            img_gray = Image.fromarray(img_array).convert('L')
+
+            # Apply edge detection (Sobel-like filter)
+            edges = img_gray.filter(ImageFilter.FIND_EDGES)
+            edge_array = np.array(edges)
+
+            # Calculate edge density
+            edge_pixels = (edge_array > 30).sum()  # Threshold for edge
+            total_pixels = edge_array.size
+            edge_density = edge_pixels / total_pixels
+
+            # Scoring based on edge density
+            if edge_density >= 0.15:  # High detail (diagrams, charts, photos)
+                return 1.0
+            elif edge_density >= 0.08:  # Moderate detail
+                return 0.8
+            elif edge_density >= 0.04:  # Some detail
+                return 0.5
+            elif edge_density >= 0.02:  # Low detail
+                return 0.3
+            else:  # Very low - likely blank/solid
+                return 0.0
+
+        except Exception as e:
+            logger.debug(f"           ⚠️  Edge detection error: {e}")
+            return 0.5
+
+    def _check_content_complexity(self, img_array: "np.ndarray") -> float:
+        """
+        Check content complexity using entropy.
+
+        Higher entropy = more information = meaningful image
+
+        Args:
+            img_array: Image as numpy array (H, W, 3)
+
+        Returns:
+            Complexity score (0.0 ~ 1.0)
+        """
+        import numpy as np
+        from scipy.stats import entropy
+
+        try:
+            # Calculate entropy for each color channel
+            entropies = []
+
+            for channel in range(3):  # R, G, B
+                hist = np.histogram(img_array[:, :, channel], bins=256, range=(0, 256))[0]
+                hist = hist / hist.sum()  # Normalize
+
+                # Remove zeros to avoid log(0)
+                hist = hist[hist > 0]
+
+                # Calculate Shannon entropy
+                channel_entropy = entropy(hist, base=2)
+                entropies.append(channel_entropy)
+
+            avg_entropy = np.mean(entropies)
+
+            # Scoring based on entropy
+            # Max entropy for 8-bit image = 8 bits
+            if avg_entropy >= 6.0:  # Very high complexity
+                return 1.0
+            elif avg_entropy >= 5.0:  # High complexity
+                return 0.8
+            elif avg_entropy >= 4.0:  # Moderate complexity
+                return 0.6
+            elif avg_entropy >= 3.0:  # Low complexity
+                return 0.4
+            elif avg_entropy >= 2.0:  # Very low
+                return 0.2
+            else:  # Extremely low - likely solid color
+                return 0.0
+
+        except ImportError:
+            # scipy not available - use simplified metric
+            logger.debug(f"           ⚠️  scipy not available, using simplified complexity check")
+
+            # Use standard deviation as proxy for complexity
+            std_r = np.std(img_array[:, :, 0])
+            std_g = np.std(img_array[:, :, 1])
+            std_b = np.std(img_array[:, :, 2])
+            avg_std = (std_r + std_g + std_b) / 3.0
+
+            # Scoring based on std dev
+            if avg_std >= 60:
+                return 1.0
+            elif avg_std >= 40:
+                return 0.7
+            elif avg_std >= 20:
+                return 0.4
+            elif avg_std >= 10:
+                return 0.2
+            else:
+                return 0.0
+
+        except Exception as e:
+            logger.debug(f"           ⚠️  Complexity check error: {e}")
+            return 0.5
 
     def _smart_select_images(
         self,
@@ -1205,7 +1472,8 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                     page_num = int(img.caption.split("page ")[-1].rstrip(")"))
                     source = img.attribution.split("Source: ")[-1].split(", page")[0]
                     used_pages.add((source, page_num))
-                except:
+                except (AttributeError, ValueError, IndexError) as e:
+                    logger.debug(f"Could not parse image metadata from caption/attribution: {e}")
                     pass
 
         # Expand search
@@ -1258,7 +1526,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                         # Quality check
                         quality = self._evaluate_image_quality_simple(full_img)
 
-                        if quality >= 0.3:
+                        if quality >= Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
                             selected.append(
                                 ImageReference(
                                     image_id=img_id,

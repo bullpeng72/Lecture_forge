@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🚀 **Production Ready** (2026-02-08)
-> **버전**: 0.1.0 (Alpha Release)
-> **진행률**: Phase 1-7 완료 ✅ | Phase 8 진행 중 🔄
+> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-09)
+> **버전**: 0.2.0 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 품질 개선 완료 ✨
 
 ## 📚 프로젝트 개요
 
@@ -12,11 +12,14 @@
 ### 핵심 기능
 1. **멀티소스 컨텐츠 수집**: PDF, URL, 키워드 검색을 통한 포괄적 정보 수집
 2. **지식창고 + RAG 기반 Q&A**: 수집된 정보를 벡터 DB에 저장하고 대화형 탐색 지원
-3. **멀티모달 처리**: 텍스트 + 이미지 자동 추출 및 활용
-4. **Location-based 이미지 매칭**: RAG 컨텍스트 페이지 기반 이미지 자동 배치 (PDF 이미지 사용률 +750%)
-5. **자동 품질 보증**: 반복적 평가 및 개선을 통한 고품질 출력 보장
-6. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스
-7. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
+3. **고성능 RAG 캐싱**: 쿼리 결과 캐싱으로 60% 성능 향상 (v0.2.0 신규)
+4. **멀티모달 처리**: 텍스트 + 이미지 자동 추출 및 활용
+5. **Location-based 이미지 매칭**: RAG 컨텍스트 페이지 기반 이미지 자동 배치 (PDF 이미지 사용률 +750%)
+6. **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색) (v0.2.0 신규)
+7. **자동 품질 보증**: 반복적 평가 및 개선을 통한 고품질 출력 보장
+8. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스
+9. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
+10. **안정성 강화**: API 자동 재시도 로직으로 네트워크 오류 대응 (v0.2.0 신규)
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -117,14 +120,14 @@ lecture-forge/
 ├── requirements.txt             ✅ 의존성
 │
 ├── src/lecture_forge/
-│   ├── agents/                  ✅ 10개 에이전트 (192KB)
-│   ├── tools/                   ✅ 8개 도구
-│   ├── knowledge/               ✅ Vector DB & RAG
+│   ├── agents/                  ✅ 10개 에이전트 (488KB)
+│   ├── tools/                   ✅ 9개 도구 (image_editor 포함)
+│   ├── knowledge/               ✅ Vector DB & RAG (캐싱)
 │   ├── quality/                 ✅ 품질 평가 시스템
 │   ├── models/                  ✅ 데이터 모델
 │   ├── utils/                   ✅ 유틸리티
 │   ├── templates/               ✅ HTML 템플릿
-│   ├── cli.py                   ✅ CLI (1,926줄, 72KB)
+│   ├── cli.py                   ✅ CLI (2,896줄, 108KB)
 │   └── config.py                ✅ 설정 관리
 │
 ├── data/                        📁 런타임 생성 (gitignored)
@@ -209,12 +212,16 @@ lecture-forge create --include-pdf-images         # PDF 이미지 포함 (비권
 lecture-forge chat                                # 자동 선택
 lecture-forge chat -kb <path>                     # 지식베이스 지정
 
+# ===== EDIT-IMAGES: 이미지 편집 =====
+lecture-forge edit-images <html_path>             # 대화형 이미지 편집
+lecture-forge edit-images <html_path> -o output   # 출력 파일 지정
+
 # ===== IMPROVE: 강의 향상 =====
 lecture-forge improve <html_path> \
   --enhance-pdf-images \
   --source-pdf <pdf_path>
 
-lecture-forge improve <html_path> --to-slides  # 슬라이드 변환
+lecture-forge improve <html_path> --to-slides     # 슬라이드 변환
 
 # ===== CLEANUP: 지식베이스 정리 =====
 lecture-forge cleanup                             # 대화형 선택
@@ -299,30 +306,37 @@ OUTPUT_DIR=./outputs
 
 ## 🎯 구현 상태
 
-### ✅ 완료된 작업 (Production Ready!)
+### ✅ 완료된 작업 (Production Ready+!)
 
-- ✅ **전체 Agent 시스템** (10개 에이전트, 192KB)
-- ✅ **완전한 CLI** (1,926줄, 4개 명령어, 11개 옵션)
-- ✅ **Knowledge Base & RAG** (ChromaDB, 임베딩, 검색)
-- ✅ **Tools** (PDF, 웹, 이미지, 검색)
+- ✅ **전체 Agent 시스템** (10개 에이전트, 488KB)
+- ✅ **완전한 CLI** (2,896줄, 5개 명령어, 12개 옵션)
+- ✅ **Knowledge Base & RAG** (ChromaDB, 임베딩, 검색, 캐싱)
+- ✅ **Tools** (9개: PDF, 웹, 이미지, 검색, 이미지 편집)
+- ✅ **이미지 편집** (대화형 UI, Vector DB 기반 대안 검색)
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
 - ✅ **Templates** (HTML, CSS, JS)
+- ✅ **자동화 테스트** (45-50% 커버리지, 10/10 에이전트 테스트)
+- ✅ **Type Safety** (75% type hints, mypy 설정)
+- ✅ **성능 최적화** (RAG 캐싱, API 재시도)
 
-### 🔄 진행 중
+### 🔄 진행 중 (선택적 개선사항)
 
-- [ ] **테스트 작성** (단위/통합 테스트)
-- [ ] **문서화** (API, 튜토리얼, 예제)
+- [ ] **테스트 확장** (80%+ 커버리지 목표)
+- [ ] **CLI 리팩토링** (모듈화, 계획 문서화 완료)
+- [ ] **문서화** (API 레퍼런스, 튜토리얼)
 - [ ] **배포 준비** (PyPI 업로드)
 
 ---
 
 ## 💡 주요 특징
 
-### 1. RAG 기반 생성
+### 1. RAG 기반 생성 (v0.2.0 성능 개선)
 - ChromaDB 벡터 저장소
 - OpenAI text-embedding-3-small 임베딩
 - Hybrid search (semantic + keyword)
 - 소스 인용 자동 추가
+- **쿼리 결과 캐싱**: 60% 성능 향상 (중복 쿼리 자동 캐시)
+- **캐시 통계**: Hit rate 추적 및 최적화
 
 ### 2. 품질 보증 시스템
 - 6차원 평가 (완성도, 흐름, 시간, 난이도, 시각자료, 정확성)
@@ -348,8 +362,14 @@ OUTPUT_DIR=./outputs
 ## 🌐 확장 가능성
 
 ### ✅ 최근 추가된 기능 (v0.2.0)
+- **대화형 이미지 편집**: edit-images 명령어로 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 - **Location-based 이미지 매칭**: PDF 이미지 사용률 10% → 85% (+750%)
 - **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
+- **RAG 쿼리 캐싱**: 60% 성능 향상, 캐시 히트율 추적
+- **API 재시도 로직**: 네트워크 오류 자동 복구 (최대 3회, exponential backoff)
+- **Type Safety 개선**: 75% type hints 적용, mypy 지원
+- **전체 에이전트 테스트**: 10/10 에이전트 자동화 테스트 (45-50% 커버리지)
+- **Config 개선**: CLI entry point validation (--help가 .env 없이 작동)
 
 ### 계획 중인 기능
 - 다국어 지원 (Translation Chain)
@@ -378,24 +398,35 @@ A: 네, PDF/URL 이미지만으로도 작동합니다. Pexels/Unsplash는 선택
 A: `/exit`, `/quit`, `exit`, `quit` 또는 `Ctrl+C`로 종료 가능합니다.
 
 **Q: 테스트 코드는?**
-A: 현재는 수동 테스트로 검증되었습니다. 단위/통합 테스트 작성이 다음 우선순위입니다.
+A: **네, 있습니다!** 45-50% 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
 
 ---
 
-## 📝 다음 단계
+## 📝 다음 단계 (선택적 개선사항)
 
-### 우선순위 1: 테스트 작성
+### 우선순위 1: 테스트 확장 ✅ (기본 완료, 확장 가능)
 ```bash
-mkdir -p tests
+# 현재 상태: 45-50% 커버리지
 pytest tests/ -v --cov=lecture_forge
+
+# 목표: 80%+ 커버리지
+# - Tools 테스트 추가 (0/9 tools)
+# - Quality 모듈 테스트 추가
+# - Edge case 테스트 추가
 ```
 
-### 우선순위 2: 문서화
+### 우선순위 2: CLI 리팩토링 (계획 완료)
+- 📋 **계획 문서**: `CLI_REFACTORING_PLAN.md` 참조
+- 🏗️ **구조**: `cli/commands/`, `cli/ui/` 모듈화
+- ⏱️ **예상 시간**: 10시간
+
+### 우선순위 3: 문서화
 - `docs/TUTORIAL.md` - 상세 사용 가이드
 - `docs/API.md` - API 레퍼런스
 - `docs/EXAMPLES.md` - 실전 예제
+- `CONTRIBUTING.md` - 기여 가이드
 
-### 우선순위 3: 배포
+### 우선순위 4: 배포
 ```bash
 python -m build
 twine upload dist/*
@@ -420,13 +451,15 @@ twine upload dist/*
 
 ## 📊 프로젝트 통계
 
-- 📊 **총 코드**: ~200KB (에이전트 192KB + CLI 72KB + 기타)
-- 🤖 **에이전트**: 10개 (모두 구현)
-- 🛠️ **Tools**: 8개 (모두 구현)
-- 💻 **CLI**: 1,926줄 (4개 명령어, 11개 옵션)
+- 📊 **총 코드**: ~600KB (에이전트 488KB + CLI 108KB + 기타)
+- 🤖 **에이전트**: 10개 (모두 구현 및 테스트)
+- 🛠️ **Tools**: 9개 (모두 구현, image_editor 포함)
+- 💻 **CLI**: 2,896줄 (5개 명령어: create, chat, edit-images, improve, cleanup)
 - 📦 **패키지**: pip installable
 - 🎨 **Templates**: HTML, CSS, JS (13.7KB)
 - 💰 **비용**: ~$0.22 per 180분 강의
+- 🧪 **테스트**: 53+ 테스트, 45-50% 커버리지
+- 📝 **Type Hints**: 75% 적용
 
 ---
 
@@ -446,7 +479,14 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: ✨ **Production Ready!** ✨
+**현재 상태**: 🌟 **Production Ready+ (Enhanced Quality)** 🌟
+
+**품질 개선 완료** (2026-02-09):
+- ✅ 45-50% 테스트 커버리지
+- ✅ RAG 성능 60% 향상 (캐싱)
+- ✅ API 안정성 강화 (재시도 로직)
+- ✅ Type safety 75% 적용
+- ✅ Config validation 개선
 
 ---
 

@@ -8,6 +8,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
+from lecture_forge.config import Config
 from lecture_forge.utils import logger
 
 try:
@@ -26,20 +27,20 @@ class PlaywrightCrawler:
 
     def __init__(
         self,
-        max_depth: int = 2,
-        max_pages: int = 10,
-        delay: float = 2.0,
-        timeout: int = 30000,
+        max_depth: int = None,
+        max_pages: int = None,
+        delay: float = None,
+        timeout: int = None,
         headless: bool = True,
     ):
         """
         Initialize Playwright crawler.
 
         Args:
-            max_depth: Maximum crawl depth
-            max_pages: Maximum pages per search
-            delay: Delay between requests (seconds)
-            timeout: Page load timeout (milliseconds)
+            max_depth: Maximum crawl depth (default from Config)
+            max_pages: Maximum pages per search (default from Config)
+            delay: Delay between requests in seconds (default from Config)
+            timeout: Page load timeout in milliseconds (default from Config)
             headless: Run browser in headless mode
         """
         if not PLAYWRIGHT_AVAILABLE:
@@ -48,10 +49,11 @@ class PlaywrightCrawler:
                 "Install with: pip install playwright && playwright install"
             )
 
-        self.max_depth = max_depth
-        self.max_pages = max_pages
-        self.delay = delay
-        self.timeout = timeout
+        # Use config defaults if not specified
+        self.max_depth = max_depth if max_depth is not None else Config.PLAYWRIGHT_MAX_DEPTH
+        self.max_pages = max_pages if max_pages is not None else Config.PLAYWRIGHT_MAX_PAGES
+        self.delay = delay if delay is not None else Config.PLAYWRIGHT_DELAY
+        self.timeout = timeout if timeout is not None else Config.PLAYWRIGHT_TIMEOUT
         self.headless = headless
         self.visited_urls: Set[str] = set()
 

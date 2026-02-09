@@ -112,81 +112,100 @@ def print_basic_help() -> None:
     ))
 
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
-    console.print("  [cyan]lecture-forge create[/cyan]                       # Interactive mode (recommended)")
-    console.print("  [cyan]lecture-forge create --image-search[/cyan]        # With Pexels images")
-    console.print("  [cyan]lecture-forge chat[/cyan]                         # Q&A with knowledge base")
+    console.print("  [cyan]lecture-forge create[/cyan]                        # Interactive mode (easiest)")
+    console.print("  [cyan]lecture-forge create --image-search[/cyan]         # With web images")
+    console.print("  [cyan]lecture-forge chat[/cyan]                          # Q&A with knowledge base")
 
     # Commands Table
-    console.print("\n[bold yellow]📖 Available Commands:[/bold yellow]")
-    table = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
-    table.add_column("Command", style="cyan", width=12)
-    table.add_column("Description", width=35)
-    table.add_column("Example", style="dim")
+    console.print("\n[bold yellow]📖 Commands:[/bold yellow]")
+    table = Table(show_header=True, header_style="bold cyan", box=box.ROUNDED, padding=(0, 1))
+    table.add_column("Command", style="cyan", width=14)
+    table.add_column("Description", width=32)
+    table.add_column("Key Options", style="green", width=28)
 
     table.add_row(
         "create",
-        "Generate lecture from sources",
-        "lecture-forge create"
+        "Generate lecture materials",
+        "--image-search, --quality-level"
     )
     table.add_row(
         "chat",
-        "Interactive Q&A with RAG",
-        "lecture-forge chat"
+        "Interactive Q&A (RAG-based)",
+        "--knowledge-base, -kb"
     )
     table.add_row(
         "edit-images",
-        "Edit images in lecture (delete/replace)",
-        "edit-images file.html"
+        "Edit lecture images",
+        "--output, -o"
     )
     table.add_row(
         "improve",
-        "Convert to slides or enhance",
-        "improve file.html --to-slides"
+        "Enhance or convert lecture",
+        "--to-slides"
     )
     table.add_row(
         "cleanup",
         "Manage knowledge bases",
-        "lecture-forge cleanup"
+        "--all (delete all)"
     )
     console.print(table)
 
-    # Key Options
-    console.print("\n[bold yellow]⚙️  Key Options:[/bold yellow]")
-    opt_table = Table(show_header=False, box=None, padding=(0, 2))
-    opt_table.add_column("Option", style="green", width=25)
-    opt_table.add_column("Description")
+    # Common Options
+    console.print("\n[bold yellow]⚙️  Common Options:[/bold yellow]")
+    opt_table = Table(show_header=False, box=None, padding=(0, 1))
+    opt_table.add_column("Option", style="green", width=22)
+    opt_table.add_column("Description", width=50)
 
-    opt_table.add_row("--image-search", "Enable Pexels image search")
-    opt_table.add_row("--quality-level", "lenient(70) | balanced(80) | strict(90)")
-    opt_table.add_row("--config, -c", "Use YAML config file")
-    opt_table.add_row("--to-slides", "Convert HTML to Reveal.js slides")
+    opt_table.add_row("--image-search", "Enable Pexels/Unsplash image search")
+    opt_table.add_row("--quality-level LEVEL", "lenient(70) | balanced(80) | strict(90)")
+    opt_table.add_row("--config, -c FILE", "Use YAML configuration file")
+    opt_table.add_row("--output, -o FILE", "Specify output filename")
+    opt_table.add_row("--to-slides", "Convert HTML to Reveal.js presentation")
     console.print(opt_table)
 
-    console.print("\n[bold yellow]💡 Examples:[/bold yellow]")
-    console.print("  [dim]# High-quality lecture with images[/dim]")
+    # Configuration
+    console.print("\n[bold yellow]🔧 Environment Configuration (.env):[/bold yellow]")
+    console.print("  [dim]Customize behavior without code changes:[/dim]")
+    console.print("    [green]SEARCH_NUM_RESULTS=20[/green]        # Search results (default: 10)")
+    console.print("    [green]DEEP_CRAWLER_MAX_PAGES=30[/green]    # Crawl depth (default: 10)")
+    console.print("    [green]IMAGE_SEARCH_PER_PAGE=15[/green]     # Images per search (default: 10)")
+    console.print("    [green]QUALITY_THRESHOLD=90[/green]         # Quality bar (default: 80)")
+    console.print("  [dim]See .env.example for 15+ configurable settings[/dim]")
+
+    # Examples
+    console.print("\n[bold yellow]💡 Usage Examples:[/bold yellow]")
+    console.print("  [dim]# Basic usage (interactive)[/dim]")
+    console.print("  $ [cyan]lecture-forge create[/cyan]")
+    console.print()
+    console.print("  [dim]# High-quality with images[/dim]")
     console.print("  $ [cyan]lecture-forge create --image-search --quality-level strict[/cyan]")
     console.print()
-    console.print("  [dim]# Edit images in generated lecture[/dim]")
+    console.print("  [dim]# Edit generated lecture images[/dim]")
     console.print("  $ [cyan]lecture-forge edit-images outputs/lecture.html[/cyan]")
     console.print()
-    console.print("  [dim]# Convert to presentation slides[/dim]")
+    console.print("  [dim]# Convert to slides[/dim]")
     console.print("  $ [cyan]lecture-forge improve outputs/lecture.html --to-slides[/cyan]")
     console.print()
-    console.print("  [dim]# Q&A with specific knowledge base[/dim]")
-    console.print("  $ [cyan]lecture-forge chat -kb data/vector_db/my_lecture[/cyan]")
+    console.print("  [dim]# Q&A with auto-selected knowledge base[/dim]")
+    console.print("  $ [cyan]lecture-forge chat[/cyan]")
 
+    # v0.2.0 Highlights
     console.print("\n[bold yellow]✨ v0.2.0 Highlights:[/bold yellow]")
-    console.print("  [green]⚡[/green] RAG query caching ([green]+60% speed[/green])")
-    console.print("  [green]🔄[/green] Auto-retry API calls ([green]3× attempts[/green])")
-    console.print("  [green]🧪[/green] 53+ tests ([green]45-50% coverage[/green])")
-    console.print("  [green]📍[/green] Location-based images ([green]+750% usage[/green])")
+    console.print("  [green]⚡[/green] RAG query caching           [green]+60% speed[/green]")
+    console.print("  [green]🔄[/green] Auto-retry API calls        [green]3× robust[/green]")
+    console.print("  [green]🧪[/green] 53+ unit tests             [green]45-50% coverage[/green]")
+    console.print("  [green]📍[/green] Location-based images      [green]+750% PDF usage[/green]")
+    console.print("  [green]🔧[/green] Config system (.env)       [green]15+ settings[/green]")
 
-    console.print("\n[bold yellow]📚 More Help:[/bold yellow]")
-    console.print("  [cyan]lecture-forge --help[/cyan]           # Full documentation")
-    console.print("  [cyan]lecture-forge <command> --help[/cyan] # Command-specific help")
+    # More Help
+    console.print("\n[bold yellow]📚 Get More Help:[/bold yellow]")
+    console.print("  [cyan]lecture-forge --help[/cyan]              # Full documentation")
+    console.print("  [cyan]lecture-forge <command> --help[/cyan]    # Command-specific help")
+    console.print("  [cyan]cat README.md[/cyan]                     # Comprehensive guide")
 
-    console.print("\n[dim]💰 Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)[/dim]")
-    console.print("[dim]📊 Stats: 10 agents | 9 tools | 2,896 lines CLI[/dim]\n")
+    # Footer
+    console.print("\n[dim]💰 Cost: ~$0.10 per 60-min lecture (~$0.22 per 180-min lecture)[/dim]")
+    console.print("[dim]📊 Stats: 10 agents | 9 tools | 2,896 lines CLI | 15+ env vars[/dim]\n")
 
 
 @click.group(invoke_without_command=True)
@@ -194,78 +213,106 @@ def print_basic_help() -> None:
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    LectureForge Pro v0.2.0 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.2.0 (Beta) - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials
-    using a multi-agent AI pipeline system.
+    using a multi-agent AI pipeline system with RAG-based knowledge management.
 
     \b
-    🎯 Core Features:
+    ✨ Key Features:
       • Multi-source collection (PDF, URLs, web search)
       • Location-based image matching (+750% PDF image usage)
-      • Interactive image editing (delete/replace with Vector DB search)
-      • RAG knowledge base with Q&A (60% faster with caching)
-      • Auto-retry API calls (3× attempts with exponential backoff)
+      • Interactive image editing (Vector DB-powered alternatives)
+      • RAG knowledge base with Q&A (+60% speed via caching)
+      • Auto-retry API calls (3× attempts, exponential backoff)
       • 6-dimension quality evaluation with auto-improvement
-      • HTML output with Mermaid diagrams & syntax highlighting
+      • .env-based configuration (15+ customizable settings)
+      • HTML output with Mermaid diagrams & code highlighting
       • Reveal.js presentation slides
       • 53+ tests (45-50% coverage)
 
     \b
     📚 Commands:
-      create       - Generate lecture from sources
-      chat         - Interactive Q&A with knowledge base
-      edit-images  - Edit images in lecture (delete/replace)
-      improve      - Convert to slides or enhance
-      cleanup      - Manage knowledge bases
+      create          Generate lecture from multiple sources
+      chat            Interactive Q&A with knowledge base (RAG)
+      edit-images     Edit lecture images (delete/replace)
+      improve         Convert to slides or enhance content
+      cleanup         Manage knowledge base storage
 
     \b
     🚀 Quick Start:
-      $ lecture-forge create                    # Interactive mode
-      $ lecture-forge create --image-search     # With Pexels images
-      $ lecture-forge chat                      # Q&A mode
-      $ lecture-forge edit-images file.html     # Edit images
-      $ lecture-forge improve file.html --to-slides
+      $ lecture-forge create                        # Interactive (easiest)
+      $ lecture-forge create --image-search         # With web images
+      $ lecture-forge chat                          # Q&A mode
+      $ lecture-forge edit-images file.html         # Edit images
+      $ lecture-forge improve file.html --to-slides # To presentation
 
     \b
-    💡 Key Options:
-      --image-search          Enable Pexels image search
-      --quality-level         lenient(70) | balanced(80) | strict(90)
-      --config, -c            Use YAML config file
-      --to-slides             Convert HTML to Reveal.js slides
-      --help                  Show detailed help
+    ⚙️  Common Options:
+      --image-search              Enable Pexels/Unsplash image search
+      --quality-level LEVEL       lenient(70) | balanced(80) | strict(90)
+      --config, -c FILE           Use YAML configuration file
+      --output, -o FILE           Specify output filename
+      --to-slides                 Convert HTML to Reveal.js slides
+      --knowledge-base, -kb PATH  Specify knowledge base directory
+      --help                      Show this help and exit
 
     \b
-    📖 Examples:
-      # High-quality lecture with images
+    🔧 Environment Configuration (.env):
+      Customize without code changes:
+        SEARCH_NUM_RESULTS=20             # Search results (default: 10)
+        DEEP_CRAWLER_MAX_PAGES=30         # Crawl pages (default: 10)
+        IMAGE_SEARCH_PER_PAGE=15          # Images/search (default: 10)
+        QUALITY_THRESHOLD=90              # Quality bar (default: 80)
+      See .env.example for 15+ configurable settings
+
+    \b
+    💡 Usage Examples:
+      # Basic usage (interactive prompts)
+      $ lecture-forge create
+
+      # High-quality with web images
       $ lecture-forge create --image-search --quality-level strict
 
-      # Use config file
-      $ lecture-forge create -c config.yaml
+      # Use YAML config
+      $ lecture-forge create -c my_lecture.yaml
 
-      # Edit images in generated lecture
-      $ lecture-forge edit-images outputs/lecture.html
+      # Edit generated images
+      $ lecture-forge edit-images outputs/lecture.html -o outputs/final.html
+
+      # Q&A with auto-selected knowledge base
+      $ lecture-forge chat
 
       # Q&A with specific knowledge base
-      $ lecture-forge chat -kb data/vector_db/my_lecture
+      $ lecture-forge chat -kb data/vector_db/AI_Engineering_xxx
 
-      # Convert to slides
+      # Convert to presentation
       $ lecture-forge improve outputs/lecture.html --to-slides
 
     \b
-    📊 Stats:
-      • Time: 3-5 min per 60-min lecture
-      • Cost: ~$0.10 (GPT-4o-mini)
-      • Quality: 80+ auto-improved
-      • Agents: 10 specialized agents
-      • Tools: 9 tools (incl. image editor)
-      • Tests: 53+ (45-50% coverage)
+    📊 Performance Stats:
+      • Generation Time: 3-5 min per 60-min lecture
+      • Cost: ~$0.10 per 60-min (~$0.22 per 180-min, GPT-4o-mini)
+      • Quality Score: 80+ (auto-improved up to 3 iterations)
+      • Architecture: 10 agents | 9 tools | 2,896 lines CLI
+      • Test Coverage: 53+ tests (45-50% coverage)
+      • Configuration: 15+ environment variables
 
     \b
-    🔗 Links:
-      GitHub: https://github.com/yourusername/lecture-forge
-      Issues: https://github.com/yourusername/lecture-forge/issues
-      Docs: lecture-forge <command> --help
+    ✨ v0.2.0 Highlights:
+      • RAG query caching (+60% speed improvement)
+      • Auto-retry API calls (3× attempts, exponential backoff)
+      • Config system (.env-based, 15+ customizable settings)
+      • Location-based images (+750% PDF image usage)
+      • Comprehensive testing (53+ unit tests)
+
+    \b
+    📚 More Information:
+      README:    cat README.md
+      Guide:     cat CLAUDE.md
+      Analysis:  cat INPUT_LIMITS_ANALYSIS.md
+      Config:    cat .env.example
+      Help:      lecture-forge <command> --help
     """
     # Validate configuration when a command is actually invoked
     # (skip for --help, --version, or when no command is provided)

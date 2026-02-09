@@ -71,9 +71,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - **45-50% 커버리지**: pytest 기반 자동화 테스트
 - **타입 힌트 75%**: 40% → 75% 향상
 
-### 개발자 경험 🔧
+### 설정 시스템 개선 🔧
+- **Config 리팩토링**: 모든 하드코딩 제거, .env 기반 중앙 집중식 설정
+- **15+ 환경변수**: 검색, 크롤링, 이미지, 타임아웃 등 모든 설정 조정 가능
+- **환경별 설정**: 개발/스테이징/프로덕션 환경 분리 지원
 - **런타임 Config 검증**: `--help` 정상 작동
-- **특정 예외 처리**: 시그널 캐치 방지
 
 ### 통계 비교
 | 메트릭 | v0.1.0 | v0.2.0 | 개선 |
@@ -83,6 +85,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 | 테스트된 에이전트 | 3/10 | 10/10 | +233% |
 | RAG 성능 | Baseline | +60% | 캐싱 |
 | API 안정성 | 수동 | 자동 3회 | 재시도 |
+| 설정 방식 | 하드코딩 | .env 기반 | 유연성 |
 
 ---
 
@@ -102,26 +105,47 @@ pip install -e .
 playwright install
 ```
 
-### 2️⃣ API 키 설정
+### 2️⃣ 환경 설정
 
 ```bash
 # .env 파일 생성
 cp .env.example .env
-
-# API 키 입력 (필수)
-OPENAI_API_KEY=sk-proj-...        # OpenAI API
-SERPER_API_KEY=...                # Serper 검색 API (무료 2,500회/월)
-
-# 선택 사항 (이미지 검색)
-PEXELS_API_KEY=...                # Pexels 무료 API
-UNSPLASH_ACCESS_KEY=...           # Unsplash API
 ```
 
+`.env` 파일을 열어 다음 항목을 설정하세요:
+
+#### 필수 API 키
+```bash
+# OpenAI API (필수)
+OPENAI_API_KEY=sk-proj-...
+
+# 검색 API (필수)
+SERPER_API_KEY=...                # 무료: 2,500회/월
+```
+
+#### 선택 사항
+```bash
+# 이미지 검색 API (선택)
+PEXELS_API_KEY=...                # 무료 무제한
+UNSPLASH_ACCESS_KEY=...           # 무료: 50회/시간
+
+# 검색 및 크롤링 설정 (기본값으로 충분)
+SEARCH_NUM_RESULTS=10             # 검색 결과 수 (최대 100)
+DEEP_CRAWLER_MAX_PAGES=10         # 크롤링 페이지 수
+IMAGE_SEARCH_PER_PAGE=10          # 이미지 검색 결과 수
+
+# 품질 설정
+QUALITY_THRESHOLD=80              # 품질 임계값 (70-90)
+MAX_ITERATIONS=3                  # 최대 개선 반복 횟수
+```
+
+💡 **더 많은 설정 옵션은 `.env.example` 파일 참조**
+
 **API 키 획득**:
-- **OpenAI**: [platform.openai.com](https://platform.openai.com/)
+- **OpenAI**: [platform.openai.com](https://platform.openai.com/) (사용량 기반 과금)
 - **Serper**: [serper.dev](https://serper.dev/) (무료 2,500회/월)
 - **Pexels**: [pexels.com/api](https://www.pexels.com/api/) (무료)
-- **Unsplash**: [unsplash.com/developers](https://unsplash.com/developers) (무료)
+- **Unsplash**: [unsplash.com/developers](https://unsplash.com/developers) (무료 50회/시간)
 
 ### 3️⃣ 첫 강의 생성
 
@@ -135,101 +159,240 @@ lecture-forge create
 
 ## 💻 사용법
 
-### 기본 명령어
+### 명령어 개요
+
+| 명령어 | 설명 | 주요 옵션 |
+|--------|------|----------|
+| **create** | 강의 생성 | `--image-search`, `--quality-level` |
+| **chat** | Q&A 모드 | `--knowledge-base` |
+| **edit-images** | 이미지 편집 | `--output` |
+| **improve** | 강의 향상 | `--to-slides` |
+| **cleanup** | 지식베이스 관리 | `--all` |
+
+### 빠른 실행 예제
 
 ```bash
-# 🎓 강의 생성 (대화형 모드)
+# 🎓 강의 생성 (대화형 - 가장 간단)
 lecture-forge create
 
-# 🎓 고품질 강의 생성 (권장)
+# 🎓 고품질 강의 (이미지 검색 포함)
 lecture-forge create --image-search --quality-level strict
 
-# 📝 설정 파일로 생성
-lecture-forge create --config config.yaml
-
-# 💬 Q&A 모드 (자동 선택)
+# 💬 Q&A 모드 (자동으로 최신 지식베이스 선택)
 lecture-forge chat
-
-# 💬 특정 지식베이스 지정
-lecture-forge chat -kb ./data/vector_db/lecture_xxx
 
 # 🎨 슬라이드 변환
 lecture-forge improve outputs/lecture.html --to-slides
 
-# 🖼️ 이미지 편집 (대화형)
+# 🖼️ 이미지 편집
 lecture-forge edit-images outputs/lecture.html
 
-# 🧹 지식베이스 정리
+# 🧹 지식베이스 정리 (대화형 선택)
 lecture-forge cleanup
 ```
 
-### 명령어 옵션
+### 명령어 상세 가이드
 
-#### `create` - 강의 생성
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `--config, -c` | YAML 설정 파일 사용 | - |
-| `--image-search` | 웹 이미지 검색 (Pexels) | OFF |
-| `--quality-level` | 품질 기준 (lenient/balanced/strict) | balanced(80) |
-| `--output, -o` | 출력 파일명 | 자동 생성 |
-| `--include-pdf-images` | PDF 이미지 추출 | OFF |
+#### 📚 `create` - 강의 생성
 
-#### `chat` - Q&A 모드
-| 옵션 | 설명 |
-|------|------|
-| `--knowledge-base, -kb` | 지식베이스 경로 (자동 선택 가능) |
-
-**채팅 명령어**: `/exit`, `/clear`, `/sources`, `/help`
-
-#### `improve` - 강의 향상
-| 옵션 | 설명 |
-|------|------|
-| `--enhance-pdf-images` | PDF 이미지 설명 추가 (레거시용) |
-| `--source-pdf` | 원본 PDF 경로 |
-| `--to-slides` | Reveal.js 슬라이드 변환 |
-
-#### `edit-images` - 이미지 편집 (대화형)
-| 옵션 | 설명 |
-|------|------|
-| `--output, -o` | 출력 파일 경로 (기본: <원본>_edited.html) |
-
-**대화형 명령어**:
-- `d <번호>`: 이미지 삭제
-- `u <번호>`: 삭제 취소
-- `r <번호>`: 이미지 교체 (대안 검색)
-- `s`: 변경사항 저장
-- `q`: 종료
-
-#### `cleanup` - 지식베이스 관리
-| 옵션 | 설명 |
-|------|------|
-| `--all, -a` | 전체 삭제 (주의!) |
-
-### 예제
-
+**기본 사용:**
 ```bash
-# 예제 1: 고품질 강의 생성
+lecture-forge create
+```
+대화형으로 정보를 입력하면 자동으로 강의를 생성합니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--config FILE` | YAML 설정 파일 사용 | `--config lecture.yaml` |
+| `--image-search` | 웹 이미지 검색 활성화 (Pexels/Unsplash) | `--image-search` |
+| `--quality-level LEVEL` | 품질 기준 설정 | `--quality-level strict` |
+| `--output FILE` | 출력 파일명 지정 | `--output my_lecture.html` |
+| `--include-pdf-images` | PDF 이미지 포함 (비권장, Location-based가 더 좋음) | `--include-pdf-images` |
+
+**품질 레벨:**
+- `lenient` (70점): 빠른 초안
+- `balanced` (80점): 기본값 ✅
+- `strict` (90점): 고품질
+
+**예제:**
+```bash
+# 기본 생성
+lecture-forge create
+
+# 고품질 + 이미지 검색
 lecture-forge create --image-search --quality-level strict
 
-# 예제 2: YAML 설정 파일 사용
-lecture-forge create -c my_lecture.yaml
-
-# 예제 3: Q&A 모드로 지식 탐색
-lecture-forge chat
-
-# 예제 4: 슬라이드 변환
-lecture-forge improve outputs/my_lecture.html --to-slides
-
-# 예제 5: 이미지 편집
-lecture-forge edit-images outputs/my_lecture.html
+# YAML 설정 사용
+lecture-forge create --config my_config.yaml
 ```
 
-### 출력 결과
+---
 
-✅ **HTML 강의자료**: 이미지, 다이어그램, 검색 기능 포함
-✅ **ChromaDB 지식창고**: 대화형 Q&A 지원
-✅ **통계 정보**: 품질 점수, 토큰 사용량, 예상 비용
-✅ **프레젠테이션 슬라이드**: Reveal.js 형식 (선택)
+#### 💬 `chat` - Q&A 모드
+
+**기본 사용:**
+```bash
+lecture-forge chat
+```
+자동으로 최신 지식베이스를 선택합니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--knowledge-base PATH` | 특정 지식베이스 지정 | `-kb ./data/vector_db/AI_xxx` |
+
+**대화형 명령어:**
+- `/help`: 도움말 표시
+- `/exit` 또는 `/quit`: 종료
+- `/clear`: 채팅 기록 지우기
+- `/sources`: 마지막 답변의 출처 표시
+
+**예제:**
+```bash
+# 자동 선택
+lecture-forge chat
+
+# 특정 지식베이스 사용
+lecture-forge chat -kb ./data/vector_db/lecture_20260209_123456
+```
+
+---
+
+#### 🖼️ `edit-images` - 이미지 편집
+
+**기본 사용:**
+```bash
+lecture-forge edit-images outputs/lecture.html
+```
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--output FILE` | 출력 파일 경로 | `-o outputs/edited.html` |
+
+**대화형 명령어:**
+
+| 명령어 | 설명 | 예시 |
+|--------|------|------|
+| `d <번호>` | 이미지 삭제 | `d 3` |
+| `u <번호>` | 삭제 취소 | `u 3` |
+| `r <번호>` | 이미지 교체 (Vector DB 검색) | `r 5` |
+| `s` | 변경사항 저장 | `s` |
+| `q` | 종료 (저장 안 함) | `q` |
+| `h` | 도움말 | `h` |
+
+**예제:**
+```bash
+# 기본 (원본_edited.html로 저장)
+lecture-forge edit-images outputs/my_lecture.html
+
+# 출력 파일 지정
+lecture-forge edit-images outputs/my_lecture.html -o outputs/final.html
+```
+
+---
+
+#### 🎨 `improve` - 강의 향상
+
+**기본 사용:**
+```bash
+lecture-forge improve outputs/lecture.html --to-slides
+```
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--to-slides` | Reveal.js 슬라이드 변환 | `--to-slides` |
+| `--enhance-pdf-images` | PDF 이미지 설명 추가 (레거시) | `--enhance-pdf-images` |
+| `--source-pdf FILE` | 원본 PDF 경로 (레거시용) | `--source-pdf doc.pdf` |
+
+⚠️ **주의**: `--enhance-pdf-images`는 레거시 기능입니다. v0.2.0부터는 Location-based 매칭이 자동으로 적용됩니다.
+
+**예제:**
+```bash
+# 슬라이드 변환 (권장)
+lecture-forge improve outputs/lecture.html --to-slides
+
+# PDF 이미지 보강 (레거시)
+lecture-forge improve outputs/lecture.html --enhance-pdf-images --source-pdf original.pdf
+```
+
+---
+
+#### 🧹 `cleanup` - 지식베이스 관리
+
+**기본 사용:**
+```bash
+lecture-forge cleanup
+```
+대화형으로 삭제할 지식베이스를 선택합니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--all` | 모든 지식베이스 삭제 (⚠️ 주의!) | `--all` |
+
+**예제:**
+```bash
+# 대화형 선택 (안전)
+lecture-forge cleanup
+
+# 전체 삭제 (복구 불가능!)
+lecture-forge cleanup --all
+```
+
+### 📤 출력 결과
+
+강의 생성 완료 후 다음 파일들이 생성됩니다:
+
+```
+outputs/
+├── [주제]_[날짜시간].html           # 📄 HTML 강의자료
+└── [주제]_[날짜시간]_slides.html   # 🎬 슬라이드 (--to-slides 사용 시)
+
+data/
+└── vector_db/
+    └── [주제]_[날짜시간]/           # 🗄️ 지식베이스 (Q&A용)
+        ├── chroma.sqlite3
+        └── ...
+```
+
+**포함 내용:**
+- ✅ **HTML 강의자료**: 이미지, Mermaid 다이어그램, 코드 하이라이팅, 검색 인덱스
+- ✅ **지식베이스**: ChromaDB 벡터 DB (대화형 Q&A 지원)
+- ✅ **통계 정보**: 품질 점수, 토큰 사용량, 예상 비용
+- ✅ **슬라이드**: Reveal.js 프레젠테이션 (선택 사항)
+
+### 🔧 고급 설정 (.env 파일)
+
+더 많은 제어가 필요한 경우 `.env` 파일에서 다음 설정을 조정할 수 있습니다:
+
+```bash
+# 검색 및 크롤링
+SEARCH_NUM_RESULTS=20              # 기본: 10, 최대: 100
+DEEP_CRAWLER_MAX_PAGES=30          # 기본: 10
+DEEP_CRAWLER_MAX_DEPTH=3           # 기본: 2
+
+# 이미지
+IMAGE_SEARCH_PER_PAGE=15           # 기본: 10
+MAX_IMAGES_PER_SEARCH=20           # 기본: 10
+
+# 품질
+QUALITY_THRESHOLD=90               # 기본: 80 (70-90)
+MAX_ITERATIONS=5                   # 기본: 3
+
+# 성능
+CHUNK_SIZE=800                     # 기본: 1000 (작을수록 정밀)
+WEB_SCRAPER_TIMEOUT=60             # 기본: 30초
+```
+
+💡 **전체 설정 목록**: `.env.example` 파일 참조 (15+ 환경변수)
 
 ---
 
@@ -282,11 +445,11 @@ HTML: my_lecture.html
 총 이미지: 25개
 
 ┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┓
-┃ 번호 ┃ 설명                              ┃ 섹션             ┃ 페이지 ┃ 상태     ┃
+┃ 번호  ┃ 설명                               ┃ 섹션              ┃ 페이지   ┃ 상태      ┃
 ┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━┩
-│  1   │ Neural network architecture       │ 1. Introduction  │  5     │ 유지     │
-│  2   │ Backpropagation diagram           │ 2. Core Concepts │  12    │ 🗑️ 삭제  │
-│  3   │ Training process flowchart        │ 2. Core Concepts │  15    │ 🔄 교체  │
+│  1   │ Neural network architecture       │ 1. Introduction  │  5     │ 유지      │
+│  2   │ Backpropagation diagram           │ 2. Core Concepts │  12    │ 🗑️ 삭제   │
+│  3   │ Training process flowchart        │ 2. Core Concepts │  15    │ 🔄 교체   │
 └──────┴───────────────────────────────────┴──────────────────┴────────┴──────────┘
 
 명령 입력: r 3
@@ -307,23 +470,23 @@ HTML: my_lecture.html
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  CLI Interface (입력 수집, 진행 상황, Q&A 인터랙션)          │
+│  CLI Interface (입력 수집, 진행 상황, Q&A 인터랙션)                │
 └────────────────────────┬────────────────────────────────────┘
                          │
         ┌────────────────┴────────────────┐
-        │    Pipeline Orchestrator         │
+        │    Pipeline Orchestrator        │
         └────────────────┬────────────────┘
                          │
-    ┌────────────────────┴──────────────────────┐
-    │                                            │
+    ┌────────────────────┴──────────────────┐
+    │                                       │
 ┌───▼────────────┐                   ┌──────▼──────────┐
 │  Phase 1-2     │                   │  Knowledge Base │
 │  Collection    │──────────────────▶│  (Vector DB)    │
 │  & Analysis    │                   │  + RAG Caching  │
 └───┬────────────┘                   └──────┬──────────┘
     │                                       │
-┌───▼────────────┐                         │
-│  Phase 3-4     │◀────────────────────────┘
+┌───▼────────────┐                          │
+│  Phase 3-4     │◀─────────────────────────┘
 │  Generation    │         (RAG Query)
 │  & Quality QA  │
 └───┬────────────┘
@@ -382,48 +545,151 @@ HTML: my_lecture.html
 
 ### 설치 및 설정
 
-**Q: 어떤 Python 버전이 필요한가요?**
+<details>
+<summary><b>Q: 어떤 Python 버전이 필요한가요?</b></summary>
+
 A: Python 3.11 이상이 필요합니다.
+```bash
+python --version  # Python 3.11+ 확인
+```
+</details>
 
-**Q: API 키가 꼭 필요한가요?**
-A: OpenAI API와 Serper API 키는 필수입니다. Pexels/Unsplash는 선택사항입니다.
+<details>
+<summary><b>Q: API 키가 꼭 필요한가요?</b></summary>
 
-**Q: 비용이 얼마나 드나요?**
-A: 180분 강의 기준 약 $0.22 (GPT-4o-mini). 생성 완료 후 상세한 비용이 표시됩니다.
+A:
+- **필수**: OpenAI API, Serper API
+- **선택**: Pexels API, Unsplash API (이미지 검색용)
+
+이미지 API 없이도 PDF/웹 이미지만으로 작동합니다.
+</details>
+
+<details>
+<summary><b>Q: 비용이 얼마나 드나요?</b></summary>
+
+A: 180분 강의 기준 약 **$0.22** (GPT-4o-mini 사용).
+- 입력 토큰: ~580K ($0.15)
+- 출력 토큰: ~155K ($0.07)
+
+생성 완료 후 정확한 비용이 표시됩니다.
+</details>
+
+<details>
+<summary><b>Q: .env 파일 설정을 바꾸려면?</b></summary>
+
+A: `.env` 파일을 열어 원하는 값을 수정하세요:
+```bash
+# 검색 결과 증가
+SEARCH_NUM_RESULTS=20
+
+# 크롤링 범위 확대
+DEEP_CRAWLER_MAX_PAGES=30
+
+# 타임아웃 증가
+WEB_SCRAPER_TIMEOUT=60
+```
+
+변경 후 재시작하면 바로 적용됩니다.
+</details>
 
 ### 사용법
 
-**Q: 오프라인에서 사용 가능한가요?**
-A: 생성 시에는 API가 필요하지만, 생성된 HTML과 지식창고는 오프라인 사용 가능합니다.
+<details>
+<summary><b>Q: 오프라인에서 사용 가능한가요?</b></summary>
 
-**Q: 품질 레벨은 무엇인가요?**
 A:
-- `lenient` (70점): 빠른 초안 생성
-- `balanced` (80점): 기본 설정 (권장)
-- `strict` (90점): 고품질 프로덕션용
+- **생성 시**: API 필요 (OpenAI, Serper 등)
+- **생성 후**: HTML 파일과 지식창고는 오프라인 사용 가능
+- **Chat 모드**: 지식창고는 오프라인 작동하지만 LLM API는 필요
+</details>
 
-**Q: Chat 모드 종료 방법은?**
-A: `/exit`, `/quit`, `exit`, `quit` 또는 `Ctrl+C`
+<details>
+<summary><b>Q: 품질 레벨의 차이는?</b></summary>
+
+A:
+| 레벨 | 임계값 | 용도 | 시간 |
+|------|--------|------|------|
+| `lenient` | 70점 | 빠른 초안 | 짧음 |
+| `balanced` | 80점 | **기본값** ✅ | 보통 |
+| `strict` | 90점 | 고품질 프로덕션 | 김 |
+
+임계값 미달 시 최대 3회 자동 개선합니다.
+</details>
+
+<details>
+<summary><b>Q: Chat 모드 종료 방법은?</b></summary>
+
+A: 다음 중 하나 사용:
+- `/exit` 또는 `/quit`
+- `exit` 또는 `quit`
+- `Ctrl+C`
+</details>
+
+<details>
+<summary><b>Q: 이미지가 제대로 매칭되지 않으면?</b></summary>
+
+A: v0.2.0의 Location-based 매칭이 자동으로 작동합니다:
+1. PDF 이미지: 85% 자동 매칭 (페이지 기반)
+2. 웹 이미지: 키워드 기반 보완
+3. 수동 편집: `lecture-forge edit-images`로 교체 가능
+</details>
 
 ### 기술적 질문
 
-**Q: 테스트는 어떻게 실행하나요?**
+<details>
+<summary><b>Q: 테스트는 어떻게 실행하나요?</b></summary>
+
 ```bash
 # 전체 테스트
 pytest tests/ -v
 
 # 커버리지 확인
-pytest tests/ --cov=lecture_forge
+pytest tests/ --cov=lecture_forge --cov-report=html
 
-# 특정 에이전트 테스트
+# 특정 테스트
 pytest tests/unit/agents/test_content_writer.py -v
+
+# 특정 에이전트만
+pytest tests/unit/agents/ -v
 ```
+</details>
 
-**Q: API 호출이 실패하면?**
-A: v0.2.0부터 자동으로 3회 재시도합니다 (지수 백오프: 2초 → 4초 → 10초).
+<details>
+<summary><b>Q: API 호출이 실패하면 어떻게 되나요?</b></summary>
 
-**Q: RAG 쿼리 캐싱은 어떻게 작동하나요?**
-A: 쿼리와 결과 개수를 MD5 해시로 변환하여 메모리 캐시에 저장합니다. 동일 질문은 즉시 응답됩니다.
+A: v0.2.0부터 **자동 재시도** 기능이 있습니다:
+- 최대 3회 재시도
+- 지수 백오프: 2초 → 4초 → 10초
+- 일시적 오류 자동 복구
+- OpenAI, Serper, Pexels, Unsplash 모두 지원
+</details>
+
+<details>
+<summary><b>Q: RAG 쿼리 캐싱은 어떻게 작동하나요?</b></summary>
+
+A:
+- 쿼리와 결과 개수를 MD5 해시로 변환하여 메모리 캐시
+- 동일 질문은 **60% 빠른 응답**
+- 캐시 히트/미스 통계 자동 추적
+- 세션 동안 유지 (프로세스 종료 시 초기화)
+</details>
+
+<details>
+<summary><b>Q: 설정을 환경별로 다르게 하려면?</b></summary>
+
+A: `.env` 파일을 환경별로 분리하세요:
+```bash
+# 개발 환경
+.env.development
+
+# 프로덕션 환경
+.env.production
+
+# 사용
+cp .env.production .env
+lecture-forge create
+```
+</details>
 
 ---
 
@@ -441,8 +707,14 @@ A: 쿼리와 결과 개수를 MD5 해시로 변환하여 메모리 캐시에 저
 - 🐛 Config 검증 런타임 이동
 - 🐛 Bare except 안티패턴 수정
 
+**설정 관리**
+- 🔧 **Config 리팩토링**: 모든 하드코딩 제거, .env 기반 설정 시스템 도입
+- ⚙️ **15+ 환경변수**: 검색, 크롤링, 이미지, 타임아웃 등 모든 설정 조정 가능
+- 🎛️ **유연한 배포**: 개발/프로덕션 환경별 설정 분리 지원
+
 **문서**
 - 📚 CLAUDE.md, README.md, INPUT_LIMITS_ANALYSIS.md 업데이트
+- 📖 Config 기반 설정 가이드 추가
 
 ### v0.1.0 (2026-02-08) - Initial Production Release 🎉
 

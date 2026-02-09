@@ -57,18 +57,31 @@ for page_num in range(total_pages):  # 모든 페이지 처리
 ### 검색 결과 제한
 
 ```python
-# src/lecture_forge/tools/search_tool.py:54
-payload = {
-    "q": query,
-    "num": min(num_results, 100),  # API 최대: 100개
-}
+# src/lecture_forge/tools/search_tool.py (v0.2.0+)
+def run(self, query: str, num_results: int = None) -> Dict:
+    # Use config default if not specified
+    if num_results is None:
+        num_results = Config.SEARCH_NUM_RESULTS  # ✅ .env 설정 가능
+
+    payload = {
+        "q": query,
+        "num": min(num_results, 100),  # API 최대: 100개
+    }
+
+    response = requests.post(
+        self.api_url,
+        json=payload,
+        headers=headers,
+        timeout=Config.SEARCH_TIMEOUT,  # ✅ .env 설정 가능
+    )
 ```
 
-| 항목 | 기본값 | 최대값 | 실제 활용 |
-|-----|--------|--------|----------|
-| **검색 결과 수** | 10개 | 100개 (API 제한) | **5개** 사용 |
-| **결과 타입** | 3종류 | - | Organic + AnswerBox + KnowledgeGraph |
-| **페이지 깊이** | 1페이지만 | - | 첫 페이지만 |
+| 항목 | 기본값 | 환경변수 | 최대값 | 실제 활용 |
+|-----|--------|----------|--------|----------|
+| **검색 결과 수** | 10개 | `SEARCH_NUM_RESULTS` | 100개 (API 제한) | **5개** 사용 |
+| **타임아웃** | 30초 | `SEARCH_TIMEOUT` | - | 30초 |
+| **결과 타입** | 3종류 | - | - | Organic + AnswerBox + KnowledgeGraph |
+| **페이지 깊이** | 1페이지만 | - | - | 첫 페이지만 |
 
 ### 실제 수집 범위
 
@@ -113,16 +126,23 @@ for i, item in enumerate(result["results"], 1):
 ### A. 일반 URL 스크래핑 (WebScraper)
 
 ```python
-# src/lecture_forge/tools/web_scraper.py:21
-def __init__(self, timeout: int = 30):
-    self.timeout = timeout  # 30초 타임아웃
+# src/lecture_forge/tools/web_scraper.py:21-29
+def __init__(self, timeout: int = None):
+    """
+    Initialize the web scraper.
+
+    Args:
+        timeout: Request timeout in seconds (default from Config)
+    """
+    from lecture_forge.config import Config
+    self.timeout = timeout if timeout is not None else Config.WEB_SCRAPER_TIMEOUT
 ```
 
-| 제약사항 | 값 | 설명 |
-|---------|-----|------|
-| **타임아웃** | 30초 | 응답 대기 시간 |
-| **페이지 크기** | 무제한 | 메모리 제한까지 |
-| **JavaScript** | ❌ 미지원 | 정적 HTML만 |
+| 제약사항 | 기본값 | 환경변수 | 설명 |
+|---------|--------|----------|------|
+| **타임아웃** | 30초 | `WEB_SCRAPER_TIMEOUT` | 응답 대기 시간 (.env 설정 가능) |
+| **페이지 크기** | 무제한 | - | 메모리 제한까지 |
+| **JavaScript** | ❌ 미지원 | - | 정적 HTML만 |
 
 **수집 범위:**
 
@@ -133,26 +153,33 @@ def __init__(self, timeout: int = 30):
 ### B. Deep Web Crawler (Hada.io 전용)
 
 ```python
-# src/lecture_forge/tools/deep_web_crawler.py:37-38
-self.max_depth = max_depth    # 깊이: 2 (검색페이지 + 기사)
-self.max_pages = max_pages    # 페이지: 10개
+# src/lecture_forge/tools/deep_web_crawler.py (v0.2.0+)
+def __init__(
+    self,
+    max_depth: int = None,
+    max_pages: int = None,
+    delay: float = None,
+    timeout: int = None,
+):
+    # Use config defaults if not specified
+    self.max_depth = max_depth if max_depth is not None else Config.DEEP_CRAWLER_MAX_DEPTH
+    self.max_pages = max_pages if max_pages is not None else Config.DEEP_CRAWLER_MAX_PAGES
+    self.delay = delay if delay is not None else Config.DEEP_CRAWLER_DELAY
+    self.timeout = timeout if timeout is not None else Config.DEEP_CRAWLER_TIMEOUT
 ```
 
 ```python
-# src/lecture_forge/agents/content_collector.py:35-38
-self.deep_crawler = DeepWebCrawler(
-    max_depth=2,      # ✅ 검색 페이지 + 연결된 기사
-    max_pages=10,     # ✅ 최대 10개 기사
-    delay=1.0,        # ✅ 1초 대기 (Rate limiting)
-)
+# src/lecture_forge/agents/content_collector.py (v0.2.0+)
+self.deep_crawler = DeepWebCrawler()  # ✅ Config 기본값 사용
 ```
 
-| 설정 | 값 | 의미 |
-|-----|-----|------|
-| **max_depth** | 2 | 검색 결과 → 기사 내용 (2단계) |
-| **max_pages** | 10 | 키워드당 최대 10개 기사 |
-| **delay** | 1.0초 | 요청 간 대기 시간 |
-| **대상 사이트** | news.hada.io | 하드코딩됨 |
+| 설정 | 기본값 | 환경변수 | 의미 |
+|-----|--------|----------|------|
+| **max_depth** | 2 | `DEEP_CRAWLER_MAX_DEPTH` | 검색 결과 → 기사 내용 (2단계) |
+| **max_pages** | 10 | `DEEP_CRAWLER_MAX_PAGES` | 키워드당 최대 10개 기사 |
+| **delay** | 1.0초 | `DEEP_CRAWLER_DELAY` | 요청 간 대기 시간 (Rate limiting) |
+| **timeout** | 30초 | `DEEP_CRAWLER_TIMEOUT` | 페이지 로드 타임아웃 |
+| **대상 사이트** | news.hada.io | `DEEP_CRAWLER_BASE_URL` | 기본 크롤링 URL |
 
 **처리 순서:**
 
@@ -167,28 +194,72 @@ self.deep_crawler = DeepWebCrawler(
 ### A. Unsplash API
 
 ```python
-# src/lecture_forge/tools/image_search.py:70
-"per_page": min(per_page, 30),  # API 최대: 30개
+# src/lecture_forge/tools/image_search.py (v0.2.0+)
+def run(
+    self,
+    query: str,
+    per_page: int = None,  # Config 기본값 사용
+    ...
+):
+    # Use config default if not specified
+    if per_page is None:
+        per_page = Config.IMAGE_SEARCH_PER_PAGE
+
+    params = {
+        "query": query,
+        "per_page": min(per_page, 30),  # API 최대: 30개
+        "orientation": orientation,
+    }
+
+    response = requests.get(
+        self.api_url,
+        params=params,
+        headers=headers,
+        timeout=Config.IMAGE_SEARCH_TIMEOUT,  # ✅ Config 사용
+    )
 ```
 
-| 항목 | 기본값 | API 최대 | 실제 사용 |
-|-----|--------|----------|----------|
-| **검색 결과** | 10개 | 30개 | 5개 |
-| **방향** | landscape | - | landscape |
-| **다운로드** | ✅ | - | ✅ 자동 |
+| 항목 | 기본값 | 환경변수 | API 최대 | 실제 사용 |
+|-----|--------|----------|----------|----------|
+| **검색 결과** | 10개 | `IMAGE_SEARCH_PER_PAGE` | 30개 | 5개 |
+| **타임아웃** | 30초 | `IMAGE_SEARCH_TIMEOUT` | - | 30초 |
+| **방향** | landscape | - | - | landscape |
+| **다운로드** | ✅ | - | - | ✅ 자동 |
 
 ### B. Pexels API
 
 ```python
-# src/lecture_forge/tools/image_search.py:246
-"per_page": min(per_page, 80),  # API 최대: 80개
+# src/lecture_forge/tools/image_search.py (v0.2.0+)
+def run(
+    self,
+    query: str,
+    per_page: int = None,  # Config 기본값 사용
+    ...
+):
+    # Use config default if not specified
+    if per_page is None:
+        per_page = Config.IMAGE_SEARCH_PER_PAGE
+
+    params = {
+        "query": query,
+        "per_page": min(per_page, 80),  # API 최대: 80개
+        "orientation": orientation,
+    }
+
+    response = requests.get(
+        self.api_url,
+        params=params,
+        headers=headers,
+        timeout=Config.IMAGE_SEARCH_TIMEOUT,  # ✅ Config 사용
+    )
 ```
 
-| 항목 | 기본값 | API 최대 | 실제 사용 |
-|-----|--------|----------|----------|
-| **검색 결과** | 10개 | 80개 | 5개 |
-| **방향** | landscape | - | landscape |
-| **다운로드** | ✅ | - | ✅ 자동 |
+| 항목 | 기본값 | 환경변수 | API 최대 | 실제 사용 |
+|-----|--------|----------|----------|----------|
+| **검색 결과** | 10개 | `IMAGE_SEARCH_PER_PAGE` | 80개 | 5개 |
+| **타임아웃** | 30초 | `IMAGE_SEARCH_TIMEOUT` | - | 30초 |
+| **방향** | landscape | - | - | landscape |
+| **다운로드** | ✅ | - | - | ✅ 자동 |
 
 ### 실제 활용
 
@@ -330,18 +401,22 @@ MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
 
 ## 📋 종합 요약표
 
-| 입력 소스 | 제한 방식 | 기본값 | 최대값 | 실제 활용 |
-|---------|----------|--------|--------|----------|
-| **PDF** | 없음 | - | 메모리 제한 | 전체 |
-| **PDF 이미지** | Location-based | - | - | **85% 활용** (v0.2.0) |
-| **URL** | 타임아웃 | 30초 | - | 전체 컨텐츠 |
-| **검색 결과** | 결과 수 | 5개 | 100개 | **첫 페이지 5개** |
-| **Deep Crawl** | 페이지 수 | 10개 | - | 기사 10개 |
-| **Unsplash** | API 제한 | 5개 | 30개 | 5개 |
-| **Pexels** | API 제한 | 5개 | 80개 | 5개 |
-| **벡터 검색** | 결과 수 | 5-10개 | - | 컨텍스트 생성용 |
-| **RAG 캐싱** | 메모리 | 무제한 | - | **60% 성능 향상** (v0.2.0) |
-| **청크 크기** | 문자 수 | 1,000자 | - | 200자 오버랩 |
+| 입력 소스 | 제한 방식 | 기본값 | 환경변수 | 최대값 | 실제 활용 |
+|---------|----------|--------|----------|--------|----------|
+| **PDF** | 없음 | - | - | 메모리 제한 | 전체 |
+| **PDF 이미지** | Location-based | - | - | - | **85% 활용** (v0.2.0) |
+| **URL** | 타임아웃 | 30초 | `WEB_SCRAPER_TIMEOUT` | - | 전체 컨텐츠 |
+| **검색 결과** | 결과 수 | 10개 | `SEARCH_NUM_RESULTS` | 100개 | **첫 페이지 5개** |
+| **검색 타임아웃** | 시간 | 30초 | `SEARCH_TIMEOUT` | - | 30초 |
+| **Deep Crawl** | 페이지 수 | 10개 | `DEEP_CRAWLER_MAX_PAGES` | - | 기사 10개 |
+| **Deep Crawl 깊이** | 단계 | 2 | `DEEP_CRAWLER_MAX_DEPTH` | - | 검색+기사 |
+| **Deep Crawl 지연** | 시간 | 1.0초 | `DEEP_CRAWLER_DELAY` | - | Rate limiting |
+| **Unsplash** | API 제한 | 10개 | `IMAGE_SEARCH_PER_PAGE` | 30개 | 5개 |
+| **Pexels** | API 제한 | 10개 | `IMAGE_SEARCH_PER_PAGE` | 80개 | 5개 |
+| **이미지 타임아웃** | 시간 | 30초 | `IMAGE_SEARCH_TIMEOUT` | - | 30초 |
+| **벡터 검색** | 결과 수 | 5-10개 | - | - | 컨텍스트 생성용 |
+| **RAG 캐싱** | 메모리 | 무제한 | - | - | **60% 성능 향상** (v0.2.0) |
+| **청크 크기** | 문자 수 | 1,000자 | `CHUNK_SIZE` | - | 200자 오버랩 |
 
 ---
 
@@ -354,6 +429,7 @@ MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
 3. **RAG 쿼리 캐싱**: MD5 기반 캐싱으로 60% 성능 향상
 4. **API 자동 재시도**: 지수 백오프로 안정성 향상
 5. **포괄적 테스트**: 53+ 테스트, 45-50% 커버리지
+6. **🆕 Config 기반 설정**: 모든 하드코딩 제거, .env 파일로 15+ 설정 조정 가능
 
 ### ✅ 관대한 제한
 
@@ -362,71 +438,97 @@ MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
 3. **PDF 이미지**: 위치 기반 자동 매칭으로 대부분 활용
 4. **RAG 캐시**: 무제한 메모리 캐싱 (세션 동안 유지)
 
-### ⚠️ 보수적인 제한
+### ⚠️ 보수적인 제한 (v0.2.0+: .env로 조정 가능!)
 
-1. **검색 결과**: API 최대 100개지만 **실제 5개만** 사용
-2. **Deep Crawl**: 키워드당 **10개 기사만**
-3. **이미지**: 키워드당 **5개씩** (Unsplash + Pexels)
+1. **검색 결과**: API 최대 100개지만 **실제 5개만** 사용 → `SEARCH_NUM_RESULTS`로 증가 가능
+2. **Deep Crawl**: 키워드당 **10개 기사만** → `DEEP_CRAWLER_MAX_PAGES`로 증가 가능
+3. **이미지**: 키워드당 **5개씩** (Unsplash + Pexels) → `IMAGE_SEARCH_PER_PAGE`로 증가 가능
+4. **타임아웃**: 모든 타임아웃 30초 기본 → 각 `*_TIMEOUT` 환경변수로 증가 가능
 
-### 💡 최적화 포인트
+### 💡 최적화 포인트 (v0.2.0+: .env로 조정 가능!)
 
-#### 검색 결과 확장 가능
+#### 검색 결과 확장
 
+**방법 1: .env 파일** (권장)
+```bash
+# .env
+SEARCH_NUM_RESULTS=20  # 기본 10 → 20으로 증가
+```
+
+**방법 2: 런타임 오버라이드**
 ```python
-# 현재: 5개
-result = self.search_tool.run(keyword, num_results=5)
-
-# 개선 가능: 10-20개로 증가
 result = self.search_tool.run(keyword, num_results=20)
 ```
 
-**위치**: `src/lecture_forge/agents/content_collector.py:114`
+#### Deep Crawl 확장
 
-#### Deep Crawl 확장 가능
-
-```python
-# 현재: 10개 기사
-max_pages=10
-
-# 개선 가능: 20-50개로 증가
-max_pages=20
+**방법 1: .env 파일** (권장)
+```bash
+# .env
+DEEP_CRAWLER_MAX_PAGES=30    # 기본 10 → 30으로 증가
+DEEP_CRAWLER_MAX_DEPTH=3     # 기본 2 → 3으로 증가
+DEEP_CRAWLER_DELAY=2.0       # 기본 1.0 → 2.0으로 증가 (안전)
 ```
 
-**위치**: `src/lecture_forge/agents/content_collector.py:37`
-
-#### 이미지 검색 확장 가능
-
+**방법 2: 런타임 오버라이드**
 ```python
-# 현재: 키워드당 5개
-max_images_per_keyword: int = 5
-
-# 개선 가능: 10-15개로 증가
-max_images_per_keyword: int = 10
+crawler = DeepWebCrawler(max_pages=30, max_depth=3)
 ```
 
-**위치**: `src/lecture_forge/agents/image_collector.py:50`
+#### 이미지 검색 확장
+
+**방법 1: .env 파일** (권장)
+```bash
+# .env
+IMAGE_SEARCH_PER_PAGE=15     # 기본 10 → 15로 증가
+IMAGE_SEARCH_TIMEOUT=60      # 기본 30 → 60초로 증가
+```
+
+**방법 2: 런타임 오버라이드**
+```python
+# image_collector.collect() 호출 시
+max_images_per_keyword=15
+```
 
 ---
 
-## 🚀 권장 설정 (환경변수로 조정 가능)
+## 🚀 권장 설정 (v0.2.0+: 모든 설정을 .env로 조정 가능!)
 
 ### .env 파일 설정 예시
 
 ```bash
-# ===== 벡터 DB 청크 설정 =====
-# 더 작은 청크 = 더 정밀한 검색
-CHUNK_SIZE=800
-CHUNK_OVERLAP=150
+# ===== 인터넷 검색 설정 =====
+SEARCH_NUM_RESULTS=20        # 검색 결과 수 (기본: 10, 최대: 100)
+SEARCH_TIMEOUT=60            # 검색 타임아웃 초 (기본: 30)
 
-# ===== 이미지 검색 =====
-# 더 많은 이미지 수집
-MAX_IMAGES_PER_SEARCH=15
-IMAGE_MAX_WIDTH=1600
+# ===== 웹 크롤링 설정 =====
+WEB_SCRAPER_TIMEOUT=60       # 웹 페이지 로드 타임아웃 (기본: 30)
+
+# Deep Web Crawler
+DEEP_CRAWLER_MAX_DEPTH=3     # 크롤링 깊이 (기본: 2)
+DEEP_CRAWLER_MAX_PAGES=30    # 최대 크롤링 페이지 수 (기본: 10)
+DEEP_CRAWLER_DELAY=2.0       # 요청 간 지연시간 초 (기본: 1.0)
+DEEP_CRAWLER_TIMEOUT=60      # 페이지 타임아웃 초 (기본: 30)
+
+# Playwright Crawler (JavaScript 렌더링)
+PLAYWRIGHT_MAX_DEPTH=3       # 크롤링 깊이 (기본: 2)
+PLAYWRIGHT_MAX_PAGES=30      # 최대 크롤링 페이지 수 (기본: 10)
+PLAYWRIGHT_DELAY=3.0         # 요청 간 지연시간 초 (기본: 2.0)
+PLAYWRIGHT_TIMEOUT=60000     # 페이지 타임아웃 밀리초 (기본: 30000)
+
+# ===== 이미지 검색 설정 =====
+IMAGE_SEARCH_PER_PAGE=15     # API 호출당 이미지 수 (기본: 10)
+IMAGE_SEARCH_TIMEOUT=60      # API 타임아웃 초 (기본: 30)
+MAX_IMAGES_PER_SEARCH=20     # 검색당 최대 이미지 수 (기본: 10)
+IMAGE_MAX_WIDTH=1600         # 이미지 최대 너비 (기본: 1200)
+
+# ===== 벡터 DB 청크 설정 =====
+CHUNK_SIZE=800               # 청크 크기 (기본: 1000, 더 작을수록 정밀)
+CHUNK_OVERLAP=150            # 청크 오버랩 (기본: 200)
 
 # ===== 품질 보증 =====
-# 더 엄격한 품질 기준
-MAX_ITERATIONS=5
-QUALITY_THRESHOLD=85
+MAX_ITERATIONS=5             # 최대 개선 반복 횟수 (기본: 3)
+QUALITY_THRESHOLD=85         # 품질 임계값 (기본: 80)
 ```
 
 ### 설정 시나리오별 권장값
@@ -434,14 +536,22 @@ QUALITY_THRESHOLD=85
 #### 1. 빠른 생성 (Draft 모드)
 
 ```bash
+# 최소한의 수집과 빠른 생성
+SEARCH_NUM_RESULTS=5
+DEEP_CRAWLER_MAX_PAGES=5
+IMAGE_SEARCH_PER_PAGE=5
 CHUNK_SIZE=1500
 MAX_ITERATIONS=1
 QUALITY_THRESHOLD=70
 ```
 
-#### 2. 균형잡힌 생성 (기본)
+#### 2. 균형잡힌 생성 (기본 - 권장)
 
 ```bash
+# 기본 설정 (.env.example 참조)
+SEARCH_NUM_RESULTS=10
+DEEP_CRAWLER_MAX_PAGES=10
+IMAGE_SEARCH_PER_PAGE=10
 CHUNK_SIZE=1000
 MAX_ITERATIONS=3
 QUALITY_THRESHOLD=80
@@ -450,6 +560,11 @@ QUALITY_THRESHOLD=80
 #### 3. 고품질 생성 (Production)
 
 ```bash
+# 포괄적 수집과 엄격한 품질 관리
+SEARCH_NUM_RESULTS=20
+DEEP_CRAWLER_MAX_PAGES=30
+DEEP_CRAWLER_DELAY=2.0       # 안전한 크롤링
+IMAGE_SEARCH_PER_PAGE=15
 CHUNK_SIZE=800
 MAX_ITERATIONS=5
 QUALITY_THRESHOLD=90
@@ -457,78 +572,41 @@ QUALITY_THRESHOLD=90
 
 ---
 
-## 📌 제한사항 우회 방법
+## 📌 설정 변경 방법 (v0.2.0+)
 
-### 1. 검색 결과 제한 우회
+### ✅ 권장 방법: .env 파일 수정
 
-**문제**: 검색 결과를 5개만 사용
-
-**해결책**:
-
-```python
-# content_collector.py 수정
-result = self.search_tool.run(keyword, num_results=20)  # 5 → 20
-```
-
-### 2. Deep Crawl 제한 우회
-
-**문제**: Hada.io만 지원, 10개 기사만
-
-**해결책**:
-
-```python
-# content_collector.py 수정
-self.deep_crawler = DeepWebCrawler(
-    max_depth=2,
-    max_pages=30,     # 10 → 30
-    delay=1.0,
-)
-```
-
-### 3. 이미지 수집 제한 우회
-
-**문제**: 키워드당 5개씩만
-
-**해결책**:
+모든 제한사항은 이제 `.env` 파일에서 간단히 조정 가능합니다:
 
 ```bash
-# .env 파일
-MAX_IMAGES_PER_SEARCH=20
+# .env 파일 수정
+SEARCH_NUM_RESULTS=20           # 검색 결과 증가
+DEEP_CRAWLER_MAX_PAGES=30       # 크롤링 범위 확대
+IMAGE_SEARCH_PER_PAGE=15        # 이미지 검색 증가
+WEB_SCRAPER_TIMEOUT=60          # 타임아웃 증가
 ```
 
-또는 CLI에서:
+**장점:**
+- ✅ 코드 수정 불필요
+- ✅ 환경별로 다른 설정 가능 (개발/프로덕션)
+- ✅ 버전 관리에서 제외 가능 (.gitignore)
+- ✅ 설정 변경 후 재시작만으로 적용
+
+### 대체 방법: 런타임 오버라이드
+
+특정 상황에서만 다른 값이 필요한 경우:
 
 ```python
-# image_collector.collect() 호출 시
-max_images_per_keyword=15
+# 코드에서 명시적으로 전달
+search_tool = SerperSearchTool()
+result = search_tool.run(keyword, num_results=20)  # 이 호출만 20개
+
+crawler = DeepWebCrawler(max_pages=50)  # 이 인스턴스만 50개
 ```
 
----
+### ⚠️ 권장하지 않음: 코드 직접 수정
 
-## 🔍 코드 참조 위치
-
-| 기능 | 파일 경로 | 라인 |
-|-----|---------|------|
-| PDF 파싱 | `src/lecture_forge/tools/pdf_parser.py` | 63 |
-| PDF 페이지 보존 | `src/lecture_forge/agents/content_collector.py` | 227 |
-| 이미지-페이지 매핑 | `src/lecture_forge/agents/image_collector.py` | 403 |
-| Location-based 매칭 | `src/lecture_forge/agents/content_writer.py` | 661, 769 |
-| RAG 쿼리 캐싱 | `src/lecture_forge/knowledge/retriever.py` | 25-35 |
-| API 재시도 로직 | `src/lecture_forge/agents/base.py` | 43-50 |
-| 슬라이드 변환 | `src/lecture_forge/cli.py` | 1949 |
-| 검색 API | `src/lecture_forge/tools/search_tool.py` | 54 |
-| 검색 사용 | `src/lecture_forge/agents/content_collector.py` | 114 |
-| 웹 스크래핑 | `src/lecture_forge/tools/web_scraper.py` | 21 |
-| Deep Crawl | `src/lecture_forge/tools/deep_web_crawler.py` | 37-38 |
-| Deep Crawl 설정 | `src/lecture_forge/agents/content_collector.py` | 35-38 |
-| Unsplash | `src/lecture_forge/tools/image_search.py` | 70 |
-| Pexels | `src/lecture_forge/tools/image_search.py` | 246 |
-| 이미지 수집 | `src/lecture_forge/agents/image_collector.py` | 50 |
-| 청크 설정 | `src/lecture_forge/config.py` | 45-46 |
-| 벡터 검색 (Writer) | `src/lecture_forge/agents/content_writer.py` | 128 |
-| 벡터 검색 (QA) | `src/lecture_forge/agents/qa_agent.py` | 44 |
-| 이미지 설정 | `src/lecture_forge/config.py` | 39-41 |
-| 품질 설정 | `src/lecture_forge/config.py` | 50 |
+이제 Config 기반으로 전환되었으므로 코드 직접 수정은 권장하지 않습니다.
 
 ---
 
@@ -548,8 +626,8 @@ max_images_per_keyword=15
 | 2026-02-08 | 1.0.0 | 초기 분석 문서 작성 |
 | 2026-02-08 | 1.1.0 | Location-based 이미지 매칭 및 슬라이드 변환 기능 추가 |
 | 2026-02-09 | 1.2.0 | v0.2.0 개선사항 반영 (RAG 캐싱, API 재시도, 테스트) |
+| 2026-02-09 | 1.3.0 | **Config 리팩토링 반영**: 모든 하드코딩 제거, .env 기반 설정으로 전환 (15+ 환경변수) |
 
 ---
 
-**작성자**: LectureForge 기술부채 분석팀
-**최종 수정**: 2026-02-08
+**최종 수정**: 2026-02-09

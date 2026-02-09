@@ -45,7 +45,7 @@ class UnsplashSearchTool:
     def run(
         self,
         query: str,
-        per_page: int = 10,
+        per_page: int = None,
         orientation: str = "landscape",
         session_id: str = "default",
         download: bool = True,
@@ -55,7 +55,7 @@ class UnsplashSearchTool:
 
         Args:
             query: Search query
-            per_page: Number of results (max 30)
+            per_page: Number of results (max 30, default from Config)
             orientation: Image orientation (landscape/portrait/squarish)
             session_id: Session identifier for organizing images
             download: Whether to download images
@@ -63,6 +63,9 @@ class UnsplashSearchTool:
         Returns:
             Search results with image URLs and metadata
         """
+        # Use config default if not specified
+        if per_page is None:
+            per_page = Config.IMAGE_SEARCH_PER_PAGE
         logger.info(f"Searching Unsplash for: {query}")
 
         if not self.access_key:
@@ -88,7 +91,7 @@ class UnsplashSearchTool:
                 self.api_url,
                 params=params,
                 headers=headers,
-                timeout=30,
+                timeout=Config.IMAGE_SEARCH_TIMEOUT,
             )
             response.raise_for_status()
 
@@ -140,7 +143,7 @@ class UnsplashSearchTool:
                                 requests.get(
                                     download_url,
                                     headers=headers,
-                                    timeout=10,
+                                    timeout=Config.IMAGE_SEARCH_TIMEOUT,
                                 )
                             except (requests.RequestException, TimeoutError) as e:
                                 logger.debug(f"Failed to trigger Unsplash download endpoint: {e}")
@@ -227,7 +230,7 @@ class PexelsSearchTool:
     def run(
         self,
         query: str,
-        per_page: int = 10,
+        per_page: int = None,
         orientation: str = "landscape",
         session_id: str = "default",
         download: bool = True,
@@ -237,7 +240,7 @@ class PexelsSearchTool:
 
         Args:
             query: Search query
-            per_page: Number of results (max 80)
+            per_page: Number of results (max 80, default from Config)
             orientation: Image orientation (landscape/portrait/square)
             session_id: Session identifier for organizing images
             download: Whether to download images
@@ -245,6 +248,9 @@ class PexelsSearchTool:
         Returns:
             Search results with image URLs and metadata
         """
+        # Use config default if not specified
+        if per_page is None:
+            per_page = Config.IMAGE_SEARCH_PER_PAGE
         logger.info(f"Searching Pexels for: {query}")
 
         if not self.api_key:
@@ -271,7 +277,7 @@ class PexelsSearchTool:
                 self.api_url,
                 params=params,
                 headers=headers,
-                timeout=30,
+                timeout=Config.IMAGE_SEARCH_TIMEOUT,
             )
             response.raise_for_status()
 

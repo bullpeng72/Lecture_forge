@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlparse, parse_qs
 import requests
 from bs4 import BeautifulSoup
 
+from lecture_forge.config import Config
 from lecture_forge.utils import logger
 
 
@@ -20,24 +21,25 @@ class DeepWebCrawler:
 
     def __init__(
         self,
-        max_depth: int = 2,
-        max_pages: int = 10,
-        delay: float = 1.0,
-        timeout: int = 30,
+        max_depth: int = None,
+        max_pages: int = None,
+        delay: float = None,
+        timeout: int = None,
     ):
         """
         Initialize the deep web crawler.
 
         Args:
-            max_depth: Maximum depth to crawl (1 = only search results, 2 = search + linked pages)
-            max_pages: Maximum number of pages to crawl per search
-            delay: Delay between requests in seconds (rate limiting)
-            timeout: Request timeout in seconds
+            max_depth: Maximum depth to crawl (default from Config)
+            max_pages: Maximum number of pages to crawl per search (default from Config)
+            delay: Delay between requests in seconds (default from Config)
+            timeout: Request timeout in seconds (default from Config)
         """
-        self.max_depth = max_depth
-        self.max_pages = max_pages
-        self.delay = delay
-        self.timeout = timeout
+        # Use config defaults if not specified
+        self.max_depth = max_depth if max_depth is not None else Config.DEEP_CRAWLER_MAX_DEPTH
+        self.max_pages = max_pages if max_pages is not None else Config.DEEP_CRAWLER_MAX_PAGES
+        self.delay = delay if delay is not None else Config.DEEP_CRAWLER_DELAY
+        self.timeout = timeout if timeout is not None else Config.DEEP_CRAWLER_TIMEOUT
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }

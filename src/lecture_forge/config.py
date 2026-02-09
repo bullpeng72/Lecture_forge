@@ -36,11 +36,15 @@ class Config:
 
     # ===== Search API =====
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")
+    SEARCH_NUM_RESULTS: int = int(os.getenv("SEARCH_NUM_RESULTS", "10"))
+    SEARCH_TIMEOUT: int = int(os.getenv("SEARCH_TIMEOUT", "30"))
 
     # ===== Image Search APIs =====
     UNSPLASH_ACCESS_KEY: Optional[str] = os.getenv("UNSPLASH_ACCESS_KEY")
     PEXELS_API_KEY: Optional[str] = os.getenv("PEXELS_API_KEY")
     MAX_IMAGES_PER_SEARCH: int = int(os.getenv("MAX_IMAGES_PER_SEARCH", "10"))
+    IMAGE_SEARCH_PER_PAGE: int = int(os.getenv("IMAGE_SEARCH_PER_PAGE", "10"))
+    IMAGE_SEARCH_TIMEOUT: int = int(os.getenv("IMAGE_SEARCH_TIMEOUT", "30"))
     IMAGE_FORMAT: str = os.getenv("IMAGE_FORMAT", "webp")
     IMAGE_MAX_WIDTH: int = int(os.getenv("IMAGE_MAX_WIDTH", "1200"))
 
@@ -70,6 +74,22 @@ class Config:
 
     # Diagram quality threshold (0-100)
     DIAGRAM_QUALITY_THRESHOLD: int = int(os.getenv("DIAGRAM_QUALITY_THRESHOLD", "70"))
+
+    # ===== Web Scraping =====
+    WEB_SCRAPER_TIMEOUT: int = int(os.getenv("WEB_SCRAPER_TIMEOUT", "30"))
+
+    # ===== Deep Web Crawler =====
+    DEEP_CRAWLER_MAX_DEPTH: int = int(os.getenv("DEEP_CRAWLER_MAX_DEPTH", "2"))
+    DEEP_CRAWLER_MAX_PAGES: int = int(os.getenv("DEEP_CRAWLER_MAX_PAGES", "10"))
+    DEEP_CRAWLER_DELAY: float = float(os.getenv("DEEP_CRAWLER_DELAY", "1.0"))
+    DEEP_CRAWLER_TIMEOUT: int = int(os.getenv("DEEP_CRAWLER_TIMEOUT", "30"))
+    DEEP_CRAWLER_BASE_URL: str = os.getenv("DEEP_CRAWLER_BASE_URL", "https://news.hada.io")
+
+    # ===== Playwright Crawler =====
+    PLAYWRIGHT_MAX_DEPTH: int = int(os.getenv("PLAYWRIGHT_MAX_DEPTH", "2"))
+    PLAYWRIGHT_MAX_PAGES: int = int(os.getenv("PLAYWRIGHT_MAX_PAGES", "10"))
+    PLAYWRIGHT_DELAY: float = float(os.getenv("PLAYWRIGHT_DELAY", "2.0"))
+    PLAYWRIGHT_TIMEOUT: int = int(os.getenv("PLAYWRIGHT_TIMEOUT", "30000"))
 
     # ===== Logging =====
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

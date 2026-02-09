@@ -18,14 +18,15 @@ class WebScraperTool:
     name: str = "Web Scraper"
     description: str = "Scrapes and extracts clean text content from web pages"
 
-    def __init__(self, timeout: int = 30):
+    def __init__(self, timeout: int = None):
         """
         Initialize the web scraper.
 
         Args:
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (default from Config)
         """
-        self.timeout = timeout
+        from lecture_forge.config import Config
+        self.timeout = timeout if timeout is not None else Config.WEB_SCRAPER_TIMEOUT
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }

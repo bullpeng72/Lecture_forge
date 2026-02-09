@@ -32,11 +32,7 @@ class ContentCollectorAgent(BaseAgent):
         self.pdf_parser = PDFParserTool()
         self.web_scraper = WebScraperTool()
         self.search_tool = SerperSearchTool()
-        self.deep_crawler = DeepWebCrawler(
-            max_depth=2,  # Search page + article pages
-            max_pages=10,  # Max articles to crawl per search
-            delay=1.0,  # 1 second delay between requests
-        )
+        self.deep_crawler = DeepWebCrawler()  # Uses Config defaults
 
         # Initialize knowledge base components
         self.chunker = TextChunker()

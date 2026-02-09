@@ -33,18 +33,22 @@ class SerperSearchTool:
             f"Search API call failed (attempt {retry_state.attempt_number}/3), retrying..."
         ),
     )
-    def run(self, query: str, num_results: int = 10) -> Dict:
+    def run(self, query: str, num_results: int = None) -> Dict:
         """
         Search the web using Serper API with automatic retry on failures.
 
         Args:
             query: Search query
-            num_results: Number of results to return (max 100)
+            num_results: Number of results to return (max 100, default from Config)
 
         Returns:
             Search results with titles, snippets, and URLs
         """
-        logger.info(f"Searching for: {query}")
+        # Use config default if not specified
+        if num_results is None:
+            num_results = Config.SEARCH_NUM_RESULTS
+
+        logger.info(f"Searching for: {query} (num_results={num_results})")
 
         if not self.api_key:
             return {
@@ -71,7 +75,7 @@ class SerperSearchTool:
                 self.api_url,
                 json=payload,
                 headers=headers,
-                timeout=30,
+                timeout=Config.SEARCH_TIMEOUT,
             )
             response.raise_for_status()
 
@@ -141,17 +145,21 @@ class SerperSearchTool:
                 "error": str(e),
             }
 
-    def search_and_summarize(self, query: str, num_results: int = 5) -> str:
+    def search_and_summarize(self, query: str, num_results: int = None) -> str:
         """
         Search and return a formatted summary of results.
 
         Args:
             query: Search query
-            num_results: Number of results to include
+            num_results: Number of results to include (default from Config)
 
         Returns:
             Formatted string with search results
         """
+        # Use config default if not specified
+        if num_results is None:
+            num_results = min(Config.SEARCH_NUM_RESULTS, 5)  # Max 5 for summary
+
         result = self.run(query, num_results)
 
         if not result["success"]:

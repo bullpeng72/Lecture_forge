@@ -2,8 +2,6 @@
 Tests for RAG retriever.
 """
 
-import pytest
-
 from lecture_forge.knowledge.retriever import RAGRetriever
 
 
@@ -29,14 +27,8 @@ def test_retriever_format_context(mock_vector_store):
     retriever = RAGRetriever(vector_store=mock_vector_store)
 
     documents = [
-        {
-            "content": "This is document 1",
-            "metadata": {"source": "test.pdf", "page": 1}
-        },
-        {
-            "content": "This is document 2",
-            "metadata": {"source": "test.pdf", "page": 2}
-        }
+        {"content": "This is document 1", "metadata": {"source": "test.pdf", "page": 1}},
+        {"content": "This is document 2", "metadata": {"source": "test.pdf", "page": 2}},
     ]
 
     context = retriever.format_context(documents)
@@ -50,11 +42,7 @@ def test_retriever_format_context(mock_vector_store):
 
 def test_retriever_handles_empty_results(mock_vector_store):
     """Test retriever handles empty results gracefully."""
-    mock_vector_store.query.return_value = {
-        "documents": [[]],
-        "metadatas": [[]],
-        "distances": [[]]
-    }
+    mock_vector_store.query.return_value = {"documents": [[]], "metadatas": [[]], "distances": [[]]}
 
     retriever = RAGRetriever(vector_store=mock_vector_store)
     results = retriever.retrieve("test query", k=5)

@@ -2,7 +2,6 @@
 Content Collector Agent - Collects text content from various sources.
 """
 
-from pathlib import Path
 from typing import Dict, List
 
 from lecture_forge.agents.base import BaseAgent
@@ -56,12 +55,10 @@ class ContentCollectorAgent(BaseAgent):
         hada_keywords = sources.get("hada_keywords", [])
 
         logger.info(
-            f"Sources: {len(pdfs)} PDFs, {len(urls)} URLs, "
-            f"{len(keywords)} keywords, {len(hada_keywords)} Hada searches"
+            f"Sources: {len(pdfs)} PDFs, {len(urls)} URLs, " f"{len(keywords)} keywords, {len(hada_keywords)} Hada searches"
         )
 
         all_documents = []
-        all_metadata = []
 
         # 1. Collect from PDFs
         for pdf_path in pdfs:
@@ -70,13 +67,15 @@ class ContentCollectorAgent(BaseAgent):
                 result = self.pdf_parser.run(pdf_path)
 
                 if result["success"]:
-                    all_documents.append({
-                        "text": result["text"],
-                        "source": pdf_path,
-                        "source_type": "pdf",
-                        "metadata": result["metadata"],
-                        "pages": result.get("pages", []),  # Store page information
-                    })
+                    all_documents.append(
+                        {
+                            "text": result["text"],
+                            "source": pdf_path,
+                            "source_type": "pdf",
+                            "metadata": result["metadata"],
+                            "pages": result.get("pages", []),  # Store page information
+                        }
+                    )
                     logger.info(f"✅ Collected from PDF: {len(result['text'])} characters")
                 else:
                     logger.error(f"❌ Failed to parse PDF: {result['error']}")
@@ -91,12 +90,14 @@ class ContentCollectorAgent(BaseAgent):
                 result = self.web_scraper.run(url)
 
                 if result["success"]:
-                    all_documents.append({
-                        "text": result["text"],
-                        "source": url,
-                        "source_type": "url",
-                        "metadata": result["metadata"],
-                    })
+                    all_documents.append(
+                        {
+                            "text": result["text"],
+                            "source": url,
+                            "source_type": "url",
+                            "metadata": result["metadata"],
+                        }
+                    )
                     logger.info(f"✅ Collected from URL: {len(result['text'])} characters")
                 else:
                     logger.error(f"❌ Failed to scrape URL: {result['error']}")
@@ -118,15 +119,17 @@ class ContentCollectorAgent(BaseAgent):
                         search_text += f"{item['snippet']}\n"
                         search_text += f"URL: {item['url']}\n\n"
 
-                    all_documents.append({
-                        "text": search_text,
-                        "source": f"search:{keyword}",
-                        "source_type": "search",
-                        "metadata": {
-                            "query": keyword,
-                            "total_results": result["total_results"],
-                        },
-                    })
+                    all_documents.append(
+                        {
+                            "text": search_text,
+                            "source": f"search:{keyword}",
+                            "source_type": "search",
+                            "metadata": {
+                                "query": keyword,
+                                "total_results": result["total_results"],
+                            },
+                        }
+                    )
                     logger.info(f"✅ Collected {result['total_results']} search results")
                 else:
                     logger.error(f"❌ Search failed: {result['error']}")
@@ -144,16 +147,18 @@ class ContentCollectorAgent(BaseAgent):
 
                 # Add each crawled page as a document
                 for page in crawled_pages:
-                    all_documents.append({
-                        "text": page["text"],
-                        "source": page["url"],
-                        "source_type": f"hada_{page['type']}",  # hada_search_page or hada_article
-                        "metadata": {
-                            **page["metadata"],
-                            "search_keyword": hada_keyword,
-                            "page_type": page["type"],
-                        },
-                    })
+                    all_documents.append(
+                        {
+                            "text": page["text"],
+                            "source": page["url"],
+                            "source_type": f"hada_{page['type']}",  # hada_search_page or hada_article
+                            "metadata": {
+                                **page["metadata"],
+                                "search_keyword": hada_keyword,
+                                "page_type": page["type"],
+                            },
+                        }
+                    )
 
             except Exception as e:
                 logger.error(f"Error deep crawling Hada.io for {hada_keyword}: {e}")
@@ -175,13 +180,15 @@ class ContentCollectorAgent(BaseAgent):
 
                 for chunk_idx, chunk in enumerate(chunks):
                     all_chunks.append(chunk)
-                    chunk_metadatas.append({
-                        "source": doc["source"],
-                        "source_type": doc["source_type"],
-                        "chunk_index": chunk_idx,
-                        "document_index": doc_idx,
-                        **doc["metadata"],
-                    })
+                    chunk_metadatas.append(
+                        {
+                            "source": doc["source"],
+                            "source_type": doc["source_type"],
+                            "chunk_index": chunk_idx,
+                            "document_index": doc_idx,
+                            **doc["metadata"],
+                        }
+                    )
 
         logger.info(f"Total chunks created: {len(all_chunks)}")
 
@@ -240,12 +247,14 @@ class ContentCollectorAgent(BaseAgent):
             doc_chunks = self.chunker.chunk_text(doc["text"])
             for chunk_idx, chunk in enumerate(doc_chunks):
                 chunks.append(chunk)
-                metadatas.append({
-                    "source": doc["source"],
-                    "source_type": "pdf",
-                    "chunk_index": chunk_idx,
-                    **doc["metadata"],
-                })
+                metadatas.append(
+                    {
+                        "source": doc["source"],
+                        "source_type": "pdf",
+                        "chunk_index": chunk_idx,
+                        **doc["metadata"],
+                    }
+                )
             return chunks, metadatas
 
         # Chunk by page
@@ -261,13 +270,15 @@ class ContentCollectorAgent(BaseAgent):
 
             for chunk_idx, chunk in enumerate(page_chunks):
                 chunks.append(chunk)
-                metadatas.append({
-                    "source": doc["source"],
-                    "source_type": "pdf",
-                    "page_number": page_num,  # ✅ Page number preserved
-                    "chunk_index": chunk_idx,
-                    "total_pages": doc["metadata"].get("total_pages", 0),
-                })
+                metadatas.append(
+                    {
+                        "source": doc["source"],
+                        "source_type": "pdf",
+                        "page_number": page_num,  # ✅ Page number preserved
+                        "chunk_index": chunk_idx,
+                        "total_pages": doc["metadata"].get("total_pages", 0),
+                    }
+                )
 
         logger.debug(f"  Created {len(chunks)} chunks from {len(pages)} pages")
         return chunks, metadatas

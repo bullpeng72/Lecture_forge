@@ -10,6 +10,7 @@ from lecture_forge.models.analysis import AnalysisResult
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.utils import logger
 
+
 class CurriculumDesignerAgent(BaseAgent):
     """Agent for designing lecture curriculum and structure."""
 
@@ -40,24 +41,16 @@ class CurriculumDesignerAgent(BaseAgent):
         logger.info(f"Target audience: {audience_level}")
 
         # 1. Generate learning objectives
-        learning_objectives = self._generate_learning_objectives(
-            topic, analysis_result, audience_level
-        )
+        learning_objectives = self._generate_learning_objectives(topic, analysis_result, audience_level)
 
         # 2. Select and sequence topics
-        selected_topics = self._select_topics(
-            analysis_result, duration, audience_level
-        )
+        selected_topics = self._select_topics(analysis_result, duration, audience_level)
 
         # 3. Create sections with time allocation
-        sections = self._create_sections(
-            selected_topics, analysis_result, duration, audience_level
-        )
+        sections = self._create_sections(selected_topics, analysis_result, duration, audience_level)
 
         # 4. Build prerequisite map
-        prerequisite_map = self._build_prerequisite_map(
-            sections, analysis_result
-        )
+        prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
 
         # Calculate total estimated time
         total_time = sum(section.estimated_time for section in sections)
@@ -134,18 +127,10 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         # Filter topics by audience level
         if audience_level == "beginner":
             # Prefer easier topics
-            selected = [
-                topic
-                for topic in all_topics
-                if difficulty_scores.get(topic, 0.5) < 0.6
-            ]
+            selected = [topic for topic in all_topics if difficulty_scores.get(topic, 0.5) < 0.6]
         elif audience_level == "advanced":
             # Prefer harder topics
-            selected = [
-                topic
-                for topic in all_topics
-                if difficulty_scores.get(topic, 0.5) > 0.4
-            ]
+            selected = [topic for topic in all_topics if difficulty_scores.get(topic, 0.5) > 0.4]
         else:  # intermediate
             selected = all_topics
 

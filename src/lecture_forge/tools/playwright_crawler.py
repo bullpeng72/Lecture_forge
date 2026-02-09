@@ -13,6 +13,7 @@ from lecture_forge.utils import logger
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -45,8 +46,7 @@ class PlaywrightCrawler:
         """
         if not PLAYWRIGHT_AVAILABLE:
             raise ImportError(
-                "Playwright is required for this crawler. "
-                "Install with: pip install playwright && playwright install"
+                "Playwright is required for this crawler. " "Install with: pip install playwright && playwright install"
             )
 
         # Use config defaults if not specified
@@ -75,9 +75,7 @@ class PlaywrightCrawler:
         with sync_playwright() as p:
             # Launch browser
             browser = p.chromium.launch(headless=self.headless)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            )
+            context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
             try:
                 # Step 1: Crawl search page
@@ -89,10 +87,7 @@ class PlaywrightCrawler:
                 # Wait for content to load
                 try:
                     # Wait for search results or "no results" message
-                    page.wait_for_selector(
-                        "main, .search-results, .topic-list, article",
-                        timeout=10000
-                    )
+                    page.wait_for_selector("main, .search-results, .topic-list, article", timeout=10000)
                 except PlaywrightTimeout:
                     logger.warning("Timeout waiting for search results")
 
@@ -107,17 +102,19 @@ class PlaywrightCrawler:
                 search_text = self._extract_text(soup)
 
                 # Add search page
-                all_content.append({
-                    "url": search_url,
-                    "title": f"Search results for: {keyword}",
-                    "text": search_text,
-                    "type": "search_page",
-                    "metadata": {
+                all_content.append(
+                    {
                         "url": search_url,
-                        "content_length": len(search_text),
-                        "word_count": len(search_text.split()),
+                        "title": f"Search results for: {keyword}",
+                        "text": search_text,
+                        "type": "search_page",
+                        "metadata": {
+                            "url": search_url,
+                            "content_length": len(search_text),
+                            "word_count": len(search_text.split()),
+                        },
                     }
-                })
+                )
 
                 # Extract article links
                 article_links = self._extract_hada_links(soup, search_url)
@@ -125,7 +122,7 @@ class PlaywrightCrawler:
 
                 # Step 2: Crawl articles
                 if self.max_depth >= 2 and article_links:
-                    for i, link in enumerate(article_links[:self.max_pages], 1):
+                    for i, link in enumerate(article_links[: self.max_pages], 1):
                         if link in self.visited_urls:
                             continue
 
@@ -139,10 +136,7 @@ class PlaywrightCrawler:
 
                             # Wait for article content
                             try:
-                                article_page.wait_for_selector(
-                                    "article, .topic-content, main",
-                                    timeout=10000
-                                )
+                                article_page.wait_for_selector("article, .topic-content, main", timeout=10000)
                             except PlaywrightTimeout:
                                 logger.warning(f"Timeout loading article: {link}")
 
@@ -155,18 +149,20 @@ class PlaywrightCrawler:
                             title = article_soup.title.string if article_soup.title else "No title"
                             text = self._extract_text(article_soup)
 
-                            all_content.append({
-                                "url": link,
-                                "title": title,
-                                "text": text,
-                                "type": "article",
-                                "metadata": {
+                            all_content.append(
+                                {
                                     "url": link,
                                     "title": title,
-                                    "content_length": len(text),
-                                    "word_count": len(text.split()),
+                                    "text": text,
+                                    "type": "article",
+                                    "metadata": {
+                                        "url": link,
+                                        "title": title,
+                                        "content_length": len(text),
+                                        "word_count": len(text.split()),
+                                    },
                                 }
-                            })
+                            )
 
                             self.visited_urls.add(link)
                             article_page.close()
@@ -252,17 +248,19 @@ class PlaywrightCrawler:
                 text = self._extract_text(soup)
                 title = soup.title.string if soup.title else "No title"
 
-                all_content.append({
-                    "url": url,
-                    "title": title,
-                    "text": text,
-                    "type": "main_page",
-                    "metadata": {
+                all_content.append(
+                    {
                         "url": url,
-                        "content_length": len(text),
-                        "word_count": len(text.split()),
+                        "title": title,
+                        "text": text,
+                        "type": "main_page",
+                        "metadata": {
+                            "url": url,
+                            "content_length": len(text),
+                            "word_count": len(text.split()),
+                        },
                     }
-                })
+                )
 
                 # Extract links
                 links = []
@@ -273,7 +271,7 @@ class PlaywrightCrawler:
                         if urlparse(full_url).netloc == urlparse(url).netloc:
                             links.append(full_url)
 
-                links = list(set(links))[:self.max_pages]
+                links = list(set(links))[: self.max_pages]
 
                 # Crawl linked pages
                 for i, link in enumerate(links, 1):
@@ -295,17 +293,19 @@ class PlaywrightCrawler:
                         link_text = self._extract_text(link_soup)
                         link_title = link_soup.title.string if link_soup.title else "No title"
 
-                        all_content.append({
-                            "url": link,
-                            "title": link_title,
-                            "text": link_text,
-                            "type": "linked_page",
-                            "metadata": {
+                        all_content.append(
+                            {
                                 "url": link,
-                                "content_length": len(link_text),
-                                "word_count": len(link_text.split()),
+                                "title": link_title,
+                                "text": link_text,
+                                "type": "linked_page",
+                                "metadata": {
+                                    "url": link,
+                                    "content_length": len(link_text),
+                                    "word_count": len(link_text.split()),
+                                },
                             }
-                        })
+                        )
 
                         self.visited_urls.add(link)
                         link_page.close()

@@ -2,6 +2,7 @@
 Diagram Generator Agent - Generates Mermaid diagrams.
 """
 
+import re
 from typing import List, Optional
 
 from lecture_forge.agents.base import BaseAgent
@@ -9,6 +10,7 @@ from lecture_forge.config import Config
 from lecture_forge.models.lecture import MermaidDiagram, SectionContent
 from lecture_forge.utils import logger
 from lecture_forge.utils.mermaid_validator import MermaidValidator, clean_mermaid_code
+
 
 class DiagramGeneratorAgent(BaseAgent):
     """Agent for generating Mermaid diagrams."""
@@ -18,9 +20,7 @@ class DiagramGeneratorAgent(BaseAgent):
         self.validator = MermaidValidator()
         logger.info("Initializing Diagram Generator Agent with validator")
 
-    def generate_diagrams(
-        self, section_contents: List[SectionContent]
-    ) -> List[SectionContent]:
+    def generate_diagrams(self, section_contents: List[SectionContent]) -> List[SectionContent]:
         """
         Generate diagrams for sections and add them to section content.
 
@@ -80,9 +80,13 @@ class DiagramGeneratorAgent(BaseAgent):
                     min_quality = Config.DIAGRAM_QUALITY_THRESHOLD
                     if quality_score["score"] >= min_quality or attempt == max_retries - 1:
                         if quality_score["score"] >= min_quality:
-                            logger.info(f"  ✅ Valid {diagram_type} diagram generated (attempt {attempt + 1}, quality: {quality_score['score']}/100)")
+                            logger.info(
+                                f"  ✅ Valid {diagram_type} diagram generated (attempt {attempt + 1}, quality: {quality_score['score']}/100)"
+                            )
                         else:
-                            logger.warning(f"  ⚠️ Accepting diagram on final attempt (quality: {quality_score['score']}/{min_quality})")
+                            logger.warning(
+                                f"  ⚠️ Accepting diagram on final attempt (quality: {quality_score['score']}/{min_quality})"
+                            )
                         if quality_score["feedback"]:
                             logger.debug(f"     Quality notes: {', '.join(quality_score['feedback'][:2])}")
                         return MermaidDiagram(
@@ -257,19 +261,17 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         Returns:
             Cleaned Mermaid code safe for rendering
         """
-        import re
-
-        lines = diagram_code.split('\n')
+        lines = diagram_code.split("\n")
         cleaned_lines = []
 
         for line in lines:
             # Skip non-node lines (diagram type, connections, empty)
-            if not line.strip() or line.strip().startswith('flowchart') or '-->' in line:
+            if not line.strip() or line.strip().startswith("flowchart") or "-->" in line:
                 cleaned_lines.append(line)
                 continue
 
             # Process node definition lines: "    A[label text]"
-            node_match = re.match(r'^(\s*)([A-Z0-9_]+)\[(.*?)\](.*)$', line)
+            node_match = re.match(r"^(\s*)([A-Z0-9_]+)\[(.*?)\](.*)$", line)
 
             if node_match:
                 indent, node_id, label, rest = node_match.groups()
@@ -279,17 +281,17 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
                 # 1. Remove parentheses and their content or convert to spaces
                 # Pattern 1: text(content) -> text content
-                label = re.sub(r'\(([^)]*)\)', r' \1', label)
+                label = re.sub(r"\(([^)]*)\)", r" \1", label)
 
                 # 2. Replace colons with hyphens
-                label = re.sub(r':\s*', ' - ', label)
+                label = re.sub(r":\s*", " - ", label)
 
                 # 3. Clean up multiple spaces
-                label = ' '.join(label.split())
+                label = " ".join(label.split())
 
                 # 4. Truncate if too long (keep under 50 chars)
                 if len(label) > 50:
-                    label = label[:50].rsplit(' ', 1)[0]
+                    label = label[:50].rsplit(" ", 1)[0]
 
                 # Reconstruct the line
                 cleaned_line = f"{indent}{node_id}[{label}]{rest}"
@@ -303,7 +305,7 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
                 # Keep the line as-is if it doesn't match node pattern
                 cleaned_lines.append(line)
 
-        cleaned_code = '\n'.join(cleaned_lines)
+        cleaned_code = "\n".join(cleaned_lines)
 
         # Log summary of changes
         if cleaned_code != diagram_code:
@@ -328,24 +330,21 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Each node = one step in the process
 - Connect sequentially: A --> B --> C --> D
 - Focus on: Step 1 → Step 2 → Step 3 → Step 4 → Result""",
-
             "architecture": """Extract the SYSTEM COMPONENTS from the content.
 - Identify main system/concept and its components
 - Create a TOP-DOWN hierarchy (flowchart TD)
 - Use hub-and-spoke or hierarchical structure
 - Focus on: System → Components → Sub-components → Output""",
-
             "comparison": """Extract the COMPARISON ELEMENTS from the content.
 - Identify what is being compared
 - Create a COMPARISON structure (flowchart TD)
 - Show options, characteristics, and conclusions
 - Focus on: Topic → Options → Features → Selection""",
-
             "concept": """Extract the CONCEPT RELATIONSHIPS from the content.
 - Identify main concept and its features
 - Create a CONCEPTUAL map (flowchart TD)
 - Show characteristics, mechanisms, and applications
-- Focus on: Concept → Features → Mechanism → Applications"""
+- Focus on: Concept → Features → Mechanism → Applications""",
         }
 
         return instructions.get(section_type, instructions["concept"])
@@ -388,10 +387,23 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         if content_preview:
             # Count sequential indicators in content
             sequential_indicators = [
-                "첫째", "둘째", "셋째", "넷째",
-                "먼저", "다음", "그다음", "마지막",
-                "1.", "2.", "3.", "4.", "5.",
-                "단계 1", "단계 2", "step 1", "step 2",
+                "첫째",
+                "둘째",
+                "셋째",
+                "넷째",
+                "먼저",
+                "다음",
+                "그다음",
+                "마지막",
+                "1.",
+                "2.",
+                "3.",
+                "4.",
+                "5.",
+                "단계 1",
+                "단계 2",
+                "step 1",
+                "step 2",
             ]
             sequential_count = sum(1 for indicator in sequential_indicators if indicator in content_preview)
 
@@ -402,9 +414,20 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
             # Check for process action verbs
             action_verbs = [
-                "수집", "전처리", "훈련", "검증", "평가",
-                "설정", "초기화", "실행", "분석", "구성",
-                "준비", "변환", "적용", "조정"
+                "수집",
+                "전처리",
+                "훈련",
+                "검증",
+                "평가",
+                "설정",
+                "초기화",
+                "실행",
+                "분석",
+                "구성",
+                "준비",
+                "변환",
+                "적용",
+                "조정",
             ]
             action_count = sum(1 for verb in action_verbs if verb in content_preview)
 
@@ -413,10 +436,7 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
                 return "process"
 
             # Check for component/module keywords (architecture)
-            component_keywords = [
-                "컴포넌트", "모듈", "레이어", "계층",
-                "블록", "유닛", "요소"
-            ]
+            component_keywords = ["컴포넌트", "모듈", "레이어", "계층", "블록", "유닛", "요소"]
             component_count = sum(1 for keyword in component_keywords if keyword in content_preview)
 
             if component_count >= 2:
@@ -452,7 +472,6 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Middle nodes (B,C,D): Core components
 - Output node (E): Result or output
 - Use hub-and-spoke or hierarchical connections""",
-
             "process": """flowchart LR
     A[단계 1 시작]
     B[단계 2 처리]
@@ -468,7 +487,6 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Use action verbs (수집, 처리, 훈련, 평가, etc.)
 - Chain connections: A --> B --> C --> D
 - NO branches unless parallel paths exist""",
-
             "comparison": """flowchart TD
     A[비교 주제]
     B[방법 A]
@@ -489,7 +507,6 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Options (B,C): Things being compared
 - Features (D,E): Characteristics or advantages
 - Conclusion (F): Selection criteria or recommendation""",
-
             "concept": """flowchart TD
     A[핵심 개념명]
     B[특징 1]
@@ -508,7 +525,7 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Features (B,C): Key characteristics
 - Mechanism (D): How it works
 - Applications (E): Use cases
-- Use hierarchical connections"""
+- Use hierarchical connections""",
         }
 
         return templates.get(section_type, templates["concept"])
@@ -536,11 +553,7 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         section_type = self._detect_section_type(section.title, section.markdown_content)
 
         # Extract key concepts from section content
-        keywords = self._extract_keywords_simple(
-            section.markdown_content,
-            section.title,
-            section_type
-        )
+        keywords = self._extract_keywords_simple(section.markdown_content, section.title, section_type)
 
         # Create flowchart with type-appropriate structure
         if section_type == "process":
@@ -648,8 +661,6 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         Returns:
             List of cleaned keywords (max 7)
         """
-        import re
-
         keywords = []
 
         # 1. Main keyword from title (always first)
@@ -688,11 +699,10 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
     def _extract_process_keywords(self, content: str) -> list:
         """Extract process/workflow keywords (action verbs and steps)."""
-        import re
         keywords = []
 
         # Extract numbered steps (1., 2., 3.)
-        step_pattern = r'(\d+)\.\s*\*?\*?([가-힣\s]{2,20})\*?\*?'
+        step_pattern = r"(\d+)\.\s*\*?\*?([가-힣\s]{2,20})\*?\*?"
         step_matches = re.findall(step_pattern, content)
         for num, step in step_matches[:6]:
             clean_step = self._clean_text_for_mermaid(step)
@@ -701,9 +711,22 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
         # Extract action verbs
         action_verbs = [
-            "데이터 수집", "전처리", "모델 훈련", "검증", "평가", "배포",
-            "데이터 준비", "학습", "테스트", "최적화", "초기화",
-            "설정", "구성", "실행", "분석", "변환"
+            "데이터 수집",
+            "전처리",
+            "모델 훈련",
+            "검증",
+            "평가",
+            "배포",
+            "데이터 준비",
+            "학습",
+            "테스트",
+            "최적화",
+            "초기화",
+            "설정",
+            "구성",
+            "실행",
+            "분석",
+            "변환",
         ]
         content_lower = content.lower()
         for verb in action_verbs:
@@ -716,15 +739,14 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
     def _extract_architecture_keywords(self, content: str) -> list:
         """Extract architecture/component keywords."""
-        import re
         keywords = []
 
         # Extract component/module mentions
         component_patterns = [
-            r'([가-힣\s]{2,15})\s*컴포넌트',
-            r'([가-힣\s]{2,15})\s*모듈',
-            r'([가-힣\s]{2,15})\s*레이어',
-            r'([가-힣\s]{2,15})\s*계층',
+            r"([가-힣\s]{2,15})\s*컴포넌트",
+            r"([가-힣\s]{2,15})\s*모듈",
+            r"([가-힣\s]{2,15})\s*레이어",
+            r"([가-힣\s]{2,15})\s*계층",
         ]
 
         for pattern in component_patterns:
@@ -774,10 +796,9 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
     def _extract_bold_text(self, content: str) -> list:
         """Extract keywords from bold text (technical terms)."""
-        import re
         keywords = []
 
-        bold_pattern = r'\*\*([^*]{2,20})\*\*'
+        bold_pattern = r"\*\*([^*]{2,20})\*\*"
         bold_matches = re.findall(bold_pattern, content)
 
         for match in bold_matches[:10]:
@@ -794,7 +815,7 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
             "process": ["시작", "처리", "변환", "검증", "완료"],
             "architecture": ["시스템", "핵심 모듈", "처리 계층", "출력"],
             "comparison": ["옵션 A", "옵션 B", "장점", "선택"],
-            "concept": ["핵심 개념", "주요 특징", "작동 방식", "활용"]
+            "concept": ["핵심 개념", "주요 특징", "작동 방식", "활용"],
         }
         return defaults.get(section_type, defaults["concept"])
 
@@ -844,12 +865,12 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         Returns:
             dict with 'score' (0-100), 'pass' (bool), 'feedback' (list)
         """
-        lines = [l.strip() for l in mermaid_code.split('\n') if l.strip() and not l.strip().startswith('flowchart')]
+        lines = [line.strip() for line in mermaid_code.split("\n") if line.strip() and not line.strip().startswith("flowchart")]
 
         # Count nodes and connections
-        node_lines = [l for l in lines if '[' in l and ']' in l and '-->' not in l]
-        connection_lines = [l for l in lines if '-->' in l]
-        decision_lines = [l for l in lines if '{{' in l and '}}' in l]
+        node_lines = [line for line in lines if "[" in line and "]" in line and "-->" not in line]
+        connection_lines = [line for line in lines if "-->" in line]
+        decision_lines = [line for line in lines if "{{" in line and "}}" in line]
 
         node_count = len(node_lines)
         connection_count = len(connection_lines)
@@ -858,8 +879,8 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         # Check for feedback loops (connections going backwards)
         has_loop = False
         for line in connection_lines:
-            if '-->' in line:
-                parts = line.split('-->')
+            if "-->" in line:
+                parts = line.split("-->")
                 if len(parts) >= 2:
                     from_node = parts[0].strip().split()[0]
                     to_node = parts[1].strip().split()[0]

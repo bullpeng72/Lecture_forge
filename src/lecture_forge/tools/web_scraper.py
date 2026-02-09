@@ -26,6 +26,7 @@ class WebScraperTool:
             timeout: Request timeout in seconds (default from Config)
         """
         from lecture_forge.config import Config
+
         self.timeout = timeout if timeout is not None else Config.WEB_SCRAPER_TIMEOUT
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -118,9 +119,7 @@ class WebScraperTool:
                 author = meta_author.get("content", "").strip()
                 metadata["author"] = author
 
-            logger.info(
-                f"Successfully scraped URL: {len(cleaned_text)} characters, {metadata['word_count']} words"
-            )
+            logger.info(f"Successfully scraped URL: {len(cleaned_text)} characters, {metadata['word_count']} words")
 
             return {
                 "success": True,

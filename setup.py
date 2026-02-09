@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="lecture-forge",
     version="0.2.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Sungwoo Kim",
+    author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator using CrewAI",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/lecture-forge",
+    url="https://github.com/bullpeng72/Lecture_forge",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
@@ -29,7 +29,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "lecture-forge=lecture_forge.cli:main",
+            "lecture-forge=lecture_forge.cli:cli",
         ],
     },
     include_package_data=True,

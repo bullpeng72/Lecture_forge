@@ -34,9 +34,8 @@ def sample_lecture():
     return Lecture(
         title="Test Lecture",
         topic="Testing",
-        duration_minutes=60,
-        difficulty="beginner",
-        target_audience="Students",
+        duration=60,
+        audience_level="beginner",
         learning_objectives=["Learn testing"],
         sections=[section],
     )

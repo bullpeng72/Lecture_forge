@@ -5,6 +5,8 @@ Content Writer Agent - Writes lecture content using RAG.
 from pathlib import Path
 from typing import List
 
+import numpy as np
+
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
@@ -16,6 +18,7 @@ from lecture_forge.utils.content_metrics import (
     evaluate_content_quality,
     format_quality_report,
 )
+
 
 class ContentWriterAgent(BaseAgent):
     """Agent for writing lecture content with RAG."""
@@ -64,13 +67,11 @@ class ContentWriterAgent(BaseAgent):
             logger.info(f"{'='*60}")
 
             # Filter available images (exclude already used ones)
-            available_for_section = [
-                img for img in (available_images or [])
-                if img.get("id") not in self.used_image_ids
-            ]
+            available_for_section = [img for img in (available_images or []) if img.get("id") not in self.used_image_ids]
 
-            logger.info(f"   📷 Available images: {len(available_for_section)} "
-                       f"(filtered from {len(available_images or [])})")
+            logger.info(
+                f"   📷 Available images: {len(available_for_section)} " f"(filtered from {len(available_images or [])})"
+            )
 
             content = self.write_section(
                 section=section,
@@ -81,8 +82,7 @@ class ContentWriterAgent(BaseAgent):
             # Track used images
             for img_ref in content.images:
                 self.used_image_ids.add(img_ref.image_id)
-                self.image_usage_count[img_ref.image_id] = \
-                    self.image_usage_count.get(img_ref.image_id, 0) + 1
+                self.image_usage_count[img_ref.image_id] = self.image_usage_count.get(img_ref.image_id, 0) + 1
 
             logger.info(f"   ✅ Used {len(content.images)} images in this section")
             logger.info(f"   📊 Total unique images used so far: {len(self.used_image_ids)}")
@@ -376,14 +376,13 @@ Write the comprehensive content NOW:"""
             logger.info(f"  📊 Initial quality score: {quality['overall_score']}/100")
 
             # CRITICAL: If NO code examples, generate them separately
-            if len(code_blocks) == 0 and targets['target_code_examples'] > 0:
-                logger.warning(f"  ❌ CRITICAL: No code examples found! Generating {targets['target_code_examples']} code examples...")
+            if len(code_blocks) == 0 and targets["target_code_examples"] > 0:
+                logger.warning(
+                    f"  ❌ CRITICAL: No code examples found! Generating {targets['target_code_examples']} code examples..."
+                )
 
                 code_examples_content = self._generate_code_examples(
-                    section=section,
-                    curriculum=curriculum,
-                    contexts=contexts,
-                    num_examples=targets['target_code_examples']
+                    section=section, curriculum=curriculum, contexts=contexts, num_examples=targets["target_code_examples"]
                 )
 
                 # Append code examples to content
@@ -466,7 +465,9 @@ Write the comprehensive content NOW:"""
         shortfalls = []
 
         if previous_quality["word_count"] < targets["min_words"]:
-            shortfalls.append(f"- Words: {previous_quality['word_count']} / {targets['min_words']} (need {targets['min_words'] - previous_quality['word_count']} more)")
+            shortfalls.append(
+                f"- Words: {previous_quality['word_count']} / {targets['min_words']} (need {targets['min_words'] - previous_quality['word_count']} more)"
+            )
 
         if previous_quality["code_block_count"] < targets["min_code_examples"]:
             shortfalls.append(f"- Code examples: {previous_quality['code_block_count']} / {targets['min_code_examples']}")
@@ -478,7 +479,7 @@ Write the comprehensive content NOW:"""
 
         context_text = "\n\n---\n\n".join(contexts[:8]) if contexts else ""
 
-        word_gap = targets['target_words'] - previous_quality['word_count']
+        word_gap = targets["target_words"] - previous_quality["word_count"]
 
         prompt = f"""🚨🚨🚨 EMERGENCY: CONTENT TOO SHORT - IMMEDIATE ACTION REQUIRED 🚨🚨🚨
 
@@ -620,8 +621,10 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                 code_block_count=len(code_blocks),
             )
 
-            word_increase = new_quality['word_count'] - previous_quality['word_count']
-            logger.info(f"     ✅ Expansion succeeded: +{word_increase} words ({previous_quality['word_count']} → {new_quality['word_count']})")
+            word_increase = new_quality["word_count"] - previous_quality["word_count"]
+            logger.info(
+                f"     ✅ Expansion succeeded: +{word_increase} words ({previous_quality['word_count']} → {new_quality['word_count']})"
+            )
             logger.info(f"     📊 Expanded quality score: {new_quality['overall_score']}/100")
 
             return expanded
@@ -629,6 +632,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         except Exception as e:
             logger.error(f"     ❌ Error expanding content: {type(e).__name__}: {e}")
             import traceback
+
             logger.debug(traceback.format_exc())
             # Return original if expansion fails
             return previous_content
@@ -714,9 +718,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         location_matched = 0
         if context_metadatas and pdf_images:
             logger.debug(f"     📍 Trying location-based matching...")
-            location_matched_images = self._match_images_by_location(
-                context_metadatas, pdf_images, max_images
-            )
+            location_matched_images = self._match_images_by_location(context_metadatas, pdf_images, max_images)
             selected.extend(location_matched_images)
             location_matched = len(location_matched_images)
             logger.info(f"     ✅ Location-based: {location_matched} images matched")
@@ -886,10 +888,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                 # Evaluate images from this page
                 for idx, img_info in enumerate(page_images):
                     # Find full image object
-                    full_img = next(
-                        (img for img in pdf_images if img.get("id") == img_info["id"]),
-                        None
-                    )
+                    full_img = next((img for img in pdf_images if img.get("id") == img_info["id"]), None)
 
                     if not full_img:
                         continue
@@ -898,25 +897,29 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                     quality_score = self._evaluate_image_quality_simple(full_img)
 
                     if quality_score < Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
-                        logger.debug(f"           ⏭️  Skip {full_img.get('id', 'unknown')} "
-                                   f"(quality: {quality_score:.2f}, threshold: {Config.IMAGE_SELECTION_QUALITY_THRESHOLD})")
+                        logger.debug(
+                            f"           ⏭️  Skip {full_img.get('id', 'unknown')} "
+                            f"(quality: {quality_score:.2f}, threshold: {Config.IMAGE_SELECTION_QUALITY_THRESHOLD})"
+                        )
                         continue
 
                     # Calculate final score
                     final_score = (
-                        importance_score * 0.7 +  # Page importance
-                        quality_score * 0.2 +     # Image quality
-                        (1.0 / (idx + 1)) * 0.1   # Position in page (first is best)
+                        importance_score * 0.7  # Page importance
+                        + quality_score * 0.2  # Image quality
+                        + (1.0 / (idx + 1)) * 0.1  # Position in page (first is best)
                     )
 
-                    candidates.append({
-                        "image": full_img,
-                        "score": final_score,
-                        "page": page_num,
-                        "source": source,
-                        "page_importance": importance_score,
-                        "quality": quality_score
-                    })
+                    candidates.append(
+                        {
+                            "image": full_img,
+                            "score": final_score,
+                            "page": page_num,
+                            "source": source,
+                            "page_importance": importance_score,
+                            "quality": quality_score,
+                        }
+                    )
 
         # 4. Sort by score
         candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -926,9 +929,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
         # 6. If not enough images, expand to adjacent pages
         if len(selected) < max_images:
-            selected = self._expand_to_adjacent_pages(
-                selected, max_images, page_importance, image_page_map, pdf_images
-            )
+            selected = self._expand_to_adjacent_pages(selected, max_images, page_importance, image_page_map, pdf_images)
 
         logger.info(f"     ✅ Location-based: {len(selected)} images matched")
 
@@ -967,10 +968,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             logger.debug(f"        Failed to load image-page map: {e}")
             return {}
 
-    def _calculate_page_importance(
-        self,
-        context_metadatas: List[dict]
-    ) -> dict:
+    def _calculate_page_importance(self, context_metadatas: List[dict]) -> dict:
         """
         Calculate page importance from RAG context.
 
@@ -995,10 +993,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             page_num = metadata.get("page_number")
 
             if source.endswith(".pdf") and page_num is not None:
-                source_pages[source].append({
-                    "page": page_num,
-                    "rank": rank  # Position in RAG results (0 = best)
-                })
+                source_pages[source].append({"page": page_num, "rank": rank})  # Position in RAG results (0 = best)
 
         # Calculate importance for each page
         page_importance = {}
@@ -1026,11 +1021,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                 page_scores[page_num] = importance
 
             # Sort by importance
-            sorted_pages = sorted(
-                page_scores.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
+            sorted_pages = sorted(page_scores.items(), key=lambda x: x[1], reverse=True)
 
             page_importance[source] = sorted_pages
 
@@ -1157,8 +1148,8 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             img = Image.open(img_path)
 
             # Convert to RGB if needed
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+            if img.mode != "RGB":
+                img = img.convert("RGB")
 
             # Resize for faster processing (max 400x400)
             img.thumbnail((400, 400), Image.Resampling.LANCZOS)
@@ -1176,15 +1167,13 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             complexity_score = self._check_content_complexity(img_array)
 
             # Weighted average
-            total_score = (
-                color_score * 0.40 +
-                edge_score * 0.30 +
-                complexity_score * 0.30
-            )
+            total_score = color_score * 0.40 + edge_score * 0.30 + complexity_score * 0.30
 
-            logger.debug(f"           📊 Content analysis: color={color_score:.2f}, "
-                        f"edge={edge_score:.2f}, complexity={complexity_score:.2f}, "
-                        f"total={total_score:.2f}")
+            logger.debug(
+                f"           📊 Content analysis: color={color_score:.2f}, "
+                f"edge={edge_score:.2f}, complexity={complexity_score:.2f}, "
+                f"total={total_score:.2f}"
+            )
 
             return total_score
 
@@ -1215,11 +1204,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         hist_b = hist_b / hist_b.sum()
 
         # Count non-zero bins (unique colors)
-        unique_colors = (
-            (hist_r > 0.001).sum() +
-            (hist_g > 0.001).sum() +
-            (hist_b > 0.001).sum()
-        ) / 3.0
+        unique_colors = ((hist_r > 0.001).sum() + (hist_g > 0.001).sum() + (hist_b > 0.001).sum()) / 3.0
 
         # Check if color is concentrated in few bins (solid color)
         max_concentration_r = hist_r.max()
@@ -1267,7 +1252,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
         try:
             # Convert to grayscale
-            img_gray = Image.fromarray(img_array).convert('L')
+            img_gray = Image.fromarray(img_array).convert("L")
 
             # Apply edge detection (Sobel-like filter)
             edges = img_gray.filter(ImageFilter.FIND_EDGES)
@@ -1367,11 +1352,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             logger.debug(f"           ⚠️  Complexity check error: {e}")
             return 0.5
 
-    def _smart_select_images(
-        self,
-        candidates: List[dict],
-        max_images: int
-    ) -> List[ImageReference]:
+    def _smart_select_images(self, candidates: List[dict], max_images: int) -> List[ImageReference]:
         """
         Smart image selection with constraints.
 
@@ -1400,7 +1381,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             page = candidate["page"]
 
             # 1. Global deduplication check
-            if hasattr(self, 'used_image_ids') and img_id in self.used_image_ids:
+            if hasattr(self, "used_image_ids") and img_id in self.used_image_ids:
                 logger.debug(f"           ⏭️  Skip {img_id} (already used in previous section)")
                 continue
 
@@ -1440,7 +1421,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         max_images: int,
         page_importance: dict,
         image_page_map: dict,
-        pdf_images: List[dict]
+        pdf_images: List[dict],
     ) -> List[ImageReference]:
         """
         Expand to adjacent pages if not enough images found.
@@ -1510,17 +1491,14 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                             break
 
                         # Find full image
-                        full_img = next(
-                            (img for img in pdf_images if img.get("id") == img_info["id"]),
-                            None
-                        )
+                        full_img = next((img for img in pdf_images if img.get("id") == img_info["id"]), None)
 
                         if not full_img:
                             continue
 
                         # Global deduplication check
                         img_id = full_img.get("id")
-                        if hasattr(self, 'used_image_ids') and img_id in self.used_image_ids:
+                        if hasattr(self, "used_image_ids") and img_id in self.used_image_ids:
                             continue
 
                         # Quality check
@@ -1552,7 +1530,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "기계학습": ["machine learning", "ml"],
             "딥러닝": ["deep learning", "dl", "deep neural network"],
             "신경망": ["neural network", "nn", "network"],
-
             # ===== LLM Related =====
             "대형 언어 모델": ["large language model", "llm", "language model", "transformer"],
             "언어 모델": ["language model", "llm", "lm"],
@@ -1563,13 +1540,11 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "프롬프트 엔지니어링": ["prompt engineering", "prompting", "prompt design"],
             "컨텍스트": ["context", "contextual", "context window"],
             "컨텍스트 엔지니어링": ["context engineering", "context", "contextual"],
-
             # ===== Models =====
             "GPT": ["gpt", "generative pre-trained transformer"],
             "BERT": ["bert", "bidirectional encoder"],
             "ChatGPT": ["chatgpt", "chat gpt", "gpt"],
             "LLM": ["llm", "large language model", "language model"],
-
             # ===== RAG & Vector DB =====
             "RAG": ["rag", "retrieval augmented generation", "retrieval", "augmented"],
             "정보 검색": ["retrieval", "information retrieval", "search", "ir"],
@@ -1580,7 +1555,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "데이터베이스": ["database", "db", "datastore", "storage"],
             "색인": ["index", "indexing"],
             "유사도": ["similarity", "cosine similarity", "distance"],
-
             # ===== AI Agents =====
             "에이전트": ["agent", "agents", "ai agent", "autonomous"],
             "AI 에이전트": ["ai agent", "agent", "autonomous agent"],
@@ -1590,7 +1564,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "실행": ["execution", "execute", "action"],
             "추론": ["reasoning", "inference", "thinking"],
             "의사결정": ["decision making", "decision"],
-
             # ===== Generation Parameters =====
             "파라미터": ["parameter", "parameters", "hyperparameter", "config"],
             "하이퍼파라미터": ["hyperparameter", "hyper-parameter", "parameter"],
@@ -1601,7 +1574,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "샘플링": ["sampling", "sample", "decoding"],
             "빔 서치": ["beam search", "beam"],
             "탐욕": ["greedy", "greedy search"],
-
             # ===== Reinforcement Learning =====
             "강화학습": ["reinforcement learning", "rl", "reward", "policy"],
             "보상": ["reward", "rewards"],
@@ -1610,7 +1582,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "Q-학습": ["q-learning", "q learning"],
             "병목": ["bottleneck", "constraint"],
             "병목 현상": ["bottleneck", "bottleneck problem"],
-
             # ===== Architecture =====
             "아키텍처": ["architecture", "model architecture", "structure"],
             "레이어": ["layer", "layers", "hidden layer"],
@@ -1620,7 +1591,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "순환 신경망": ["recurrent neural network", "rnn"],
             "합성곱": ["convolution", "convolutional", "cnn"],
             "완전 연결": ["fully connected", "dense", "fc"],
-
             # ===== Training Process =====
             "학습": ["training", "learning", "train"],
             "훈련": ["training", "train"],
@@ -1636,7 +1606,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "역전파": ["backpropagation", "backprop"],
             "배치": ["batch", "batching", "mini-batch"],
             "에포크": ["epoch", "epochs"],
-
             # ===== Evaluation =====
             "평가": ["evaluation", "eval", "assessment", "metric"],
             "성능": ["performance", "accuracy", "precision"],
@@ -1645,7 +1614,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "재현율": ["recall"],
             "F1": ["f1", "f1-score"],
             "지표": ["metric", "metrics", "measure"],
-
             # ===== Data =====
             "데이터": ["data", "dataset"],
             "데이터셋": ["dataset", "data", "corpus"],
@@ -1654,24 +1622,20 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "정규화": ["normalization", "normalize"],
             "토큰화": ["tokenization", "tokenize"],
             "레이블": ["label", "labels", "annotation"],
-
             # ===== Common CS Terms =====
             "알고리즘": ["algorithm", "algo"],
             "모델": ["model", "models"],
             "예측": ["prediction", "inference", "predict"],
-            "추론": ["inference", "reasoning"],
             "분류": ["classification", "classify"],
             "회귀": ["regression"],
             "군집화": ["clustering", "cluster"],
             "차원": ["dimension", "dimensional"],
             "특징": ["feature", "features"],
-
             # ===== Visualization =====
             "다이어그램": ["diagram", "chart", "visualization"],
             "그래프": ["graph", "plot", "chart"],
             "시각화": ["visualization", "visual", "plot"],
             "플롯": ["plot", "plotting"],
-
             # ===== Domain Specific =====
             "자연어처리": ["natural language processing", "nlp", "language processing"],
             "컴퓨터비전": ["computer vision", "cv", "image processing"],
@@ -1679,7 +1643,6 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "음성인식": ["speech recognition", "speech", "audio"],
             "텍스트 생성": ["text generation", "generation"],
             "번역": ["translation", "machine translation"],
-
             # ===== Concepts =====
             "개념": ["concept", "concepts"],
             "원리": ["principle", "principles"],
@@ -1693,13 +1656,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             "라이브러리": ["library", "libraries"],
         }
 
-    def _generate_code_examples(
-        self,
-        section: Section,
-        curriculum: Curriculum,
-        contexts: List[str],
-        num_examples: int
-    ) -> str:
+    def _generate_code_examples(self, section: Section, curriculum: Curriculum, contexts: List[str], num_examples: int) -> str:
         """Generate code examples separately when main content lacks them."""
 
         context_text = "\n\n---\n\n".join(contexts[:5]) if contexts else ""
@@ -1829,11 +1786,12 @@ _(코드 생성 실패 원인: {str(e)[:100]})_
 
         # Extract acronyms (e.g., "LLM" from "대형 언어 모델(LLM)")
         import re
-        acronyms = re.findall(r'\b[A-Z]{2,}\b', topic)
+
+        acronyms = re.findall(r"\b[A-Z]{2,}\b", topic)
         keywords.extend([a.lower() for a in acronyms])
 
         # Extract English words already in topic
-        english_words = re.findall(r'\b[a-zA-Z]{3,}\b', topic)
+        english_words = re.findall(r"\b[a-zA-Z]{3,}\b", topic)
         keywords.extend([w.lower() for w in english_words])
 
         # Remove duplicates and empty strings

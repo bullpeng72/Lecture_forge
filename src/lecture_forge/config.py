@@ -55,13 +55,9 @@ class Config:
 
     # Quality thresholds (0.0 ~ 1.0)
     # Extraction phase: Conservative filtering (reject obvious junk only)
-    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(
-        os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.25")
-    )
+    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.25"))
     # Selection phase: Strict filtering (select best images for lecture)
-    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(
-        os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.30")
-    )
+    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.30"))
 
     # ===== Vector DB =====
     VECTOR_DB_PATH: Path = Path(os.getenv("VECTOR_DB_PATH", str(DATA_DIR / "vector_db")))
@@ -115,15 +111,10 @@ class Config:
         else:
             # Validate Serper API key format (basic length check)
             if len(cls.SERPER_API_KEY) < 10:
-                errors.append(
-                    "SERPER_API_KEY appears invalid (too short). "
-                    "Please verify your API key from serper.dev"
-                )
+                errors.append("SERPER_API_KEY appears invalid (too short). " "Please verify your API key from serper.dev")
 
         if errors:
-            raise ValueError(
-                "Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors)
-            )
+            raise ValueError("Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
 
         # Warnings for optional keys
         if not cls.UNSPLASH_ACCESS_KEY:

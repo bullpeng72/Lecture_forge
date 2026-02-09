@@ -59,13 +59,11 @@ graph LR
     C --> D[Model Evaluation]
     D --> E[Deployment]
 ```"""
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 100, "completion_tokens": 80, "total_tokens": 180}
-        }
+        mock_response.response_metadata = {"token_usage": {"prompt_tokens": 100, "completion_tokens": 80, "total_tokens": 180}}
         mock_llm_instance.invoke.return_value = mock_response
 
         # Test diagram generation
-        diagrams = diagram_generator.generate(section_content=sample_section_content)
+        diagrams = diagram_generator.generate_diagrams(section_contents=[sample_section_content])
 
         assert diagrams is not None
         assert isinstance(diagrams, list)
@@ -88,11 +86,9 @@ def test_generate_with_no_diagrams_needed(diagram_generator, mock_llm):
     with patch.object(diagram_generator, "llm") as mock_llm_instance:
         mock_response = MagicMock()
         mock_response.content = "No diagrams needed."
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 50, "completion_tokens": 10, "total_tokens": 60}
-        }
+        mock_response.response_metadata = {"token_usage": {"prompt_tokens": 50, "completion_tokens": 10, "total_tokens": 60}}
         mock_llm_instance.invoke.return_value = mock_response
 
-        diagrams = diagram_generator.generate(section_content=simple_content)
+        diagrams = diagram_generator.generate_diagrams(section_contents=[simple_content])
 
         assert diagrams is not None

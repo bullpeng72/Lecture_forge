@@ -9,6 +9,7 @@ from lecture_forge.models.evaluation import EvaluationResult, Issue
 from lecture_forge.models.lecture import Lecture, SectionContent, MermaidDiagram
 from lecture_forge.utils import logger
 
+
 class RevisionAgent(BaseAgent):
     """Agent for revising lecture content."""
 
@@ -37,8 +38,7 @@ class RevisionAgent(BaseAgent):
         medium_severity_issues = [i for i in evaluation.issues if i.severity == "medium"]
 
         logger.info(
-            f"Processing {len(high_severity_issues)} high and "
-            f"{len(medium_severity_issues)} medium severity issues"
+            f"Processing {len(high_severity_issues)} high and " f"{len(medium_severity_issues)} medium severity issues"
         )
 
         # Handle high severity issues first
@@ -95,7 +95,8 @@ class RevisionAgent(BaseAgent):
         """Add code examples to sections that lack them."""
         # Find sections without code blocks
         sections_without_code = [
-            s for s in lecture.sections
+            s
+            for s in lecture.sections
             if len(s.code_blocks) == 0 and "intro" not in s.section_id.lower() and "conclusion" not in s.section_id.lower()
         ]
 
@@ -146,7 +147,7 @@ Generate the code examples NOW (in Korean):"""
             # Clean up outer markdown fences only
             if code_examples_content.startswith("```markdown"):
                 code_examples_content = code_examples_content.split("```markdown")[1].split("```")[0].strip()
-            elif code_examples_content.startswith("```") and not "```python" in code_examples_content[:20]:
+            elif code_examples_content.startswith("```") and "```python" not in code_examples_content[:20]:
                 # Only remove outer fence if it's wrapping the whole content
                 parts = code_examples_content.split("```")
                 if len(parts) >= 3:
@@ -157,6 +158,7 @@ Generate the code examples NOW (in Korean):"""
 
             # Re-extract code blocks
             from lecture_forge.agents.content_writer import ContentWriterAgent
+
             temp_writer = ContentWriterAgent()
             new_code_blocks = temp_writer._extract_code_blocks(section.markdown_content)
 
@@ -195,13 +197,15 @@ Generate the code examples NOW (in Korean):"""
             total_target += targets["target_words"]
 
             if gap > 0:
-                section_gaps.append({
-                    "section": section,
-                    "gap": gap,
-                    "targets": targets,
-                    "estimated_time": estimated_time,
-                    "priority": gap  # Higher gap = higher priority
-                })
+                section_gaps.append(
+                    {
+                        "section": section,
+                        "gap": gap,
+                        "targets": targets,
+                        "estimated_time": estimated_time,
+                        "priority": gap,  # Higher gap = higher priority
+                    }
+                )
 
         total_gap = total_target - total_actual
 
@@ -228,11 +232,7 @@ Generate the code examples NOW (in Korean):"""
             gap = item["gap"]
 
             # Expand this section
-            added_words = self._expand_section_with_verification(
-                section=section,
-                target_gap=gap,
-                lecture=lecture
-            )
+            added_words = self._expand_section_with_verification(section=section, target_gap=gap, lecture=lecture)
 
             expanded_total += added_words
             logger.info(f"  ✅ Expanded '{section.title}': +{added_words} words")
@@ -240,12 +240,7 @@ Generate the code examples NOW (in Korean):"""
         coverage = (expanded_total / total_gap * 100) if total_gap > 0 else 0
         logger.info(f"Total expansion: +{expanded_total:,} words ({coverage:.1f}% of gap)")
 
-    def _expand_section_with_verification(
-        self,
-        section: "SectionContent",
-        target_gap: int,
-        lecture: Lecture
-    ) -> int:
+    def _expand_section_with_verification(self, section: "SectionContent", target_gap: int, lecture: Lecture) -> int:
         """Expand a single section with verification."""
         original_content = section.markdown_content
         original_count = section.word_count
@@ -366,6 +361,7 @@ WRITE {target_gap:,}+ WORDS NOW (NOT {added_words}):
         except Exception as e:
             logger.error(f"  ❌ Failed to expand section: {e}")
             import traceback
+
             logger.debug(traceback.format_exc())
             return 0
 
@@ -388,8 +384,8 @@ WRITE {target_gap:,}+ WORDS NOW (NOT {added_words}):
     def _remove_duplicates(self, new_content: str, original_content: str) -> str:
         """Remove duplicated sentences."""
         # Split by sentences (simple approach)
-        new_sentences = [s.strip() for s in new_content.split('. ') if s.strip()]
-        original_sentences = set(s.strip() for s in original_content.split('. ') if s.strip())
+        new_sentences = [s.strip() for s in new_content.split(". ") if s.strip()]
+        original_sentences = set(s.strip() for s in original_content.split(". ") if s.strip())
 
         # Keep only unique sentences
         unique_sentences = [s for s in new_sentences if s not in original_sentences]
@@ -397,7 +393,7 @@ WRITE {target_gap:,}+ WORDS NOW (NOT {added_words}):
         if len(unique_sentences) < len(new_sentences) * 0.5:
             logger.warning(f"     Removed {len(new_sentences) - len(unique_sentences)} duplicate sentences")
 
-        return '. '.join(unique_sentences) + '.'
+        return ". ".join(unique_sentences) + "."
 
     def _add_introduction(self, lecture: Lecture) -> None:
         """Add introduction section."""

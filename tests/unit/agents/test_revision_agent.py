@@ -35,9 +35,8 @@ def sample_lecture():
     return Lecture(
         title="Test Lecture",
         topic="Testing",
-        duration_minutes=60,
-        difficulty="beginner",
-        target_audience="Students",
+        duration=60,
+        audience_level="beginner",
         learning_objectives=["Learn testing"],
         sections=[section],
     )
@@ -47,8 +46,9 @@ def sample_lecture():
 def sample_evaluation():
     """Create sample evaluation result."""
     issue = Issue(
-        category="content_completeness",
+        dimension="content_completeness",
         severity="medium",
+        location="sec_1",
         description="Section needs more examples",
         suggestion="Add 2-3 code examples",
     )

@@ -3,7 +3,7 @@ Q&A Agent - Answers questions using knowledge base.
 """
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 from rich.console import Console
 from rich.panel import Panel
@@ -13,6 +13,7 @@ from rich.table import Table
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.utils import logger
+
 
 class QAAgent(BaseAgent):
     """Agent for answering questions using RAG."""
@@ -190,4 +191,3 @@ class QAAgent(BaseAgent):
         console.print(f"📚 Knowledge base: {self.knowledge_base_path.name}")
         console.print("\n[cyan]Thank you for using LectureForge Q&A![/cyan]")
         console.print("[dim]Run 'lecture-forge chat' to start another session or delete knowledge bases[/dim]\n")
-

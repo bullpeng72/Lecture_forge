@@ -58,13 +58,14 @@ def test_analyze_content(content_analyzer, sample_text_content, mock_llm):
         mock_llm_instance.invoke.return_value = mock_response
 
         # Test analysis
+        collection_result = {"documents": [{"text": sample_text_content}], "metadata": {"total_chunks": 1}}
         result = content_analyzer.analyze(
-            content=sample_text_content,
+            collection_result=collection_result,
             topic="Machine Learning",
         )
 
         assert result is not None
-        assert hasattr(result, "topic") or isinstance(result, dict)
+        assert hasattr(result, "key_topics") or isinstance(result, dict)
 
 
 def test_analyze_handles_empty_content(content_analyzer, mock_llm):
@@ -79,11 +80,10 @@ def test_analyze_handles_empty_content(content_analyzer, mock_llm):
   "prerequisite_knowledge": [],
   "difficulty_indicators": {}
 }"""
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 50, "completion_tokens": 50, "total_tokens": 100}
-        }
+        mock_response.response_metadata = {"token_usage": {"prompt_tokens": 50, "completion_tokens": 50, "total_tokens": 100}}
         mock_llm_instance.invoke.return_value = mock_response
 
-        result = content_analyzer.analyze(content="", topic="Test")
+        collection_result = {"documents": [], "metadata": {"total_chunks": 0}}
+        result = content_analyzer.analyze(collection_result=collection_result, topic="Test")
 
         assert result is not None

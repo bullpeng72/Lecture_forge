@@ -55,18 +55,12 @@ class RAGRetriever:
 
         if cache_key in self._query_cache:
             self._cache_hits += 1
-            logger.debug(
-                f"Cache HIT for query: {query[:50]}... "
-                f"(hits: {self._cache_hits}, misses: {self._cache_misses})"
-            )
+            logger.debug(f"Cache HIT for query: {query[:50]}... " f"(hits: {self._cache_hits}, misses: {self._cache_misses})")
             return self._query_cache[cache_key]
 
         # Cache miss - query vector store
         self._cache_misses += 1
-        logger.debug(
-            f"Cache MISS for query: {query[:50]}... "
-            f"(hits: {self._cache_hits}, misses: {self._cache_misses})"
-        )
+        logger.debug(f"Cache MISS for query: {query[:50]}... " f"(hits: {self._cache_hits}, misses: {self._cache_misses})")
 
         results = self.vector_store.query(query, n_results=k)
 
@@ -77,12 +71,8 @@ class RAGRetriever:
                 documents.append(
                     {
                         "content": doc,
-                        "metadata": results["metadatas"][0][i]
-                        if results.get("metadatas")
-                        else {},
-                        "distance": results["distances"][0][i]
-                        if results.get("distances")
-                        else None,
+                        "metadata": results["metadatas"][0][i] if results.get("metadatas") else {},
+                        "distance": results["distances"][0][i] if results.get("distances") else None,
                     }
                 )
 
@@ -94,9 +84,7 @@ class RAGRetriever:
     def clear_cache(self) -> None:
         """Clear the query cache."""
         self._query_cache.clear()
-        logger.info(
-            f"Query cache cleared (had {self._cache_hits} hits, {self._cache_misses} misses)"
-        )
+        logger.info(f"Query cache cleared (had {self._cache_hits} hits, {self._cache_misses} misses)")
         self._cache_hits = 0
         self._cache_misses = 0
 

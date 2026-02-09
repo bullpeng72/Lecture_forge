@@ -7,6 +7,7 @@ from lecture_forge.models.evaluation import EvaluationResult
 from lecture_forge.models.lecture import Lecture
 from lecture_forge.utils import logger
 
+
 class QualityEvaluatorAgent(BaseAgent):
     """Agent for evaluating lecture quality."""
 

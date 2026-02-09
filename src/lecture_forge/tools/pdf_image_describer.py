@@ -30,12 +30,7 @@ class PDFImageDescriber:
         self.model = model or "gpt-4o-mini"
         self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
-    def enhance_images(
-        self,
-        pdf_path: str,
-        image_dir: str,
-        batch_size: int = 5
-    ) -> Dict:
+    def enhance_images(self, pdf_path: str, image_dir: str, batch_size: int = 5) -> Dict:
         """
         Generate descriptions for PDF images using page text inference.
 
@@ -53,28 +48,16 @@ class PDFImageDescriber:
         image_dir = Path(image_dir)
 
         if not pdf_path.exists():
-            return {
-                "success": False,
-                "error": f"PDF not found: {pdf_path}",
-                "enhanced_count": 0
-            }
+            return {"success": False, "error": f"PDF not found: {pdf_path}", "enhanced_count": 0}
 
         if not image_dir.exists():
-            return {
-                "success": False,
-                "error": f"Image directory not found: {image_dir}",
-                "enhanced_count": 0
-            }
+            return {"success": False, "error": f"Image directory not found: {image_dir}", "enhanced_count": 0}
 
         # Load PDF
         try:
             doc = fitz.open(pdf_path)
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed to open PDF: {e}",
-                "enhanced_count": 0
-            }
+            return {"success": False, "error": f"Failed to open PDF: {e}", "enhanced_count": 0}
 
         # Group images by page
         images_by_page = self._group_images_by_page(image_dir)
@@ -95,20 +78,13 @@ class PDFImageDescriber:
                     continue
 
                 # Generate descriptions for all images on this page
-                descriptions = self._generate_descriptions_for_page(
-                    page_num,
-                    page_text,
-                    len(image_files)
-                )
+                descriptions = self._generate_descriptions_for_page(page_num, page_text, len(image_files))
 
                 # Update image files with descriptions
                 for img_file, description in zip(image_files, descriptions):
-                    enhanced_images.append({
-                        "file": img_file.name,
-                        "page": page_num,
-                        "description": description,
-                        "path": str(img_file)
-                    })
+                    enhanced_images.append(
+                        {"file": img_file.name, "page": page_num, "description": description, "path": str(img_file)}
+                    )
 
                 logger.info(f"   ✅ Page {page_num}: Generated {len(descriptions)} descriptions")
 
@@ -141,7 +117,7 @@ class PDFImageDescriber:
             "enhanced_count": len(enhanced_images),
             "descriptions_file": str(descriptions_file),
             "estimated_cost": total_cost,
-            "enhanced_images": enhanced_images
+            "enhanced_images": enhanced_images,
         }
 
     def _group_images_by_page(self, image_dir: Path) -> Dict[int, List[Path]]:
@@ -176,12 +152,7 @@ class PDFImageDescriber:
             logger.error(f"   Failed to extract text from page {page_num}: {e}")
             return ""
 
-    def _generate_descriptions_for_page(
-        self,
-        page_num: int,
-        page_text: str,
-        num_images: int
-    ) -> List[str]:
+    def _generate_descriptions_for_page(self, page_num: int, page_text: str, num_images: int) -> List[str]:
         """Generate descriptions for images on a page using LLM."""
         # Limit page text to avoid token limits
         page_text = page_text[:2000]
@@ -213,15 +184,12 @@ If you can't infer from text, describe the general topic of the page."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a technical document analyst. Generate concise, keyword-rich descriptions for images based on surrounding text."
+                        "content": "You are a technical document analyst. Generate concise, keyword-rich descriptions for images based on surrounding text.",
                     },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=300
+                max_tokens=300,
             )
 
             content = response.choices[0].message.content.strip()
@@ -266,11 +234,7 @@ If you can't infer from text, describe the general topic of the page."""
 
         return descriptions[:expected_count]
 
-    def apply_descriptions_to_images(
-        self,
-        image_dir: str,
-        descriptions_file: str = None
-    ) -> int:
+    def apply_descriptions_to_images(self, image_dir: str, descriptions_file: str = None) -> int:
         """
         Apply saved descriptions to image metadata.
 
@@ -301,10 +265,7 @@ If you can't infer from text, describe the general topic of the page."""
             return 0
 
         # Create mapping: filename -> description
-        desc_map = {
-            img["file"]: img["description"]
-            for img in enhanced_images
-        }
+        desc_map = {img["file"]: img["description"] for img in enhanced_images}
 
         logger.info(f"Loaded {len(desc_map)} descriptions")
 

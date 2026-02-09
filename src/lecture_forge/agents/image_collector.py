@@ -12,6 +12,7 @@ from lecture_forge.tools.image_extractor import PDFImageExtractorTool, WebImageS
 from lecture_forge.tools.image_search import PexelsSearchTool, UnsplashSearchTool
 from lecture_forge.utils import logger
 
+
 class ImageCollectorAgent(BaseAgent):
     """Agent for collecting images from PDFs, URLs, and image search APIs."""
 
@@ -68,9 +69,7 @@ class ImageCollectorAgent(BaseAgent):
         urls = sources.get("urls", [])
         image_keywords = sources.get("image_keywords", [])
 
-        logger.info(
-            f"Sources: {len(pdfs)} PDFs, {len(urls)} URLs, {len(image_keywords)} keywords"
-        )
+        logger.info(f"Sources: {len(pdfs)} PDFs, {len(urls)} URLs, {len(image_keywords)} keywords")
 
         self.all_images = []
         self.image_hashes = set()
@@ -93,9 +92,7 @@ class ImageCollectorAgent(BaseAgent):
 
                     pdf_images_by_source[pdf_path] = pdf_images
 
-                    logger.info(
-                        f"✅ Extracted {len(result['images'])} images from PDF"
-                    )
+                    logger.info(f"✅ Extracted {len(result['images'])} images from PDF")
                 else:
                     logger.error(f"❌ Failed to extract images: {result['error']}")
 
@@ -133,9 +130,7 @@ class ImageCollectorAgent(BaseAgent):
                                 self.all_images.append(img)
                                 self.image_hashes.add(img["hash"])
 
-                        logger.info(
-                            f"✅ Scraped {len(result['images'])} images from URL"
-                        )
+                        logger.info(f"✅ Scraped {len(result['images'])} images from URL")
                     else:
                         logger.error(f"❌ Failed to scrape images: {result['error']}")
                 else:
@@ -164,9 +159,7 @@ class ImageCollectorAgent(BaseAgent):
                         if img_id not in [i.get("id") for i in self.all_images]:
                             self.all_images.append(img)
 
-                    logger.info(
-                        f"✅ Found {len(result['images'])} images on Pexels"
-                    )
+                    logger.info(f"✅ Found {len(result['images'])} images on Pexels")
                 else:
                     logger.warning(f"Pexels search failed: {result['error']}")
 
@@ -184,9 +177,7 @@ class ImageCollectorAgent(BaseAgent):
                             if img_id not in [i.get("id") for i in self.all_images]:
                                 self.all_images.append(img)
 
-                        logger.info(
-                            f"✅ Found {len(unsplash_result['images'])} images on Unsplash"
-                        )
+                        logger.info(f"✅ Found {len(unsplash_result['images'])} images on Unsplash")
                     else:
                         logger.warning(f"Unsplash search also failed: {unsplash_result['error']}")
 
@@ -220,9 +211,7 @@ class ImageCollectorAgent(BaseAgent):
             "total_collected": len(self.all_images),
             "session_id": self.session_id,
             "storage_path": str(storage_path),
-            "images_by_source": {
-                key: len(value) for key, value in images_by_source.items()
-            },
+            "images_by_source": {key: len(value) for key, value in images_by_source.items()},
             "metadata": {
                 "sources": {
                     "pdfs": len(pdfs),
@@ -270,10 +259,7 @@ class ImageCollectorAgent(BaseAgent):
                 if not images:
                     continue
 
-                task = progress.add_task(
-                    f"Describing images from {Path(pdf_path).name}...",
-                    total=len(images)
-                )
+                task = progress.add_task(f"Describing images from {Path(pdf_path).name}...", total=len(images))
 
                 try:
                     # Get image directory from first image
@@ -283,24 +269,19 @@ class ImageCollectorAgent(BaseAgent):
                         continue
 
                     # Generate descriptions
-                    result = describer.enhance_images(
-                        pdf_path=pdf_path,
-                        image_dir=str(image_dir)
-                    )
+                    result = describer.enhance_images(pdf_path=pdf_path, image_dir=str(image_dir))
 
                     if result["success"]:
                         # Load the generated descriptions
                         descriptions_file = Path(result["descriptions_file"])
                         if descriptions_file.exists():
                             import json
+
                             with open(descriptions_file, "r", encoding="utf-8") as f:
                                 enhanced_images = json.load(f)
 
                             # Create a mapping: filename -> description
-                            desc_map = {
-                                Path(img["path"]).name: img["description"]
-                                for img in enhanced_images
-                            }
+                            desc_map = {Path(img["path"]).name: img["description"] for img in enhanced_images}
 
                             # Apply descriptions to our images
                             for img in images:
@@ -346,8 +327,7 @@ class ImageCollectorAgent(BaseAgent):
 
         # Filter images with descriptions
         images_with_descriptions = [
-            img for img in self.all_images
-            if img.get("description") and img.get("description").strip()
+            img for img in self.all_images if img.get("description") and img.get("description").strip()
         ]
 
         if not images_with_descriptions:
@@ -385,11 +365,7 @@ class ImageCollectorAgent(BaseAgent):
 
         # Store in vector database
         try:
-            self.vector_store.add_documents(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
+            self.vector_store.add_documents(documents=documents, metadatas=metadatas, ids=ids)
             logger.info(f"   ✅ Indexed {len(documents)} images in Vector DB")
             logger.info(f"   → Images now searchable via RAG")
         except Exception as e:
@@ -422,18 +398,22 @@ class ImageCollectorAgent(BaseAgent):
                 image_page_map[source][page] = []
 
             # Store relevant image info
-            image_page_map[source][page].append({
-                "id": img["id"],
-                "path": img.get("path", ""),
-                "hash": img.get("hash", ""),
-                "description": img.get("description", ""),
-                "alt_text": img.get("alt_text", ""),
-                "width": img.get("width"),
-                "height": img.get("height"),
-            })
+            image_page_map[source][page].append(
+                {
+                    "id": img["id"],
+                    "path": img.get("path", ""),
+                    "hash": img.get("hash", ""),
+                    "description": img.get("description", ""),
+                    "alt_text": img.get("alt_text", ""),
+                    "width": img.get("width"),
+                    "height": img.get("height"),
+                }
+            )
 
-        logger.debug(f"Built image-page map: {len(image_page_map)} sources, "
-                    f"{sum(len(pages) for pages in image_page_map.values())} pages")
+        logger.debug(
+            f"Built image-page map: {len(image_page_map)} sources, "
+            f"{sum(len(pages) for pages in image_page_map.values())} pages"
+        )
 
         return image_page_map
 
@@ -485,11 +465,7 @@ class ImageCollectorAgent(BaseAgent):
             alt_text = img.get("alt_text", "").lower()
             query = img.get("query", "").lower()
 
-            if (
-                keyword.lower() in description
-                or keyword.lower() in alt_text
-                or keyword.lower() in query
-            ):
+            if keyword.lower() in description or keyword.lower() in alt_text or keyword.lower() in query:
                 relevant.append(img)
 
         return relevant

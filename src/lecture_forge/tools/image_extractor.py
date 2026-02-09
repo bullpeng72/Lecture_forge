@@ -4,9 +4,10 @@ Image Extractor Tool - Extracts images from PDFs and web pages.
 
 import hashlib
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import fitz  # PyMuPDF
+import numpy as np
 from PIL import Image
 
 from lecture_forge.config import Config
@@ -116,6 +117,7 @@ class PDFImageExtractorTool:
 
                         # Load image to check dimensions
                         import io
+
                         pil_image = Image.open(io.BytesIO(image_bytes))
                         width, height = pil_image.size
 
@@ -126,9 +128,7 @@ class PDFImageExtractorTool:
                             continue
 
                         # ✨ NEW: Quality check to filter out meaningless images
-                        quality_score = self._evaluate_image_quality(
-                            pil_image, width, height, len(image_bytes)
-                        )
+                        quality_score = self._evaluate_image_quality(pil_image, width, height, len(image_bytes))
 
                         if quality_score < self.quality_threshold:
                             logger.debug(
@@ -147,19 +147,21 @@ class PDFImageExtractorTool:
                             f.write(image_bytes)
 
                         # Store metadata
-                        images.append({
-                            "id": f"pdf_{image_hash[:12]}",
-                            "path": str(image_path),
-                            "filename": filename,
-                            "source": pdf_path,
-                            "page": page_num + 1,
-                            "width": width,
-                            "height": height,
-                            "format": image_ext,
-                            "size_bytes": len(image_bytes),
-                            "hash": image_hash,
-                            "extraction_quality": quality_score,  # Store quality score
-                        })
+                        images.append(
+                            {
+                                "id": f"pdf_{image_hash[:12]}",
+                                "path": str(image_path),
+                                "filename": filename,
+                                "source": pdf_path,
+                                "page": page_num + 1,
+                                "width": width,
+                                "height": height,
+                                "format": image_ext,
+                                "size_bytes": len(image_bytes),
+                                "hash": image_hash,
+                                "extraction_quality": quality_score,  # Store quality score
+                            }
+                        )
 
                         extracted_hashes.add(image_hash)
                         self.stats["extracted"] += 1
@@ -179,8 +181,8 @@ class PDFImageExtractorTool:
             logger.info(f"   • ✅ Extracted: {self.stats['extracted']}")
 
             # Calculate savings
-            if self.stats['total_found'] > 0:
-                filter_rate = (self.stats['size_filtered'] + self.stats['quality_filtered']) / self.stats['total_found'] * 100
+            if self.stats["total_found"] > 0:
+                filter_rate = (self.stats["size_filtered"] + self.stats["quality_filtered"]) / self.stats["total_found"] * 100
                 logger.info(f"   • 💰 Filtered out: {filter_rate:.1f}% (saves Vision API costs)")
 
             return {
@@ -200,9 +202,7 @@ class PDFImageExtractorTool:
                 "error": str(e),
             }
 
-    def _evaluate_image_quality(
-        self, pil_image: Image.Image, width: int, height: int, size_bytes: int
-    ) -> float:
+    def _evaluate_image_quality(self, pil_image: Image.Image, width: int, height: int, size_bytes: int) -> float:
         """
         Evaluate image quality to filter out meaningless images during extraction.
 
@@ -247,8 +247,7 @@ class PDFImageExtractorTool:
             if bytes_per_pixel < 0.05:
                 # Extremely low bytes per pixel = solid color or gradient
                 logger.debug(
-                    f"      Low compression: {bytes_per_pixel:.4f} bpp "
-                    f"({size_bytes:,} bytes / {pixels:,} pixels)"
+                    f"      Low compression: {bytes_per_pixel:.4f} bpp " f"({size_bytes:,} bytes / {pixels:,} pixels)"
                 )
                 return 0.0  # Reject solid color images immediately
 
@@ -287,8 +286,8 @@ class PDFImageExtractorTool:
             import numpy as np
 
             # Convert to RGB
-            if pil_image.mode != 'RGB':
-                pil_image = pil_image.convert('RGB')
+            if pil_image.mode != "RGB":
+                pil_image = pil_image.convert("RGB")
 
             # Resize for faster processing (max 200x200 for extraction phase)
             pil_image.thumbnail((200, 200), Image.Resampling.LANCZOS)
@@ -463,6 +462,7 @@ class WebImageScraperTool:
 
                     # Load image to check dimensions
                     import io
+
                     pil_image = Image.open(io.BytesIO(image_bytes))
                     width, height = pil_image.size
 
@@ -485,19 +485,21 @@ class WebImageScraperTool:
                     alt_text = img.get("alt", "")
 
                     # Store metadata
-                    images.append({
-                        "id": f"web_{image_hash[:12]}",
-                        "path": str(image_path),
-                        "filename": filename,
-                        "source": url,
-                        "original_url": img_url,
-                        "width": width,
-                        "height": height,
-                        "format": image_format,
-                        "size_bytes": len(image_bytes),
-                        "hash": image_hash,
-                        "alt_text": alt_text,
-                    })
+                    images.append(
+                        {
+                            "id": f"web_{image_hash[:12]}",
+                            "path": str(image_path),
+                            "filename": filename,
+                            "source": url,
+                            "original_url": img_url,
+                            "width": width,
+                            "height": height,
+                            "format": image_format,
+                            "size_bytes": len(image_bytes),
+                            "hash": image_hash,
+                            "alt_text": alt_text,
+                        }
+                    )
 
                     extracted_hashes.add(image_hash)
 

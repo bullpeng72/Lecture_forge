@@ -8,18 +8,19 @@ version = "0.2.0"
 description = "AI-powered lecture material generator using CrewAI"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Sungwoo Kim", email = "sungwoo.kim@gmail.com"}
 ]
+urls = {Homepage = "https://github.com/bullpeng72/Lecture_forge"}
 keywords = ["ai", "education", "lecture", "crewai", "multiagent"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Education",
     "Topic :: Education",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
 ]
+dynamic = ["dependencies"]
 
 [project.optional-dependencies]
 dev = [
@@ -76,9 +77,10 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--cov=lecture_forge",
-    "--cov-report=term-missing",
-    "--cov-report=html",
+    # Coverage options (requires pytest-cov: pip install -r requirements-dev.txt)
+    # "--cov=lecture_forge",
+    # "--cov-report=term-missing",
+    # "--cov-report=html",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

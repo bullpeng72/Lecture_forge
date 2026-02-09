@@ -4,7 +4,7 @@ Deep Web Crawler Tool - Crawls search results and linked content.
 
 import time
 from typing import Dict, List, Set
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -40,9 +40,7 @@ class DeepWebCrawler:
         self.max_pages = max_pages if max_pages is not None else Config.DEEP_CRAWLER_MAX_PAGES
         self.delay = delay if delay is not None else Config.DEEP_CRAWLER_DELAY
         self.timeout = timeout if timeout is not None else Config.DEEP_CRAWLER_TIMEOUT
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
+        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         self.visited_urls: Set[str] = set()
 
     def crawl_hada_search(self, keyword: str) -> List[Dict]:
@@ -69,9 +67,7 @@ class DeepWebCrawler:
             return all_content
 
         # Extract article links from search results
-        article_links = self._extract_hada_article_links(
-            search_content["html"], search_url
-        )
+        article_links = self._extract_hada_article_links(search_content["html"], search_url)
         logger.info(f"Found {len(article_links)} article links")
 
         # Add search page content
@@ -232,9 +228,7 @@ class DeepWebCrawler:
 
         return links
 
-    def crawl_generic_search(
-        self, search_url: str, link_selector: str = "a[href]"
-    ) -> List[Dict]:
+    def crawl_generic_search(self, search_url: str, link_selector: str = "a[href]") -> List[Dict]:
         """
         Generic crawler for any search page.
 
@@ -276,7 +270,7 @@ class DeepWebCrawler:
                     if urlparse(full_url).netloc == urlparse(search_url).netloc:
                         links.append(full_url)
 
-            links = list(set(links))[:self.max_pages]  # Deduplicate and limit
+            links = list(set(links))[: self.max_pages]  # Deduplicate and limit
 
             # Crawl each link
             for i, link in enumerate(links, 1):

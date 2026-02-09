@@ -2,7 +2,7 @@
 Search Tool - Performs web searches using Serper API.
 """
 
-from typing import Dict, List
+from typing import Dict
 
 import requests
 from tenacity import (
@@ -87,35 +87,43 @@ class SerperSearchTool:
             # Organic results
             if "organic" in data:
                 for item in data["organic"][:num_results]:
-                    results.append({
-                        "title": item.get("title", ""),
-                        "snippet": item.get("snippet", ""),
-                        "url": item.get("link", ""),
-                        "position": item.get("position", 0),
-                        "type": "organic",
-                    })
+                    results.append(
+                        {
+                            "title": item.get("title", ""),
+                            "snippet": item.get("snippet", ""),
+                            "url": item.get("link", ""),
+                            "position": item.get("position", 0),
+                            "type": "organic",
+                        }
+                    )
 
             # Answer box (if present)
             if "answerBox" in data:
                 answer_box = data["answerBox"]
-                results.insert(0, {
-                    "title": answer_box.get("title", "Answer"),
-                    "snippet": answer_box.get("answer", ""),
-                    "url": answer_box.get("link", ""),
-                    "position": 0,
-                    "type": "answer_box",
-                })
+                results.insert(
+                    0,
+                    {
+                        "title": answer_box.get("title", "Answer"),
+                        "snippet": answer_box.get("answer", ""),
+                        "url": answer_box.get("link", ""),
+                        "position": 0,
+                        "type": "answer_box",
+                    },
+                )
 
             # Knowledge graph (if present)
             if "knowledgeGraph" in data:
                 kg = data["knowledgeGraph"]
-                results.insert(0, {
-                    "title": kg.get("title", ""),
-                    "snippet": kg.get("description", ""),
-                    "url": kg.get("website", ""),
-                    "position": 0,
-                    "type": "knowledge_graph",
-                })
+                results.insert(
+                    0,
+                    {
+                        "title": kg.get("title", ""),
+                        "snippet": kg.get("description", ""),
+                        "url": kg.get("website", ""),
+                        "position": 0,
+                        "type": "knowledge_graph",
+                    },
+                )
 
             logger.info(f"Search successful: found {len(results)} results")
 

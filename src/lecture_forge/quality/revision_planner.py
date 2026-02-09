@@ -2,7 +2,7 @@
 Revision planner for lecture improvements.
 """
 
-from typing import Dict, List
+from typing import Dict
 
 from lecture_forge.models.evaluation import EvaluationResult, Issue
 from lecture_forge.models.lecture import Lecture

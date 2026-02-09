@@ -24,9 +24,7 @@ class TextChunker:
         self.chunk_size = chunk_size or Config.CHUNK_SIZE
         self.chunk_overlap = chunk_overlap or Config.CHUNK_OVERLAP
 
-        logger.info(
-            f"Initializing text chunker (size: {self.chunk_size}, overlap: {self.chunk_overlap})"
-        )
+        logger.info(f"Initializing text chunker (size: {self.chunk_size}, overlap: {self.chunk_overlap})")
 
         self.splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,

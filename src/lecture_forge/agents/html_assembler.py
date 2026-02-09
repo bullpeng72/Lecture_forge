@@ -5,14 +5,13 @@ HTML Assembler Agent - Generates final HTML output.
 from datetime import datetime
 from pathlib import Path
 from typing import List
-import re
-
 import markdown
 from bs4 import BeautifulSoup
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.models.lecture import Lecture, SectionContent
 from lecture_forge.utils import logger
+
 
 class HTMLAssemblerAgent(BaseAgent):
     """Agent for assembling final HTML output."""
@@ -330,18 +329,16 @@ class HTMLAssemblerAgent(BaseAgent):
         toc_items = []
 
         for section in sections:
-            toc_items.append(
-                f'<a href="#{section.section_id}" class="toc-link">{section.title}</a>'
-            )
+            toc_items.append(f'<a href="#{section.section_id}" class="toc-link">{section.title}</a>')
 
-        return '\n'.join(toc_items)
+        return "\n".join(toc_items)
 
     def _generate_objectives_html(self, objectives: List[str]) -> str:
         """Generate learning objectives HTML."""
         if not objectives:
             return ""
 
-        items = '\n'.join(f'<li>{obj}</li>' for obj in objectives)
+        items = "\n".join(f"<li>{obj}</li>" for obj in objectives)
 
         return f"""
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
@@ -360,20 +357,20 @@ class HTMLAssemblerAgent(BaseAgent):
         - Downgrades h2 -> h3, h3 -> h4 for proper hierarchy
         """
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
+            soup = BeautifulSoup(html_content, "html.parser")
 
             # Remove all h1 tags (section already has title)
-            for h1 in soup.find_all('h1'):
+            for h1 in soup.find_all("h1"):
                 h1.decompose()
 
             # Downgrade heading levels for proper hierarchy
             # h2 -> h3 (since section has h2 title)
-            for h2 in soup.find_all('h2'):
-                h2.name = 'h3'
+            for h2 in soup.find_all("h2"):
+                h2.name = "h3"
 
             # h3 -> h4
-            for h3 in soup.find_all('h3'):
-                h3.name = 'h4'
+            for h3 in soup.find_all("h3"):
+                h3.name = "h4"
 
             return str(soup)
         except Exception as e:
@@ -386,20 +383,14 @@ class HTMLAssemblerAgent(BaseAgent):
         md_html = markdown.markdown(
             section.markdown_content,
             extensions=[
-                'extra',           # Tables, attributes, etc.
-                'fenced_code',     # ```python code blocks
-                'codehilite',      # Syntax highlighting
-                'tables',          # Table support
-                'nl2br',           # Newline to <br>
-                'sane_lists'       # Better list handling
+                "extra",  # Tables, attributes, etc.
+                "fenced_code",  # ```python code blocks
+                "codehilite",  # Syntax highlighting
+                "tables",  # Table support
+                "nl2br",  # Newline to <br>
+                "sane_lists",  # Better list handling
             ],
-            extension_configs={
-                'codehilite': {
-                    'css_class': 'highlight',
-                    'linenums': False,
-                    'guess_lang': True
-                }
-            }
+            extension_configs={"codehilite": {"css_class": "highlight", "linenums": False, "guess_lang": True}},
         )
 
         # Clean up HTML structure
@@ -408,28 +399,32 @@ class HTMLAssemblerAgent(BaseAgent):
         # Add diagrams
         diagrams_html = []
         for diagram in section.diagrams:
-            diagrams_html.append(f"""
+            diagrams_html.append(
+                f"""
             <div class="my-8">
                 <h4 class="text-center text-gray-600 mb-2">{diagram.title}</h4>
                 <div class="mermaid">
 {diagram.mermaid_code}
                 </div>
-            </div>""")
+            </div>"""
+            )
 
         # Add images with corrected relative paths
         images_html = []
         for img in section.images:
             # Fix path: outputs/file.html -> ../data/images/...
-            corrected_path = f"../{img.path}" if not img.path.startswith(('http://', 'https://', '../')) else img.path
+            corrected_path = f"../{img.path}" if not img.path.startswith(("http://", "https://", "../")) else img.path
 
-            images_html.append(f"""
+            images_html.append(
+                f"""
             <figure class="my-6">
                 <img src="{corrected_path}" alt="{img.description}" loading="lazy" />
                 <figcaption class="text-center text-sm text-gray-600 mt-2">
                     {img.caption or img.description}
                     {f'<br><span class="text-xs">{img.attribution}</span>' if img.attribution else ''}
                 </figcaption>
-            </figure>""")
+            </figure>"""
+            )
 
         return f"""
         <section id="{section.section_id}" class="section">

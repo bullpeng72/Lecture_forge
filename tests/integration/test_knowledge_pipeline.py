@@ -3,8 +3,6 @@ Integration tests for knowledge base pipeline.
 """
 
 import pytest
-from pathlib import Path
-
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.knowledge.chunker import TextChunker
 from lecture_forge.knowledge.retriever import RAGRetriever
@@ -18,7 +16,6 @@ class TestKnowledgePipeline:
         """Test complete flow: chunk -> store -> retrieve."""
         # Setup
         collection_name = "test_collection"
-        persist_directory = str(temp_dir / "test_vector_db")
 
         # 1. Chunk text
         chunker = TextChunker(chunk_size=200, chunk_overlap=50)
@@ -27,17 +24,14 @@ class TestKnowledgePipeline:
         assert len(chunks) > 0, "Chunking should produce at least one chunk"
 
         # 2. Create vector store and add documents
-        vector_store = VectorStore(
-            collection_name=collection_name,
-            persist_directory=persist_directory
-        )
+        vector_store = VectorStore(collection_name=collection_name)
 
         # Add chunks with metadata
-        for i, chunk in enumerate(chunks):
-            vector_store.add_documents(
-                texts=[chunk],
-                metadatas=[{"source": "test", "chunk_id": i}]
-            )
+        vector_store.add_documents(
+            documents=chunks,
+            metadatas=[{"source": "test", "chunk_id": i} for i in range(len(chunks))],
+            ids=[f"chunk_{i}" for i in range(len(chunks))],
+        )
 
         # 3. Query vector store
         retriever = RAGRetriever(vector_store=vector_store)
@@ -55,23 +49,17 @@ class TestKnowledgePipeline:
     def test_vector_store_persistence(self, temp_dir, sample_text_content):
         """Test that vector store persists across instances."""
         collection_name = "persist_test"
-        persist_directory = str(temp_dir / "persist_db")
 
         # Create and populate vector store
-        vector_store1 = VectorStore(
-            collection_name=collection_name,
-            persist_directory=persist_directory
-        )
+        vector_store1 = VectorStore(collection_name=collection_name)
         vector_store1.add_documents(
-            texts=["Test document 1", "Test document 2"],
-            metadatas=[{"source": "test1"}, {"source": "test2"}]
+            documents=["Test document 1", "Test document 2"],
+            metadatas=[{"source": "test1"}, {"source": "test2"}],
+            ids=["doc_1", "doc_2"],
         )
 
-        # Create new instance with same persist directory
-        vector_store2 = VectorStore(
-            collection_name=collection_name,
-            persist_directory=persist_directory
-        )
+        # Create new instance with same collection name
+        vector_store2 = VectorStore(collection_name=collection_name)
 
         # Query second instance
         results = vector_store2.query("test document", n_results=2)
@@ -81,24 +69,21 @@ class TestKnowledgePipeline:
     def test_retriever_relevance_ranking(self, temp_dir):
         """Test that retriever ranks results by relevance."""
         collection_name = "ranking_test"
-        persist_directory = str(temp_dir / "ranking_db")
 
         # Create vector store with diverse content
-        vector_store = VectorStore(
-            collection_name=collection_name,
-            persist_directory=persist_directory
-        )
+        vector_store = VectorStore(collection_name=collection_name)
 
         documents = [
             "Python is a programming language used for machine learning.",
             "JavaScript is used for web development.",
             "Machine learning with Python is very popular.",
-            "CSS is used for styling web pages."
+            "CSS is used for styling web pages.",
         ]
 
         vector_store.add_documents(
-            texts=documents,
-            metadatas=[{"id": i} for i in range(len(documents))]
+            documents=documents,
+            metadatas=[{"id": i} for i in range(len(documents))],
+            ids=[f"doc_{i}" for i in range(len(documents))],
         )
 
         # Query for Python ML content
@@ -107,9 +92,9 @@ class TestKnowledgePipeline:
 
         # Check that most relevant documents are returned
         top_contents = [doc["content"].lower() for doc in results[:2]]
-        assert any("python" in content and "machine learning" in content
-                   for content in top_contents), \
-            "Top results should contain both Python and machine learning"
+        assert any(
+            "python" in content and "machine learning" in content for content in top_contents
+        ), "Top results should contain both Python and machine learning"
 
 
 @pytest.mark.integration
@@ -120,18 +105,15 @@ class TestKnowledgeBaseScale:
     def test_large_document_processing(self, temp_dir):
         """Test processing a large number of documents."""
         collection_name = "scale_test"
-        persist_directory = str(temp_dir / "scale_db")
 
-        vector_store = VectorStore(
-            collection_name=collection_name,
-            persist_directory=persist_directory
-        )
+        vector_store = VectorStore(collection_name=collection_name)
 
         # Create 100 documents
         documents = [f"This is test document number {i} about topic {i % 10}" for i in range(100)]
         metadatas = [{"doc_id": i, "topic": i % 10} for i in range(100)]
+        ids = [f"doc_{i}" for i in range(100)]
 
-        vector_store.add_documents(texts=documents, metadatas=metadatas)
+        vector_store.add_documents(documents=documents, metadatas=metadatas, ids=ids)
 
         # Query and verify
         retriever = RAGRetriever(vector_store=vector_store)

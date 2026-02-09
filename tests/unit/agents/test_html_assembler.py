@@ -2,8 +2,6 @@
 Smoke tests for HTMLAssemblerAgent.
 """
 
-from unittest.mock import MagicMock
-
 import pytest
 
 from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
@@ -34,9 +32,8 @@ def sample_lecture():
     return Lecture(
         title="Test Lecture",
         topic="Testing",
-        duration_minutes=60,
-        difficulty="beginner",
-        target_audience="Students",
+        duration=60,
+        audience_level="beginner",
         learning_objectives=["Learn testing"],
         sections=[section],
     )
@@ -48,14 +45,24 @@ def test_html_assembler_initialization(html_assembler):
     assert html_assembler.agent_name == "HTMLAssemblerAgent"
 
 
-def test_assemble_html(html_assembler, sample_lecture):
+def test_assemble_html(html_assembler, sample_lecture, temp_dir):
     """Test HTML assembly."""
-    html_output = html_assembler.assemble(
+    output_path = str(temp_dir / "test_output.html")
+    result_path = html_assembler.assemble(
         lecture=sample_lecture,
-        output_path="test_output.html",
+        output_path=output_path,
     )
 
-    assert html_output is not None
-    assert isinstance(html_output, str)
-    assert len(html_output) > 0
-    assert "<html>" in html_output or "<!DOCTYPE" in html_output
+    # Should return file path
+    assert result_path is not None
+    assert isinstance(result_path, str)
+    assert result_path == output_path
+
+    # File should exist and contain HTML
+    import os
+
+    assert os.path.exists(result_path)
+    with open(result_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+        assert len(html_content) > 0
+        assert "<html>" in html_content or "<!DOCTYPE" in html_content

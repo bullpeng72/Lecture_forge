@@ -3,7 +3,7 @@ PDF Parser Tool - Extracts text and metadata from PDF files.
 """
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import fitz  # PyMuPDF
 
@@ -64,11 +64,13 @@ class PDFParserTool:
                 page = doc[page_num]
                 text = page.get_text()
 
-                pages.append({
-                    "page_number": page_num + 1,
-                    "text": text,
-                    "word_count": len(text.split()),
-                })
+                pages.append(
+                    {
+                        "page_number": page_num + 1,
+                        "text": text,
+                        "word_count": len(text.split()),
+                    }
+                )
 
                 full_text.append(text)
 
@@ -77,9 +79,7 @@ class PDFParserTool:
             # Combine all text
             combined_text = "\n\n".join(full_text)
 
-            logger.info(
-                f"Successfully parsed PDF: {total_pages} pages, {len(combined_text)} characters"
-            )
+            logger.info(f"Successfully parsed PDF: {total_pages} pages, {len(combined_text)} characters")
 
             return {
                 "success": True,

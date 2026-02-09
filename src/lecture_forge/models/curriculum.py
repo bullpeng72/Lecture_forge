@@ -27,6 +27,4 @@ class Curriculum(BaseModel):
     learning_objectives: List[str] = Field(default_factory=list)
     sections: List[Section] = Field(default_factory=list)
     total_estimated_time: int = 0
-    prerequisite_map: Dict[str, List[str]] = Field(
-        default_factory=dict
-    )  # section_id -> prerequisite section_ids
+    prerequisite_map: Dict[str, List[str]] = Field(default_factory=dict)  # section_id -> prerequisite section_ids

@@ -18,8 +18,8 @@ def sample_curriculum():
         title="Introduction to Machine Learning",
         estimated_time=20,
         difficulty_level="beginner",
-        key_points=["What is ML?", "Types of ML", "Applications"],
-        subsections=[],
+        topics=["What is ML?", "Types of ML", "Applications"],
+        learning_outcomes=["Understand ML basics"],
     )
 
     section2 = Section(
@@ -27,15 +27,14 @@ def sample_curriculum():
         title="Supervised Learning Basics",
         estimated_time=30,
         difficulty_level="beginner",
-        key_points=["Classification", "Regression", "Training"],
-        subsections=[],
+        topics=["Classification", "Regression", "Training"],
+        learning_outcomes=["Understand supervised learning"],
     )
 
     return Curriculum(
         topic="Machine Learning",
-        duration_minutes=120,
-        difficulty="beginner",
-        target_audience="Computer Science students",
+        duration=120,
+        audience_level="beginner",
         learning_objectives=[
             "Understand ML fundamentals",
             "Learn supervised learning concepts",
@@ -117,9 +116,7 @@ def test_write_section_with_images(content_writer, sample_curriculum, sample_ima
         # Mock LLM response
         mock_response = MagicMock()
         mock_response.content = "# Section content with images\n\nThis is sample content."
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
-        }
+        mock_response.response_metadata = {"token_usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}}
         mock_llm_instance.invoke.return_value = mock_response
 
         # Test section writing with images
@@ -141,9 +138,7 @@ def test_write_all_sections(content_writer, sample_curriculum, mock_llm):
         # Mock LLM response
         mock_response = MagicMock()
         mock_response.content = "# Section content\n\nThis is auto-generated content."
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
-        }
+        mock_response.response_metadata = {"token_usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}}
         mock_llm_instance.invoke.return_value = mock_response
 
         # Test writing all sections

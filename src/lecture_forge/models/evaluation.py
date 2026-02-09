@@ -22,9 +22,7 @@ class EvaluationResult(BaseModel):
 
     overall_score: float  # 0-100
     passed: bool  # >= threshold
-    dimension_scores: Dict[str, float] = Field(
-        default_factory=dict
-    )  # dimension_name -> score
+    dimension_scores: Dict[str, float] = Field(default_factory=dict)  # dimension_name -> score
     issues: List[Issue] = Field(default_factory=list)
     revision_strategy: str = "none"  # "none", "auto", "consult", "major"
     iteration: int = 0

@@ -2,8 +2,6 @@
 Base agent class for common functionality.
 """
 
-from typing import Any, Dict, List
-
 from langchain_openai import ChatOpenAI
 from tenacity import (
     retry,

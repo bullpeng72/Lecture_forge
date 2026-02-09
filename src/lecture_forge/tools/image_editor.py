@@ -2,9 +2,8 @@
 Image Editor Tool - Edit images in generated HTML lectures.
 """
 
-import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -40,8 +39,8 @@ class ImageEditor:
         # Track changes
         self.changes = {
             "delete": set(),  # Image IDs to delete
-            "replace": {},    # Image ID -> new image info
-            "add": [],        # New images to add
+            "replace": {},  # Image ID -> new image info
+            "add": [],  # New images to add
         }
 
         # Initialize Vector Store (for finding alternatives)
@@ -138,8 +137,9 @@ class ImageEditor:
         caption = self._extract_caption(img_tag)
 
         import re
+
         for text in [alt_text, caption]:
-            match = re.search(r'page\s+(\d+)', text, re.IGNORECASE)
+            match = re.search(r"page\s+(\d+)", text, re.IGNORECASE)
             if match:
                 return int(match.group(1))
 
@@ -160,14 +160,16 @@ class ImageEditor:
             if img["index"] in self.changes["replace"]:
                 status = "replace"
 
-            image_list.append({
-                "index": img["index"],
-                "description": img["alt"][:50] if img["alt"] else "No description",
-                "caption": img["caption"][:50] if img["caption"] else "",
-                "section": img["section"][:40],
-                "page": img["page"],
-                "status": status,
-            })
+            image_list.append(
+                {
+                    "index": img["index"],
+                    "description": img["alt"][:50] if img["alt"] else "No description",
+                    "caption": img["caption"][:50] if img["caption"] else "",
+                    "section": img["section"][:40],
+                    "page": img["page"],
+                    "status": status,
+                }
+            )
 
         return image_list
 
@@ -205,9 +207,7 @@ class ImageEditor:
             return True
         return False
 
-    def find_alternative_images(
-        self, image_index: int, max_results: int = 5
-    ) -> List[Dict]:
+    def find_alternative_images(self, image_index: int, max_results: int = 5) -> List[Dict]:
         """
         Find alternative images from Vector DB.
 
@@ -264,13 +264,15 @@ class ImageEditor:
                     # Check if image file still exists
                     img_path = metadata.get("path", "")
                     if img_path and Path(img_path).exists():
-                        alternatives.append({
-                            "index": len(alternatives) + 1,
-                            "path": img_path,
-                            "description": documents[idx][:100],
-                            "page": metadata.get("page"),
-                            "source": Path(metadata.get("source", "")).name,
-                        })
+                        alternatives.append(
+                            {
+                                "index": len(alternatives) + 1,
+                                "path": img_path,
+                                "description": documents[idx][:100],
+                                "page": metadata.get("page"),
+                                "source": Path(metadata.get("source", "")).name,
+                            }
+                        )
 
                     if len(alternatives) >= max_results:
                         break
@@ -320,10 +322,7 @@ class ImageEditor:
         """
         if output_path is None:
             # Generate default output path
-            output_path = str(
-                self.html_path.parent
-                / f"{self.html_path.stem}_edited{self.html_path.suffix}"
-            )
+            output_path = str(self.html_path.parent / f"{self.html_path.stem}_edited{self.html_path.suffix}")
 
         # Apply changes to soup
         changes_made = 0

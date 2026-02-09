@@ -42,9 +42,7 @@ class QualityEvaluator:
         dimension_scores = self.metrics.calculate_all_metrics(lecture)
 
         # Calculate overall score
-        overall_score = sum(
-            dimension_scores[metric] * weight for metric, weight in self.WEIGHTS.items()
-        )
+        overall_score = sum(dimension_scores[metric] * weight for metric, weight in self.WEIGHTS.items())
 
         # Determine if passed
         passed = overall_score >= threshold
@@ -69,40 +67,31 @@ class QualityEvaluator:
 
     def _identify_issues(self, dimension_scores: dict, lecture: Lecture) -> list:
         """Identify specific issues based on scores."""
-        from lecture_forge.models.evaluation import Issue
 
         issues = []
 
         for dimension, score in dimension_scores.items():
             if score < 60:
                 # High severity
-                issue = self._create_issue_for_dimension(
-                    dimension, score, lecture, severity="high"
-                )
+                issue = self._create_issue_for_dimension(dimension, score, lecture, severity="high")
                 if issue:
                     issues.append(issue)
 
             elif score < 70:
                 # Medium severity
-                issue = self._create_issue_for_dimension(
-                    dimension, score, lecture, severity="medium"
-                )
+                issue = self._create_issue_for_dimension(dimension, score, lecture, severity="medium")
                 if issue:
                     issues.append(issue)
 
             elif score < 80:
                 # Low severity
-                issue = self._create_issue_for_dimension(
-                    dimension, score, lecture, severity="low"
-                )
+                issue = self._create_issue_for_dimension(dimension, score, lecture, severity="low")
                 if issue:
                     issues.append(issue)
 
         return issues
 
-    def _create_issue_for_dimension(
-        self, dimension: str, score: float, lecture: Lecture, severity: str
-    ) -> dict:
+    def _create_issue_for_dimension(self, dimension: str, score: float, lecture: Lecture, severity: str) -> dict:
         """Create specific issue for a dimension."""
         from lecture_forge.models.evaluation import Issue
 
@@ -149,8 +138,7 @@ class QualityEvaluator:
             # Check for missing intro/conclusion
             has_intro = any("intro" in s.section_id.lower() for s in lecture.sections)
             has_conclusion = any(
-                "conclusion" in s.section_id.lower() or "summary" in s.section_id.lower()
-                for s in lecture.sections
+                "conclusion" in s.section_id.lower() or "summary" in s.section_id.lower() for s in lecture.sections
             )
 
             if not has_intro:

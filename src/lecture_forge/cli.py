@@ -103,13 +103,15 @@ def print_banner() -> None:
 def print_basic_help() -> None:
     """Print basic help information when no command is provided."""
     console.print()
-    console.print(Panel.fit(
-        "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + " [green](Beta)[/green]\n\n"
-        "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
-        "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-        "[dim]10 Agents | 9 Tools | 53+ Tests (45-50%) | $0.22/180min lecture[/dim]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + " [green](Beta)[/green]\n\n"
+            "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
+            "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
+            "[dim]10 Agents | 9 Tools | 53+ Tests (45-50%) | $0.22/180min lecture[/dim]",
+            border_style="cyan",
+        )
+    )
 
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
     console.print("  [cyan]lecture-forge create[/cyan]                        # Interactive mode (easiest)")
@@ -123,31 +125,11 @@ def print_basic_help() -> None:
     table.add_column("Description", width=32)
     table.add_column("Key Options", style="green", width=28)
 
-    table.add_row(
-        "create",
-        "Generate lecture materials",
-        "--image-search, --quality-level"
-    )
-    table.add_row(
-        "chat",
-        "Interactive Q&A (RAG-based)",
-        "--knowledge-base, -kb"
-    )
-    table.add_row(
-        "edit-images",
-        "Edit lecture images",
-        "--output, -o"
-    )
-    table.add_row(
-        "improve",
-        "Enhance or convert lecture",
-        "--to-slides"
-    )
-    table.add_row(
-        "cleanup",
-        "Manage knowledge bases",
-        "--all (delete all)"
-    )
+    table.add_row("create", "Generate lecture materials", "--image-search, --quality-level")
+    table.add_row("chat", "Interactive Q&A (RAG-based)", "--knowledge-base, -kb")
+    table.add_row("edit-images", "Edit lecture images", "--output, -o")
+    table.add_row("improve", "Enhance or convert lecture", "--to-slides")
+    table.add_row("cleanup", "Manage knowledge bases", "--all (delete all)")
     console.print(table)
 
     # Common Options
@@ -332,44 +314,30 @@ def cli(ctx):
 
 
 @cli.command()
+@click.option("--config", "-c", type=click.Path(exists=True), help="Configuration YAML file with lecture parameters")
+@click.option("--interactive", "-i", is_flag=True, help="Enable interactive Q&A mode during generation")
 @click.option(
-    "--config", "-c",
-    type=click.Path(exists=True),
-    help="Configuration YAML file with lecture parameters"
-)
-@click.option(
-    "--interactive", "-i",
-    is_flag=True,
-    help="Enable interactive Q&A mode during generation"
-)
-@click.option(
-    "--image-search/--no-image-search",
-    default=True,
-    help="Enable image search from web sources (Pexels, default: enabled)"
+    "--image-search/--no-image-search", default=True, help="Enable image search from web sources (Pexels, default: enabled)"
 )
 @click.option(
     "--quality-level",
     type=click.Choice(["lenient", "balanced", "strict"]),
     default="balanced",
     help="Quality threshold: lenient(70), balanced(80), strict(90)",
-    show_default=True
+    show_default=True,
 )
-@click.option(
-    "--output", "-o",
-    type=str,
-    help="Output file name without extension (auto-generated if not provided)"
-)
+@click.option("--output", "-o", type=str, help="Output file name without extension (auto-generated if not provided)")
 @click.option(
     "--include-pdf-images/--no-include-pdf-images",
     default=True,
     help="Extract images from PDFs with location-based matching (default: enabled since v0.2.0)",
-    show_default=True
+    show_default=True,
 )
 @click.option(
     "--auto-describe-images/--no-auto-describe-images",
     default=True,
     help="Automatically generate descriptions for PDF images using GPT-4o-mini (only if --include-pdf-images is enabled)",
-    show_default=True
+    show_default=True,
 )
 def create(
     config: Optional[str],
@@ -471,9 +439,7 @@ def create(
             missing_fields = [f for f in required_fields if f not in inputs]
 
             if missing_fields:
-                console.print(
-                    f"[red]❌ Error: Missing required fields in config: {', '.join(missing_fields)}[/red]\n"
-                )
+                console.print(f"[red]❌ Error: Missing required fields in config: {', '.join(missing_fields)}[/red]\n")
                 console.print("[yellow]Required fields: topic, duration, audience_level[/yellow]\n")
                 sys.exit(1)
 
@@ -524,19 +490,19 @@ def create(
         console.print(f"   • Images: {result['images']}")
 
         # Display quality metrics
-        if 'quality_score' in result and result['quality_score'] > 0:
-            score = result['quality_score']
+        if "quality_score" in result and result["quality_score"] > 0:
+            score = result["quality_score"]
             color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
             console.print(f"   • Quality score: [{color}]{score:.1f}/100[/{color}]")
 
-            if 'quality_iterations' in result:
-                iterations = result['quality_iterations']
+            if "quality_iterations" in result:
+                iterations = result["quality_iterations"]
                 if iterations > 0:
                     console.print(f"   • Quality improvements: {iterations} iteration(s)")
 
         # Display token usage and cost estimate
-        if 'token_usage' in result:
-            display_token_usage(result['token_usage'])
+        if "token_usage" in result:
+            display_token_usage(result["token_usage"])
 
         console.print(f"\n[dim]💡 Open the HTML file in a browser to view the lecture![/dim]\n")
 
@@ -548,7 +514,8 @@ def create(
 
 @cli.command()
 @click.option(
-    "--knowledge-base", "-kb",
+    "--knowledge-base",
+    "-kb",
     type=click.Path(exists=True),
     help="Path to knowledge base directory (e.g., data/vector_db/my_lecture)",
 )
@@ -618,23 +585,13 @@ def chat(knowledge_base: Optional[str]):
         sys.exit(1)
 
 
-@cli.command()
-@click.argument("lecture_path", type=click.Path(exists=True))
-@click.option(
-    "--threshold", "-t",
-    type=int,
-    default=80,
-    help="Quality threshold (0-100)",
-    show_default=True
-)
-@click.option(
-    "--max-iterations", "-m",
-    type=int,
-    default=3,
-    help="Maximum revision iterations",
-    show_default=True
-)
-def improve(lecture_path: str, threshold: int, max_iterations: int):
+# NOTE: This 'improve' command is disabled due to name conflict with the newer improve command at line 1201
+# TODO: Rename this to 'evaluate' or 'improve-quality' if this functionality is still needed
+# @cli.command()
+# @click.argument("lecture_path", type=click.Path(exists=True))
+# @click.option("--threshold", "-t", type=int, default=80, help="Quality threshold (0-100)", show_default=True)
+# @click.option("--max-iterations", "-m", type=int, default=3, help="Maximum revision iterations", show_default=True)
+def _improve_quality_DISABLED(lecture_path: str, threshold: int, max_iterations: int):
     """
     Re-evaluate and improve existing lecture.
 
@@ -740,9 +697,7 @@ def improve(lecture_path: str, threshold: int, max_iterations: int):
             if evaluation.issues:
                 console.print(f"[yellow]Issues found: {len(evaluation.issues)}[/yellow]")
                 for i, issue in enumerate(evaluation.issues[:5], 1):  # Show top 5
-                    severity_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(
-                        issue.severity, "white"
-                    )
+                    severity_color = {"high": "red", "medium": "yellow", "low": "blue"}.get(issue.severity, "white")
                     console.print(
                         f"  [{severity_color}]{i}. [{issue.severity.upper()}] {issue.description}[/{severity_color}]"
                     )
@@ -783,7 +738,8 @@ def improve(lecture_path: str, threshold: int, max_iterations: int):
 
 @cli.command()
 @click.option(
-    "--all", "-a",
+    "--all",
+    "-a",
     is_flag=True,
     help="Delete ALL knowledge bases without confirmation (DANGEROUS)",
 )
@@ -997,7 +953,6 @@ def select_knowledge_base() -> Optional[str]:
     Returns:
         Path to selected knowledge base, or None if cancelled
     """
-    import shutil
 
     while True:  # Loop to allow returning after deletion
         # Get vector DB directory
@@ -1054,7 +1009,7 @@ def select_knowledge_base() -> Optional[str]:
             return None
 
         # Handle delete option
-        if choice.lower() in ['delete', 'd']:
+        if choice.lower() in ["delete", "d"]:
             delete_result = handle_kb_deletion_interactive(kb_dirs)
             if delete_result == "continue":
                 continue  # Return to KB selection
@@ -1105,7 +1060,7 @@ def handle_kb_deletion_interactive(kb_dirs: List[Path]) -> str:
         return "continue"
 
     # Handle 'all' option
-    if choice.lower() == 'all':
+    if choice.lower() == "all":
         console.print(f"\n[bold red]⚠️  WARNING: This will delete ALL {len(kb_dirs)} knowledge bases![/bold red]\n")
 
         # Show what will be deleted
@@ -1196,7 +1151,6 @@ def find_pdf_files(max_depth: int = 2) -> List[Path]:
     Returns:
         List of PDF file paths with size and modification time
     """
-    import os
     from pathlib import Path
     from datetime import datetime
 
@@ -1217,13 +1171,15 @@ def find_pdf_files(max_depth: int = 2) -> List[Path]:
                     size_mb = stat.st_size / (1024 * 1024)
                     mtime = datetime.fromtimestamp(stat.st_mtime)
 
-                    pdf_files.append({
-                        "path": str(pdf_path),
-                        "relative_path": str(pdf_path.relative_to(current_dir)),
-                        "size_mb": size_mb,
-                        "modified": mtime,
-                        "name": pdf_path.name
-                    })
+                    pdf_files.append(
+                        {
+                            "path": str(pdf_path),
+                            "relative_path": str(pdf_path.relative_to(current_dir)),
+                            "size_mb": size_mb,
+                            "modified": mtime,
+                            "name": pdf_path.name,
+                        }
+                    )
                 except (OSError, ValueError):
                     continue
 
@@ -1238,18 +1194,10 @@ def find_pdf_files(max_depth: int = 2) -> List[Path]:
 @click.option(
     "--enhance-pdf-images",
     is_flag=True,
-    help="Generate descriptions for PDF images using page text (costs ~$0.04 per 400 images)"
+    help="Generate descriptions for PDF images using page text (costs ~$0.04 per 400 images)",
 )
-@click.option(
-    "--source-pdf",
-    type=click.Path(exists=True),
-    help="Source PDF file (required for --enhance-pdf-images)"
-)
-@click.option(
-    "--to-slides",
-    is_flag=True,
-    help="Convert lecture to presentation slides format (Reveal.js)"
-)
+@click.option("--source-pdf", type=click.Path(exists=True), help="Source PDF file (required for --enhance-pdf-images)")
+@click.option("--to-slides", is_flag=True, help="Convert lecture to presentation slides format (Reveal.js)")
 def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool):
     """
     Improve existing lecture quality with optional enhancements.
@@ -1295,10 +1243,7 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
       - Original lecture file will be backed up before modification
     """
     console.print()
-    console.print(Panel.fit(
-        "[bold cyan]🔧 LectureForge - Lecture Improvement[/bold cyan]",
-        border_style="cyan"
-    ))
+    console.print(Panel.fit("[bold cyan]🔧 LectureForge - Lecture Improvement[/bold cyan]", border_style="cyan"))
     console.print()
 
     lecture_path = Path(lecture_path)
@@ -1346,10 +1291,7 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         describer = PDFImageDescriber()
 
         with console.status("[bold green]Generating image descriptions..."):
-            result = describer.enhance_images(
-                pdf_path=str(source_pdf),
-                image_dir=str(image_dir)
-            )
+            result = describer.enhance_images(pdf_path=str(source_pdf), image_dir=str(image_dir))
 
         if not result["success"]:
             console.print(f"[red]❌ Enhancement failed: {result.get('error', 'Unknown error')}[/red]")
@@ -1400,7 +1342,8 @@ def _find_image_dir_from_html(html_path: Path) -> Path:
 
         # Look for metadata comment: <!-- image_dir: data/images/session_xxx -->
         import re
-        match = re.search(r'<!-- image_dir: (.+?) -->', html_content)
+
+        match = re.search(r"<!-- image_dir: (.+?) -->", html_content)
 
         if match:
             image_dir = Path(match.group(1))
@@ -1451,7 +1394,7 @@ def select_pdf_files() -> List[str]:
         header_style="bold cyan",
         box=box.ROUNDED,
         title=f"[bold]Found {len(pdf_files)} PDF file(s)[/bold]",
-        title_style="bold green"
+        title_style="bold green",
     )
 
     table.add_column("#", style="dim", width=4, justify="right")
@@ -1461,16 +1404,10 @@ def select_pdf_files() -> List[str]:
     table.add_column("Modified", style="dim")
 
     for idx, pdf in enumerate(pdf_files, 1):
-        size_str = f"{pdf['size_mb']:.1f} MB" if pdf['size_mb'] >= 1 else f"{pdf['size_mb']*1024:.0f} KB"
-        modified_str = pdf['modified'].strftime("%Y-%m-%d %H:%M")
+        size_str = f"{pdf['size_mb']:.1f} MB" if pdf["size_mb"] >= 1 else f"{pdf['size_mb']*1024:.0f} KB"
+        modified_str = pdf["modified"].strftime("%Y-%m-%d %H:%M")
 
-        table.add_row(
-            str(idx),
-            pdf['name'],
-            pdf['relative_path'],
-            size_str,
-            modified_str
-        )
+        table.add_row(str(idx), pdf["name"], pdf["relative_path"], size_str, modified_str)
 
     console.print(table)
     console.print()
@@ -1482,10 +1419,7 @@ def select_pdf_files() -> List[str]:
     console.print("  • Press [cyan]Enter[/cyan] to skip")
     console.print()
 
-    selection = Prompt.ask(
-        "[bold]Select PDF files[/bold]",
-        default=""
-    )
+    selection = Prompt.ask("[bold]Select PDF files[/bold]", default="")
 
     if not selection:
         return []
@@ -1494,7 +1428,7 @@ def select_pdf_files() -> List[str]:
 
     # Handle 'all' selection
     if selection == "all":
-        selected_files = [pdf['relative_path'] for pdf in pdf_files]
+        selected_files = [pdf["relative_path"] for pdf in pdf_files]
         console.print(f"[green]✓ Selected all {len(selected_files)} files[/green]\n")
         return selected_files
 
@@ -1502,12 +1436,12 @@ def select_pdf_files() -> List[str]:
     selected_indices = set()
 
     try:
-        for part in selection.split(','):
+        for part in selection.split(","):
             part = part.strip()
 
             # Handle range (e.g., "1-3")
-            if '-' in part:
-                start, end = part.split('-')
+            if "-" in part:
+                start, end = part.split("-")
                 start_idx = int(start.strip())
                 end_idx = int(end.strip())
 
@@ -1532,7 +1466,7 @@ def select_pdf_files() -> List[str]:
         return []
 
     # Get selected files
-    selected_files = [pdf_files[idx - 1]['relative_path'] for idx in sorted(selected_indices)]
+    selected_files = [pdf_files[idx - 1]["relative_path"] for idx in sorted(selected_indices)]
 
     if selected_files:
         console.print(f"[green]✓ Selected {len(selected_files)} file(s):[/green]")
@@ -1569,11 +1503,7 @@ def collect_inputs_interactive() -> Dict[str, Any]:
     console.print("  [3] Skip PDF files")
     console.print()
 
-    pdf_choice = Prompt.ask(
-        "[bold]Choose option[/bold]",
-        choices=["1", "2", "3"],
-        default="1"
-    )
+    pdf_choice = Prompt.ask("[bold]Choose option[/bold]", choices=["1", "2", "3"], default="1")
 
     if pdf_choice == "1":
         # Browse and select PDF files
@@ -1581,10 +1511,7 @@ def collect_inputs_interactive() -> Dict[str, Any]:
 
         # Allow adding more files manually
         if inputs["pdfs"]:
-            add_more = Confirm.ask(
-                "\n[bold]Add more PDF files manually?[/bold]",
-                default=False
-            )
+            add_more = Confirm.ask("\n[bold]Add more PDF files manually?[/bold]", default=False)
             if add_more:
                 console.print("[dim]💡 Tip: For filenames with spaces, just type without quotes[/dim]")
                 pdf_input = Prompt.ask("[bold]Additional PDF files[/bold] (comma-separated)")
@@ -1614,9 +1541,7 @@ def collect_inputs_interactive() -> Dict[str, Any]:
         inputs["urls"] = []
 
     # Search keywords
-    keyword_input = Prompt.ask(
-        "[bold]Search keywords[/bold] (comma-separated, or press Enter to skip)"
-    )
+    keyword_input = Prompt.ask("[bold]Search keywords[/bold] (comma-separated, or press Enter to skip)")
     if keyword_input:
         inputs["keywords"] = [k.strip().strip('"').strip("'") for k in keyword_input.split(",")]
     else:
@@ -1624,18 +1549,14 @@ def collect_inputs_interactive() -> Dict[str, Any]:
 
     # Hada.io deep search keywords
     console.print("\n[dim]💡 Deep Crawling: Hada.io search will crawl article links too[/dim]")
-    hada_keyword_input = Prompt.ask(
-        "[bold]Hada.io search keywords[/bold] (comma-separated, or press Enter to skip)"
-    )
+    hada_keyword_input = Prompt.ask("[bold]Hada.io search keywords[/bold] (comma-separated, or press Enter to skip)")
     if hada_keyword_input:
         inputs["hada_keywords"] = [k.strip().strip('"').strip("'") for k in hada_keyword_input.split(",")]
     else:
         inputs["hada_keywords"] = []
 
     # Image search keywords (if enabled via flag)
-    image_keyword_input = Prompt.ask(
-        "[bold]Image search keywords[/bold] (comma-separated, or press Enter to skip)"
-    )
+    image_keyword_input = Prompt.ask("[bold]Image search keywords[/bold] (comma-separated, or press Enter to skip)")
     if image_keyword_input:
         inputs["image_keywords"] = [k.strip().strip('"').strip("'") for k in image_keyword_input.split(",")]
     else:
@@ -1701,9 +1622,7 @@ def parse_html_to_lecture(html_path: str):
             for pre in section_elem.find_all("pre"):
                 code = pre.find("code")
                 if code:
-                    code_blocks.append(
-                        CodeBlock(language="python", code=code.get_text(), caption=None)
-                    )
+                    code_blocks.append(CodeBlock(language="python", code=code.get_text(), caption=None))
 
             # Extract diagrams
             diagrams = []
@@ -1766,9 +1685,10 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     # Generate collection name from topic
     # Sanitize topic name for ChromaDB (ASCII only: alphanumeric, underscore, hyphen)
     import re
+
     topic_safe = inputs["topic"].replace(" ", "_").replace("/", "_").replace("\\", "_")
     # Remove non-ASCII characters (한글 등)
-    topic_safe = re.sub(r'[^a-zA-Z0-9_-]', '', topic_safe)
+    topic_safe = re.sub(r"[^a-zA-Z0-9_-]", "", topic_safe)
     # If empty after sanitization, use default
     if not topic_safe or len(topic_safe) < 3:
         topic_safe = "lecture"
@@ -1806,8 +1726,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Phase 2: Image Collection
         task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=None)
         image_agent = ImageCollectorAgent(
-            session_id=collection_name,
-            vector_store=content_agent.vector_store  # Share vector store for RAG integration
+            session_id=collection_name, vector_store=content_agent.vector_store  # Share vector store for RAG integration
         )
 
         # PDF images now recommended with location-based matching (v0.2.0+)
@@ -1840,8 +1759,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         )
         progress.update(task3a, completed=True)
         console.print(
-            f"   ✅ Analysis complete: {len(analysis_result.key_topics)} topics, "
-            f"{len(analysis_result.entities)} entities"
+            f"   ✅ Analysis complete: {len(analysis_result.key_topics)} topics, " f"{len(analysis_result.entities)} entities"
         )
 
         # Phase 3b: Curriculum Design
@@ -1855,8 +1773,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         )
         progress.update(task3b, completed=True)
         console.print(
-            f"   ✅ Curriculum designed: {len(curriculum.sections)} sections, "
-            f"{curriculum.total_estimated_time} min"
+            f"   ✅ Curriculum designed: {len(curriculum.sections)} sections, " f"{curriculum.total_estimated_time} min"
         )
 
         # Phase 4a: Content Writing
@@ -1904,9 +1821,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         console.print(f"   ✅ HTML assembled: {html_path}")
 
         # Phase 5: Quality Assurance (optional but enabled by default)
-        quality_threshold = {"lenient": 70, "balanced": 80, "strict": 90}.get(
-            inputs.get("quality_level", "balanced"), 80
-        )
+        quality_threshold = {"lenient": 70, "balanced": 80, "strict": 90}.get(inputs.get("quality_level", "balanced"), 80)
         max_iterations = 3
 
         # Import quality agents
@@ -1916,10 +1831,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         evaluator = QualityEvaluatorAgent()
         revision_agent = RevisionAgent()
 
-        task5 = progress.add_task(
-            f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...",
-            total=None
-        )
+        task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None)
 
         iteration = 0
         previous_score = 0
@@ -1932,10 +1844,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             evaluation = evaluator.evaluate(improved_lecture, quality_threshold)
             final_evaluation = evaluation  # Save for later use
 
-            console.print(
-                f"\n   📊 Quality evaluation (iteration {iteration + 1}):"
-                f" {evaluation.overall_score:.1f}/100"
-            )
+            console.print(f"\n   📊 Quality evaluation (iteration {iteration + 1}):" f" {evaluation.overall_score:.1f}/100")
 
             # Check if passed
             if evaluation.passed:
@@ -1949,17 +1858,11 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                 improvement = evaluation.overall_score - previous_score
 
                 if improvement < 2:
-                    console.print(
-                        f"   ⚠️  Minimal improvement (+{improvement:.1f}). "
-                        "Stopping to prevent degradation."
-                    )
+                    console.print(f"   ⚠️  Minimal improvement (+{improvement:.1f}). " "Stopping to prevent degradation.")
                     break
 
                 if improvement < 0:
-                    console.print(
-                        f"   ❌ Quality degraded ({improvement:.1f}). "
-                        "Keeping previous version."
-                    )
+                    console.print(f"   ❌ Quality degraded ({improvement:.1f}). " "Keeping previous version.")
                     # Revert to previous version (would need to be saved)
                     break
 
@@ -1967,12 +1870,9 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             if evaluation.issues and iteration == 0:
                 console.print(f"   ⚠️  {len(evaluation.issues)} issues found:")
                 for issue in evaluation.issues[:3]:  # Show top 3
-                    severity_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
-                        issue.severity, "⚪"
-                    )
+                    severity_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(issue.severity, "⚪")
                     console.print(
-                        f"      {severity_icon} [{issue.severity}] {issue.dimension}: "
-                        f"{issue.description[:80]}..."
+                        f"      {severity_icon} [{issue.severity}] {issue.dimension}: " f"{issue.description[:80]}..."
                     )
 
             # Apply revisions
@@ -1983,10 +1883,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             final_evaluation = evaluator.evaluate(revised_lecture, quality_threshold)
             actual_improvement = final_evaluation.overall_score - evaluation.overall_score
 
-            console.print(
-                f"   → After revision: {final_evaluation.overall_score:.1f}/100 "
-                f"(+{actual_improvement:.1f})"
-            )
+            console.print(f"   → After revision: {final_evaluation.overall_score:.1f}/100 " f"(+{actual_improvement:.1f})")
 
             if actual_improvement > 0:
                 improved_lecture = revised_lecture
@@ -2048,14 +1945,10 @@ def _convert_to_bullet_points(text: str) -> List[str]:
         from langchain_core.messages import HumanMessage
 
         # Skip if text is already short or already in bullet format
-        if len(text) < 100 or text.strip().startswith(('•', '-', '*')):
+        if len(text) < 100 or text.strip().startswith(("•", "-", "*")):
             return [text]
 
-        llm = ChatOpenAI(
-            model=Config.DEFAULT_MODEL,
-            temperature=0.3,
-            api_key=Config.OPENAI_API_KEY
-        )
+        llm = ChatOpenAI(model=Config.DEFAULT_MODEL, temperature=0.3, api_key=Config.OPENAI_API_KEY)
 
         prompt = f"""다음 서술식 텍스트를 프레젠테이션 슬라이드에 적합한 개조식 표현으로 변환해주세요.
 
@@ -2077,12 +1970,12 @@ def _convert_to_bullet_points(text: str) -> List[str]:
 
         # Parse bullet points
         bullets = []
-        for line in bullet_text.split('\n'):
+        for line in bullet_text.split("\n"):
             line = line.strip()
             # Remove bullet markers if present
-            line = line.lstrip('•-*').strip()
+            line = line.lstrip("•-*").strip()
             # Remove numbering if present
-            line = re.sub(r'^\d+[\.)]\s*', '', line)
+            line = re.sub(r"^\d+[\.)]\s*", "", line)
             if line and len(line) > 5:  # Filter out very short lines
                 bullets.append(line)
 
@@ -2092,7 +1985,8 @@ def _convert_to_bullet_points(text: str) -> List[str]:
         logger.warning(f"Failed to convert to bullet points: {e}")
         # Fallback: split by sentences
         import re
-        sentences = re.split(r'[.!?]\s+', text)
+
+        sentences = re.split(r"[.!?]\s+", text)
         return [s.strip() for s in sentences if len(s.strip()) > 10][:5]
 
 
@@ -2148,8 +2042,7 @@ def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
             section_title_raw = section_title_tag.text.strip()
 
             # Remove leading number and dot (e.g., "1. ", "2. ", etc.)
-            import re
-            section_title = re.sub(r'^\d+\.\s*', '', section_title_raw)
+            section_title = re.sub(r"^\d+\.\s*", "", section_title_raw)
 
             logger.debug(f"Processing section: {section_title_raw} -> {section_title}")
 
@@ -2215,10 +2108,7 @@ def _convert_to_slides(lecture_html_path: Path, output_path: Path) -> bool:
                 if mermaid_code:
                     content_blocks.append({"type": "diagram", "content": mermaid_code})
 
-            sections.append({
-                "title": section_title,
-                "blocks": content_blocks
-            })
+            sections.append({"title": section_title, "blocks": content_blocks})
 
         # Clear progress line
         console.print(" " * 80, end="\r")
@@ -2253,13 +2143,15 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
     slides_content = []
 
     # Title slide (Korean)
-    slides_content.append(f"""
+    slides_content.append(
+        f"""
     <section data-transition="zoom">
         <h1>{title}</h1>
         {f'<p class="subtitle">{subtitle}</p>' if subtitle else ''}
         <p><small>LectureForge로 생성됨</small></p>
     </section>
-    """)
+    """
+    )
 
     # Section slides
     for section in sections:
@@ -2267,11 +2159,13 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         blocks = section["blocks"]
 
         # Section title slide
-        slides_content.append(f"""
+        slides_content.append(
+            f"""
     <section data-transition="convex">
         <h2>{section_title}</h2>
     </section>
-        """)
+        """
+        )
 
         # Content slides - group content into logical slides
         current_slide_content = []
@@ -2313,13 +2207,15 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     slide_item_count = 0
 
                 language = block.get("language", "")
-                slides_content.append(f"""
+                slides_content.append(
+                    f"""
     <section>
         <pre><code class="language-{language}" data-trim data-noescape>
 {block['content']}
         </code></pre>
     </section>
-                """)
+                """
+                )
 
             elif block_type == "image":
                 # Images take a full slide
@@ -2329,12 +2225,14 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     slide_item_count = 0
 
                 caption = block.get("caption", "")
-                slides_content.append(f"""
+                slides_content.append(
+                    f"""
     <section>
         <img src="{block['src']}" alt="{block['alt']}" style="max-height: 500px; max-width: 90%;">
         {f'<p><small>{caption}</small></p>' if caption else ''}
     </section>
-                """)
+                """
+                )
 
             elif block_type == "diagram":
                 # Diagrams take a full slide
@@ -2344,17 +2242,19 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     slide_item_count = 0
 
                 # Clean and escape mermaid code
-                import html
-                mermaid_code = block['content'].strip()
+
+                mermaid_code = block["content"].strip()
 
                 # Wrap in pre tag for better rendering
-                slides_content.append(f"""
+                slides_content.append(
+                    f"""
     <section>
         <div class="mermaid">
 {mermaid_code}
         </div>
     </section>
-                """)
+                """
+                )
 
             # Check if we should start a new slide
             if slide_item_count >= max_items_per_slide:
@@ -2367,13 +2267,15 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
             slides_content.append(_create_content_slide(current_slide_content))
 
     # End slide (Korean)
-    slides_content.append("""
+    slides_content.append(
+        """
     <section data-transition="zoom">
         <h2>감사합니다!</h2>
         <p>질문이 있으신가요?</p>
         <p><small>LectureForge로 생성됨</small></p>
     </section>
-    """)
+    """
+    )
 
     # Complete HTML template (Korean)
     html_template = f"""
@@ -2644,12 +2546,7 @@ def _create_content_slide(content_items: List[str]) -> str:
 
 @cli.command("edit-images")
 @click.argument("html_path", type=click.Path(exists=True))
-@click.option(
-    "--output",
-    "-o",
-    type=click.Path(),
-    help="Output file path (default: <original>_edited.html)"
-)
+@click.option("--output", "-o", type=click.Path(), help="Output file path (default: <original>_edited.html)")
 def edit_images(html_path: str, output: str):
     """
     Edit images in generated HTML lecture (interactive mode).
@@ -2666,9 +2563,7 @@ def edit_images(html_path: str, output: str):
         lecture-forge edit-images lecture.html --output new_lecture.html
     """
     from rich.console import Console
-    from rich.table import Table
     from rich.prompt import Prompt, Confirm
-    from rich.panel import Panel
     from lecture_forge.tools.image_editor import ImageEditor
 
     console = Console()
@@ -2711,7 +2606,7 @@ def edit_images(html_path: str, output: str):
             args = parts[1:] if len(parts) > 1 else []
 
             # Handle commands
-            if cmd == 'q' or cmd == 'quit' or cmd == 'exit':
+            if cmd == "q" or cmd == "quit" or cmd == "exit":
                 if editor.get_summary()["to_delete"] > 0 or editor.get_summary()["to_replace"] > 0:
                     if Confirm.ask("[yellow]변경사항이 저장되지 않았습니다. 종료하시겠습니까?[/yellow]"):
                         console.print("[red]변경사항 취소됨[/red]")
@@ -2719,7 +2614,7 @@ def edit_images(html_path: str, output: str):
                 else:
                     break
 
-            elif cmd == 'd' or cmd == 'delete':
+            elif cmd == "d" or cmd == "delete":
                 if not args:
                     console.print("[red]❌ 이미지 번호를 입력하세요 (예: d 3)[/red]")
                     continue
@@ -2733,7 +2628,7 @@ def edit_images(html_path: str, output: str):
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == 'u' or cmd == 'undo' or cmd == 'undelete':
+            elif cmd == "u" or cmd == "undo" or cmd == "undelete":
                 if not args:
                     console.print("[red]❌ 이미지 번호를 입력하세요 (예: u 3)[/red]")
                     continue
@@ -2747,7 +2642,7 @@ def edit_images(html_path: str, output: str):
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == 'r' or cmd == 'replace':
+            elif cmd == "r" or cmd == "replace":
                 if not args:
                     console.print("[red]❌ 이미지 번호를 입력하세요 (예: r 3)[/red]")
                     continue
@@ -2758,11 +2653,11 @@ def edit_images(html_path: str, output: str):
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == 's' or cmd == 'save':
+            elif cmd == "s" or cmd == "save":
                 _handle_save_changes(console, editor, output)
                 break
 
-            elif cmd == 'h' or cmd == 'help':
+            elif cmd == "h" or cmd == "help":
                 _display_help(console)
 
             else:
@@ -2772,6 +2667,7 @@ def edit_images(html_path: str, output: str):
     except Exception as e:
         console.print(f"\n[bold red]❌ 오류 발생:[/bold red] {e}")
         import traceback
+
         logger.error(traceback.format_exc())
         raise click.Abort()
 
@@ -2803,7 +2699,7 @@ def _display_image_table(console, editor):
             img["description"] or "[dim]설명 없음[/dim]",
             img["section"],
             str(img["page"]) if img["page"] else "-",
-            f"[{status_style}]{status_text}[/{status_style}]"
+            f"[{status_style}]{status_text}[/{status_style}]",
         )
 
     console.print(table)
@@ -2830,21 +2726,13 @@ def _handle_replace_image(console, editor, img_num):
     table.add_column("출처", width=20)
 
     for alt in alternatives:
-        table.add_row(
-            str(alt["index"]),
-            alt["description"],
-            str(alt["page"]) if alt["page"] else "-",
-            alt["source"]
-        )
+        table.add_row(str(alt["index"]), alt["description"], str(alt["page"]) if alt["page"] else "-", alt["source"])
 
     console.print(table)
 
     # Prompt for selection
     console.print("\n[dim]0: 취소[/dim]")
-    choice = Prompt.ask(
-        "[bold yellow]선택[/bold yellow]",
-        default="0"
-    )
+    choice = Prompt.ask("[bold yellow]선택[/bold yellow]", default="0")
 
     try:
         choice_num = int(choice)

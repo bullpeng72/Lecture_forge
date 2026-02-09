@@ -170,19 +170,9 @@ class MermaidValidator:
     def _validate_sequence(self, code: str) -> list:
         """Validate sequence diagram syntax."""
         errors = []
-        lines = code.split("\n")
 
-        # Check for participants
-        has_participants = False
-        participant_pattern = re.compile(r"^\s*participant\s+")
-
-        for line in lines[1:]:
-            if participant_pattern.match(line):
-                has_participants = True
-                break
-
-        # Sequence diagrams should have participants
-        # (though not strictly required)
+        # Note: Sequence diagrams should have participants, but this is not strictly required
+        # Participant validation is currently not enforced
 
         return errors
 

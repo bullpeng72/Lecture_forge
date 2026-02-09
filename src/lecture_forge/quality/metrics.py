@@ -67,8 +67,7 @@ class QualityMetrics:
 
         # 2. Check for conclusion section (25점)
         if lecture.sections and any(
-            "conclusion" in s.section_id.lower() or "summary" in s.section_id.lower()
-            for s in lecture.sections
+            "conclusion" in s.section_id.lower() or "summary" in s.section_id.lower() for s in lecture.sections
         ):
             score += 25
 
@@ -137,9 +136,7 @@ class QualityMetrics:
                 avg_words = sum(section_words) / len(section_words)
                 # Check variance - sections shouldn't be too different
                 # Allow 2x variation
-                balanced_sections = sum(
-                    1 for wc in section_words if 0.5 * avg_words <= wc <= 2 * avg_words
-                )
+                balanced_sections = sum(1 for wc in section_words if 0.5 * avg_words <= wc <= 2 * avg_words)
                 balance_ratio = balanced_sections / len(section_words)
                 score += 40 * balance_ratio
 
@@ -158,9 +155,7 @@ class QualityMetrics:
         score = 0.0
 
         # 1. Check if sections have difficulty levels set (30점)
-        sections_with_difficulty = sum(
-            1 for s in lecture.sections if hasattr(s, "difficulty_level") and s.difficulty_level
-        )
+        sections_with_difficulty = sum(1 for s in lecture.sections if hasattr(s, "difficulty_level") and s.difficulty_level)
         if lecture.sections:
             score += 30 * (sections_with_difficulty / len(lecture.sections))
 
@@ -241,11 +236,7 @@ class QualityMetrics:
 
         # 3. Check distribution (20점)
         # Visuals should be distributed across sections
-        sections_with_visuals = sum(
-            1
-            for s in lecture.sections
-            if (len(s.diagrams) > 0 or len(s.images) > 0)
-        )
+        sections_with_visuals = sum(1 for s in lecture.sections if (len(s.diagrams) > 0 or len(s.images) > 0))
 
         if lecture.sections:
             # At least 50% of sections should have visuals

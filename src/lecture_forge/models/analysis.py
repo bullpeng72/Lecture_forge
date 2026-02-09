@@ -54,14 +54,10 @@ class AnalysisResult(BaseModel):
     concept_relations: List[ConceptRelation] = Field(default_factory=list)
 
     # Difficulty assessment per topic
-    difficulty_scores: Dict[str, float] = Field(
-        default_factory=dict
-    )  # topic -> score (0-1)
+    difficulty_scores: Dict[str, float] = Field(default_factory=dict)  # topic -> score (0-1)
 
     # Image recommendations (which concepts need visual aids)
-    image_recommendations: Dict[str, List[str]] = Field(
-        default_factory=dict
-    )  # concept -> image_keywords
+    image_recommendations: Dict[str, List[str]] = Field(default_factory=dict)  # concept -> image_keywords
 
     # Overall content statistics
     metadata: Dict = Field(default_factory=dict)
@@ -72,19 +68,11 @@ class AnalysisResult(BaseModel):
 
     def get_beginner_topics(self) -> List[str]:
         """Get topics suitable for beginners."""
-        return [
-            topic
-            for topic, score in self.difficulty_scores.items()
-            if score < 0.3
-        ]
+        return [topic for topic, score in self.difficulty_scores.items() if score < 0.3]
 
     def get_advanced_topics(self) -> List[str]:
         """Get advanced topics."""
-        return [
-            topic
-            for topic, score in self.difficulty_scores.items()
-            if score > 0.7
-        ]
+        return [topic for topic, score in self.difficulty_scores.items() if score > 0.7]
 
     def get_prerequisites(self, topic: str) -> List[str]:
         """Get prerequisite topics for a given topic."""

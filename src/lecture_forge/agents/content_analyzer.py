@@ -15,6 +15,7 @@ from lecture_forge.models.analysis import (
 )
 from lecture_forge.utils import logger
 
+
 class ContentAnalyzerAgent(BaseAgent):
     """Agent for analyzing content and extracting key concepts."""
 
@@ -80,9 +81,7 @@ class ContentAnalyzerAgent(BaseAgent):
 
         # 6. Recommend images for concepts
         logger.info("Recommending images...")
-        image_recommendations = self._recommend_images(
-            key_topics, entities, image_result
-        )
+        image_recommendations = self._recommend_images(key_topics, entities, image_result)
 
         result = AnalysisResult(
             entities=entities,
@@ -197,9 +196,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         return entities
 
-    def _assess_difficulty(
-        self, topics: List[str], text: str
-    ) -> Dict[str, float]:
+    def _assess_difficulty(self, topics: List[str], text: str) -> Dict[str, float]:
         """Assess difficulty level for each topic (0.0 = beginner, 1.0 = advanced)."""
         difficulty_scores = {}
 
@@ -228,9 +225,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         return difficulty_scores
 
-    def _build_relationships(
-        self, entities: List[Entity], text: str
-    ) -> List[ConceptRelation]:
+    def _build_relationships(self, entities: List[Entity], text: str) -> List[ConceptRelation]:
         """Build relationships between concepts."""
         relations = []
 
@@ -252,7 +247,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         # Create related_to relationships for entities in same domain
         for i, e1 in enumerate(entities):
-            for e2 in entities[i + 1:]:
+            for e2 in entities[i + 1 :]:
                 # Simple heuristic: if they share words, they're related
                 words1 = set(e1.name.lower().split())
                 words2 = set(e2.name.lower().split())
@@ -269,9 +264,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         return relations
 
-    def _create_clusters(
-        self, entities: List[Entity], relations: List[ConceptRelation]
-    ) -> List[TopicCluster]:
+    def _create_clusters(self, entities: List[Entity], relations: List[ConceptRelation]) -> List[TopicCluster]:
         """Create topic clusters from entities and relations."""
         clusters = []
 

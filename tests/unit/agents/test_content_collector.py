@@ -14,7 +14,7 @@ def content_collector(test_env_vars, mock_vector_store):
     """Create a ContentCollectorAgent instance with mocked dependencies."""
     with patch("lecture_forge.agents.content_collector.VectorStore") as mock_vs_class:
         mock_vs_class.return_value = mock_vector_store
-        agent = ContentCollectorAgent(session_id="test_session")
+        agent = ContentCollectorAgent(collection_name="test_session")
         agent.vector_store = mock_vector_store
         return agent
 
@@ -34,9 +34,7 @@ def test_collect_from_pdfs_with_mock(content_collector, sample_pdf_path):
         mock_parser.run.return_value = {
             "success": True,
             "text": "Sample PDF content about machine learning.",
-            "pages": [
-                {"page_number": 1, "text": "Sample PDF content about machine learning.", "word_count": 6}
-            ],
+            "pages": [{"page_number": 1, "text": "Sample PDF content about machine learning.", "word_count": 6}],
             "metadata": {"total_pages": 1, "title": "ML Tutorial"},
             "error": None,
         }
@@ -48,7 +46,6 @@ def test_collect_from_pdfs_with_mock(content_collector, sample_pdf_path):
         # Test collection
         result = content_collector.collect(
             sources={"pdfs": [str(sample_pdf_path)], "urls": [], "keywords": []},
-            topic="Machine Learning",
         )
 
         # Assertions
@@ -82,7 +79,6 @@ def test_collect_with_keywords(content_collector):
         # Test collection
         result = content_collector.collect(
             sources={"pdfs": [], "urls": [], "keywords": ["machine learning basics"]},
-            topic="Machine Learning",
         )
 
         # Assertions
@@ -93,7 +89,6 @@ def test_collect_handles_empty_sources(content_collector):
     """Test that collect handles empty sources gracefully."""
     result = content_collector.collect(
         sources={"pdfs": [], "urls": [], "keywords": []},
-        topic="Test Topic",
     )
 
     # Should complete without errors even with no sources

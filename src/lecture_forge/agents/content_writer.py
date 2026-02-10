@@ -367,10 +367,12 @@ Write the comprehensive content NOW:"""
 
             # Validate content quality
             code_blocks = self._extract_code_blocks(content)
+            image_count = self._count_images(content)
             quality = evaluate_content_quality(
                 content=content,
                 targets=targets,
                 code_block_count=len(code_blocks),
+                image_count=image_count,
             )
 
             logger.info(f"  📊 Initial quality score: {quality['overall_score']}/100")
@@ -393,10 +395,12 @@ Write the comprehensive content NOW:"""
                 logger.info(f"  ✅ Added {len(code_blocks)} code examples")
 
                 # Re-evaluate
+                image_count = self._count_images(content)
                 quality = evaluate_content_quality(
                     content=content,
                     targets=targets,
                     code_block_count=len(code_blocks),
+                    image_count=image_count,
                 )
                 logger.info(f"  📊 Quality after adding code: {quality['overall_score']}/100")
 
@@ -407,6 +411,8 @@ Write the comprehensive content NOW:"""
 
                 # Try up to 2 iterations of expansion
                 max_iterations = 2
+                previous_quality_score = quality["overall_score"]  # Track for improvement check
+
                 for iteration in range(max_iterations):
                     logger.info(f"  🔄 Expansion attempt {iteration + 1}/{max_iterations}")
 
@@ -426,18 +432,33 @@ Write the comprehensive content NOW:"""
 
                             # Re-evaluate
                             code_blocks = self._extract_code_blocks(content)
+                            image_count = self._count_images(content)
                             quality = evaluate_content_quality(
                                 content=content,
                                 targets=targets,
                                 code_block_count=len(code_blocks),
+                                image_count=image_count,
                             )
 
                             logger.info(f"  📊 Quality after expansion {iteration + 1}: {quality['overall_score']}/100")
+
+                            # Check improvement effectiveness (prevent wasteful iterations)
+                            if iteration > 0:
+                                improvement = quality["overall_score"] - previous_quality_score
+                                if improvement < 3:  # Less than 3 points improvement
+                                    logger.warning(
+                                        f"  ⚠️ Minimal improvement (+{improvement:.1f} points). "
+                                        "Stopping early to prevent wasteful iterations."
+                                    )
+                                    break
 
                             # Stop if meets requirements
                             if quality["meets_requirements"]:
                                 logger.info(f"  ✅ Quality threshold met after {iteration + 1} expansion(s)")
                                 break
+
+                            # Update previous score for next iteration comparison
+                            previous_quality_score = quality["overall_score"]
                         else:
                             logger.warning(f"  ⚠️ Expansion {iteration + 1} produced no change - stopping")
                             break
@@ -615,10 +636,12 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
             # Re-evaluate
             code_blocks = self._extract_code_blocks(expanded)
+            image_count = self._count_images(expanded)
             new_quality = evaluate_content_quality(
                 content=expanded,
                 targets=targets,
                 code_block_count=len(code_blocks),
+                image_count=image_count,
             )
 
             word_increase = new_quality["word_count"] - previous_quality["word_count"]
@@ -636,6 +659,14 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             logger.debug(traceback.format_exc())
             # Return original if expansion fails
             return previous_content
+
+    def _count_images(self, markdown: str) -> int:
+        """Count the number of images in markdown content."""
+        import re
+        # Match markdown image syntax: ![alt](url)
+        image_pattern = r'!\[.*?\]\(.*?\)'
+        matches = re.findall(image_pattern, markdown)
+        return len(matches)
 
     def _extract_code_blocks(self, markdown: str) -> List[CodeBlock]:
         """Extract code blocks from markdown content."""

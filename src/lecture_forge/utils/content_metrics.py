@@ -162,7 +162,7 @@ def evaluate_content_quality(
 
     return {
         "overall_score": round(overall_score, 1),
-        "meets_requirements": overall_score >= 75,  # 75% threshold
+        "meets_requirements": overall_score >= 70,  # 70% threshold (relaxed for section-level evaluation)
         "word_count": word_count,
         "word_score": round(word_score, 1),
         "code_block_count": code_block_count,

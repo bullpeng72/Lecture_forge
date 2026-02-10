@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/yourusername/lecture-forge)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/yourusername/lecture-forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/yourusername/lecture-forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-45--50%25-brightgreen.svg)](https://github.com/yourusername/lecture-forge)
 
-> 🚀 **v0.2.0 Beta Release** | Enhanced Quality & Performance
+> 🚀 **v0.2.1 Beta Release** | Bug Fixes & Improvements
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -107,14 +107,31 @@ playwright install
 
 ### 2️⃣ 환경 설정
 
+#### 방법 1: 대화형 설정 (권장 ⭐)
+
 ```bash
-# .env 파일 생성
+# 대화형 설정 마법사 실행
+lecture-forge init
+```
+
+이 명령어는 다음을 수행합니다:
+- ✅ 플랫폼별 최적 위치에 `.env` 파일 자동 생성
+  - **Windows**: `%LOCALAPPDATA%\lecture-forge\.env`
+  - **Mac/Linux**: `~/.lecture-forge/.env`
+- ✅ 필수 API 키 입력 안내 (OpenAI, Serper)
+- ✅ 선택적 이미지 검색 API 설정 (Pexels, Unsplash)
+- ✅ 파일 권한 자동 설정 (Unix/Mac: 600)
+
+#### 방법 2: 수동 설정
+
+```bash
+# .env 파일 생성 (프로젝트 개발 시)
 cp .env.example .env
 ```
 
 `.env` 파일을 열어 다음 항목을 설정하세요:
 
-#### 필수 API 키
+**필수 API 키**:
 ```bash
 # OpenAI API (필수)
 OPENAI_API_KEY=sk-proj-...
@@ -123,7 +140,7 @@ OPENAI_API_KEY=sk-proj-...
 SERPER_API_KEY=...                # 무료: 2,500회/월
 ```
 
-#### 선택 사항
+**선택 사항**:
 ```bash
 # 이미지 검색 API (선택)
 PEXELS_API_KEY=...                # 무료 무제한
@@ -140,6 +157,16 @@ MAX_ITERATIONS=3                  # 최대 개선 반복 횟수
 ```
 
 💡 **더 많은 설정 옵션은 `.env.example` 파일 참조**
+
+#### .env 파일 위치
+
+LectureForge는 다음 순서로 `.env` 파일을 탐색합니다:
+
+1. **환경 변수**: `LECTURE_FORGE_ENV_FILE`로 지정한 경로
+2. **현재 디렉토리**: `./.env`
+3. **사용자 디렉토리** (권장):
+   - Windows: `%LOCALAPPDATA%\lecture-forge\.env`
+   - Mac/Linux: `~/.lecture-forge/.env`
 
 **API 키 획득**:
 - **OpenAI**: [platform.openai.com](https://platform.openai.com/) (사용량 기반 과금)
@@ -163,6 +190,7 @@ lecture-forge create
 
 | 명령어 | 설명 | 주요 옵션 |
 |--------|------|----------|
+| **init** | 초기 설정 | `--path` |
 | **create** | 강의 생성 | `--image-search`, `--quality-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit-images** | 이미지 편집 | `--output` |
@@ -172,6 +200,9 @@ lecture-forge create
 ### 빠른 실행 예제
 
 ```bash
+# 🚀 초기 설정 (처음 한 번만)
+lecture-forge init
+
 # 🎓 강의 생성 (대화형 - 가장 간단)
 lecture-forge create
 
@@ -192,6 +223,45 @@ lecture-forge cleanup
 ```
 
 ### 명령어 상세 가이드
+
+#### 🚀 `init` - 초기 설정
+
+**기본 사용:**
+```bash
+lecture-forge init
+```
+대화형 마법사가 API 키 입력을 안내하고 자동으로 `.env` 파일을 생성합니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--path PATH` | 커스텀 디렉토리 지정 | `--path /custom/path` |
+
+**기본 저장 위치:**
+- **Windows**: `C:\Users\<username>\AppData\Local\lecture-forge\.env`
+- **Mac/Linux**: `~/.lecture-forge/.env`
+
+**예제:**
+```bash
+# 기본 위치에 설정 (권장)
+lecture-forge init
+
+# 커스텀 디렉토리 사용
+lecture-forge init --path /my/config/dir
+
+# 현재 디렉토리에 생성
+lecture-forge init --path .
+```
+
+**하는 일:**
+1. 필수 API 키 입력 (OpenAI, Serper)
+2. 선택적 이미지 API 설정 (Pexels, Unsplash)
+3. `.env` 파일 자동 생성
+4. 기본 설정 값 자동 설정
+5. 파일 권한 보안 설정 (Unix/Mac)
+
+---
 
 #### 📚 `create` - 강의 생성
 
@@ -694,6 +764,23 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.2.1 (2026-02-10) - Bug Fixes & Improvements 🐛
+
+**버그 수정**
+- 🐛 Visual score 항상 0으로 표시되는 문제 수정 (이미지 카운팅 로직 추가)
+- 🐛 품질 평가 무한 반복 문제 해결 (섹션별 임계값 완화 + 조기 종료)
+- 🐛 슬라이드 orphaned heading 문제 개선 (look-ahead 로직 적용)
+
+**개선사항**
+- ✨ CLI 도움말 텍스트 가독성 향상 (줄바꿈 개선)
+- ✨ Reveal.js 키보드 단축키 설명 추가 (--to-slides 도움말)
+- ✨ 슬라이드 구성 알고리즘 개선 (max_items_per_slide 3→4)
+- ✨ 품질 평가 효율성 향상 (3점 미만 개선 시 조기 종료)
+
+**문서**
+- 📚 INPUT_LIMITS_ANALYSIS.md에 멀티소스 전략 상세 분석 추가 (Section 8)
+- 📖 README.md 및 CLAUDE.md v0.2.1 정보 업데이트
 
 ### v0.2.0 (2026-02-09) - Enhanced Quality Release 🚀
 

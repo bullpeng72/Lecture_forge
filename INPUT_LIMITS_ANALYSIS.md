@@ -1,9 +1,9 @@
 # 📊 LectureForge 입력 소스 제한 및 활용 범위 분석
 
 > **작성일**: 2026-02-08
-> **최종 수정**: 2026-02-09
-> **버전**: 0.2.0
-> **분석 대상**: PDF, URL, 검색, 이미지 입력 소스
+> **최종 수정**: 2026-02-10
+> **버전**: 1.4.0
+> **분석 대상**: PDF, URL, 검색, 이미지 입력 소스 + 멀티소스 구성 전략
 
 ---
 
@@ -16,9 +16,10 @@
 5. [벡터 DB (ChromaDB)](#5-벡터-db-chromadb)
 6. [이미지 처리](#6-이미지-처리)
 7. [품질 보증](#7-품질-보증)
-8. [종합 요약표](#종합-요약표)
-9. [핵심 발견사항](#핵심-발견사항)
-10. [권장 설정](#권장-설정-환경변수로-조정-가능)
+8. [멀티소스 컨텐츠 구성 전략](#8-멀티소스-컨텐츠-구성-전략)
+9. [종합 요약표](#종합-요약표)
+10. [핵심 발견사항](#핵심-발견사항)
+11. [권장 설정](#권장-설정-환경변수로-조정-가능)
 
 ---
 
@@ -399,6 +400,627 @@ MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
 
 ---
 
+## 8. 🎯 멀티소스 컨텐츠 구성 전략
+
+### 개요
+
+LectureForge는 **소스 타입 무관 통합 분석 방식**을 사용합니다. 모든 입력 소스(PDF, URL, 검색, Hada)를 동등하게 취급하고, RAG(Retrieval Augmented Generation) 기반 유사도 검색으로 최적의 내용을 선택합니다.
+
+### A. 컨텐츠 수집 단계 (Phase 1)
+
+```python
+# src/lecture_forge/agents/content_collector.py:40-228
+
+# 1. 모든 소스 수집
+all_documents = []
+
+# PDF 수집
+for pdf_path in pdfs:
+    all_documents.append({
+        "text": result["text"],
+        "source": pdf_path,
+        "source_type": "pdf",  # ✅ 타입 메타데이터
+        "metadata": result["metadata"],
+    })
+
+# URL 수집
+for url in urls:
+    all_documents.append({
+        "text": result["text"],
+        "source": url,
+        "source_type": "url",  # ✅ 타입 메타데이터
+    })
+
+# 검색 결과 수집 (snippet만)
+for keyword in keywords:
+    search_text = f"Search results for '{keyword}':\n\n"
+    for item in results:
+        search_text += f"{item['title']}\n{item['snippet']}\n"
+    all_documents.append({
+        "text": search_text,
+        "source": f"search:{keyword}",
+        "source_type": "search",  # ✅ 타입 메타데이터
+    })
+
+# Hada.io 크롤링 (전체 페이지)
+for hada_keyword in hada_keywords:
+    for page in crawled_pages:
+        all_documents.append({
+            "text": page["text"],
+            "source": page["url"],
+            "source_type": f"hada_{page['type']}",  # ✅ 타입 메타데이터
+        })
+```
+
+**핵심 특징:**
+
+- ✅ 모든 소스를 `all_documents` 배열에 동등하게 추가
+- ✅ 소스 타입을 메타데이터로 보존 (`source_type`)
+- ✅ 가중치나 우선순위 없음 (flat structure)
+- ✅ 청크로 분할하여 벡터 DB에 저장
+
+### B. 컨텐츠 분석 단계 (Phase 3a)
+
+```python
+# src/lecture_forge/agents/content_analyzer.py:59-60
+
+# 모든 문서를 단순 결합 (소스 구분 없이)
+all_text = "\n\n".join([doc["text"] for doc in documents])
+
+# 통합 분석 수행
+key_topics = self._extract_key_topics(all_text, topic)
+entities = self._extract_entities(all_text, key_topics)
+difficulty_scores = self._assess_difficulty(key_topics, all_text)
+```
+
+**핵심 특징:**
+
+- ✅ 소스 타입 무시하고 모든 텍스트 결합
+- ✅ LLM이 통합된 내용에서 주요 주제 추출
+- ✅ 자연스러운 주제 우선순위 결정 (빈도 + 중요도)
+
+### C. 목차 구성 단계 (Phase 3b)
+
+```python
+# src/lecture_forge/agents/curriculum_designer.py:117-142
+
+def _select_topics(analysis_result, duration, audience_level):
+    all_topics = analysis_result.key_topics  # 소스 정보 없음
+    difficulty_scores = analysis_result.difficulty_scores
+
+    # 난이도 기반 필터링
+    if audience_level == "beginner":
+        selected = [t for t in all_topics if difficulty_scores[t] < 0.6]
+    elif audience_level == "advanced":
+        selected = [t for t in all_topics if difficulty_scores[t] > 0.4]
+    else:
+        selected = all_topics
+
+    # 시간 기반 주제 수 결정
+    avg_time_per_topic = 15  # minutes
+    max_topics = max(3, duration // avg_time_per_topic)
+
+    return selected[:max_topics]
+
+def _create_sections(topics, duration):
+    # 시간 배분
+    intro_time = max(5, duration // 20)       # 5%
+    conclusion_time = max(5, duration // 20)  # 5%
+    content_time = duration - intro_time - conclusion_time  # 90%
+
+    # 균등 분배
+    time_per_topic = content_time // len(topics)
+```
+
+**핵심 특징:**
+
+- ✅ 분석 결과(key_topics)만 사용
+- ✅ 소스 타입 정보 사용하지 않음
+- ✅ 난이도와 시간 기반 자동 구성
+- ❌ 소스별 가중치 없음
+
+**시간 배분 공식:**
+
+```
+총 시간 = 100%
+├─ Intro: 5%
+├─ Main Content: 90% (주제 수로 균등 분배)
+└─ Conclusion: 5%
+```
+
+### D. 컨텐츠 작성 단계 (Phase 4a)
+
+```python
+# src/lecture_forge/agents/content_writer.py:156-181
+
+def _query_knowledge(section):
+    # 섹션 주제로 쿼리 생성 (소스 타입 무관)
+    query = " ".join(section.topics)
+
+    # 벡터 DB에서 유사도 기반 검색
+    results = self.vector_store.query(query, n_results=10)
+
+    # 가장 관련성 높은 10개 청크 반환
+    documents = results["documents"][0]
+    metadatas = results["metadatas"][0]
+
+    return documents, metadatas
+```
+
+**RAG 검색 원리:**
+
+1. **쿼리 생성**: 섹션의 topics 결합
+2. **임베딩 변환**: OpenAI text-embedding-3-small 사용
+3. **유사도 검색**: ChromaDB 코사인 유사도
+4. **상위 N개 선택**: 기본 10개 (n_results=10)
+5. **소스 무관**: PDF, URL, 검색 모두 동등하게 경쟁
+
+**검색 결과 예시:**
+
+```python
+# 쿼리: "딥러닝 기초"
+results = {
+    "documents": [
+        "딥러닝은...",        # PDF page 5 (유사도 0.95)
+        "신경망 구조는...",    # URL article (유사도 0.92)
+        "머신러닝과 차이는...", # 검색 snippet (유사도 0.89)
+        "텐서플로우 활용...",  # Hada article (유사도 0.87)
+        # ... 총 10개
+    ],
+    "metadatas": [
+        {"source": "ml.pdf", "source_type": "pdf", "page_number": 5},
+        {"source": "https://...", "source_type": "url"},
+        {"source": "search:deep learning", "source_type": "search"},
+        {"source": "https://news.hada.io/...", "source_type": "hada_article"},
+        # ...
+    ]
+}
+```
+
+**LLM 프롬프트에 컨텍스트 제공:**
+
+```python
+# src/lecture_forge/agents/content_writer.py:194
+context_text = "\n\n---\n\n".join(contexts[:8])  # 상위 8개 사용
+
+prompt = f"""
+...
+Knowledge Base Context:
+{context_text}
+
+Write the comprehensive content NOW:
+"""
+```
+
+---
+
+### 📊 소스별 시나리오 분석
+
+#### 시나리오 1: PDF만 있는 경우
+
+```yaml
+pdfs:
+  - "machine_learning.pdf"  # 100 pages
+urls: []
+keywords: []
+```
+
+**결과:**
+
+- ✅ PDF 전체 페이지 파싱 (100 pages)
+- ✅ 청크 단위로 벡터 DB 저장 (~100-200 chunks)
+- ✅ PDF 내용만으로 주제 추출 및 목차 구성
+- ✅ RAG 검색으로 PDF에서 관련 내용 선택
+- 📊 **내용 반영 비율: PDF 100%**
+
+#### 시나리오 2: URL만 있는 경우
+
+```yaml
+pdfs: []
+urls:
+  - "https://example.com/deep-learning-guide"
+  - "https://example.com/neural-networks"
+  - "https://example.com/tensorflow-tutorial"
+keywords: []
+```
+
+**결과:**
+
+- ✅ 3개 URL 전체 스크래핑 (전체 텍스트)
+- ✅ 벡터 DB에 저장 (~30-60 chunks)
+- ✅ URL 내용만으로 주제 추출
+- 📊 **내용 반영 비율: URL1 33% + URL2 33% + URL3 34%** (유사도 기반)
+
+#### 시나리오 3: 검색만 있는 경우
+
+```yaml
+pdfs: []
+urls: []
+keywords:
+  - "deep learning basics"
+  - "neural network architecture"
+  - "tensorflow tutorial"
+```
+
+**결과:**
+
+- ⚠️ 검색 결과는 **snippet(요약)만** 저장 (전체 페이지 ❌)
+- ✅ 3개 키워드 × 5개 결과 = 15개 snippet
+- ✅ 벡터 DB에 저장 (~5-10 chunks)
+- ⚠️ **내용 부족 가능성**: snippet만으로 상세 강의 작성 어려움
+- 📊 **내용 반영 비율: 키워드1 33% + 키워드2 33% + 키워드3 34%**
+
+**권장:**
+
+```bash
+# 검색만 사용하는 경우, 이미지 검색 활성화
+lecture-forge create --image-search
+```
+
+#### 시나리오 4: PDF + URL 조합
+
+```yaml
+pdfs:
+  - "deep_learning.pdf"  # 50 pages
+urls:
+  - "https://tensorflow.org/guide"
+  - "https://pytorch.org/tutorials"
+keywords: []
+```
+
+**결과:**
+
+- ✅ PDF 50 pages + URL 2개 전체 스크래핑
+- ✅ 벡터 DB에 통합 저장 (~70-120 chunks)
+- ✅ 주제 추출 시 모든 소스 고려
+- 📊 **내용 반영 비율: 유사도 기반 자동 결정**
+  - 예: PDF 60% + URL1 25% + URL2 15% (RAG 검색 결과에 따라 동적)
+
+**RAG 검색 예시:**
+
+```
+섹션: "텐서플로우 기초"
+→ RAG 검색 결과:
+  1. tensorflow.org/guide (유사도 0.95) ← URL 우선!
+  2. deep_learning.pdf page 23 (유사도 0.92)
+  3. pytorch.org/tutorials (유사도 0.85)
+  → LLM이 1,2를 주로 활용하여 내용 작성
+
+섹션: "딥러닝 수학적 기초"
+→ RAG 검색 결과:
+  1. deep_learning.pdf page 5 (유사도 0.94) ← PDF 우선!
+  2. deep_learning.pdf page 6 (유사도 0.93)
+  3. tensorflow.org/guide (유사도 0.78)
+  → LLM이 PDF를 주로 활용하여 내용 작성
+```
+
+#### 시나리오 5: 복합 소스 (최대 활용)
+
+```yaml
+pdfs:
+  - "ml_textbook.pdf"      # 200 pages
+  - "research_paper.pdf"   # 30 pages
+urls:
+  - "https://stanford.edu/ml-course"
+  - "https://github.com/awesome-ml"
+keywords:
+  - "machine learning applications"
+  - "deep learning frameworks"
+hada_keywords:
+  - "AI 최신 트렌드"
+```
+
+**결과:**
+
+- ✅ **PDF**: 230 pages → ~200-300 chunks
+- ✅ **URL**: 2개 전체 스크래핑 → ~40-80 chunks
+- ⚠️ **검색**: 2 × 5개 snippet → ~5-10 chunks
+- ✅ **Hada**: ~10 articles → ~50-100 chunks
+- 📊 **총 ~300-500 chunks in Vector DB**
+
+**내용 반영 비율 (추정):**
+
+```
+총 청크 수: 500개
+├─ PDF: 300 chunks (60%)
+├─ URL: 80 chunks (16%)
+├─ 검색: 10 chunks (2%)
+└─ Hada: 110 chunks (22%)
+
+하지만 실제 강의 내용은 RAG 검색 결과에 따라:
+├─ 섹션 1: PDF 70% + URL 20% + Hada 10%
+├─ 섹션 2: PDF 40% + Hada 50% + 검색 10%
+├─ 섹션 3: URL 60% + PDF 30% + Hada 10%
+└─ ... (섹션별로 다름)
+```
+
+#### 시나리오 6: 일부 소스 누락
+
+```yaml
+pdfs:
+  - "guide.pdf"
+urls:
+  - "https://broken-link.com"  # ❌ 404 Error
+keywords:
+  - "valid keyword"
+```
+
+**결과:**
+
+- ✅ PDF 정상 수집
+- ❌ URL 실패 (로그에 에러 기록, 무시하고 계속)
+- ✅ 검색 정상 수행
+- 📊 **내용 반영 비율: PDF 80% + 검색 20%**
+
+**로그 예시:**
+
+```
+✅ Collected from PDF: 50,000 characters
+❌ Failed to scrape URL: 404 Not Found
+✅ Collected 5 search results
+```
+
+**강의 생성:**
+
+- ✅ 실패한 소스 무시하고 계속 진행
+- ✅ 수집된 소스만으로 목차 구성
+- ⚠️ 내용이 부족하면 품질 점수 낮아짐
+
+#### 시나리오 7: 모든 소스 없음
+
+```yaml
+pdfs: []
+urls: []
+keywords: []
+```
+
+**결과:**
+
+- ❌ **에러 발생**: No documents to analyze
+- 🛑 **강의 생성 실패**
+
+```python
+# src/lecture_forge/agents/content_analyzer.py:56-57
+if not documents:
+    logger.warning("No documents to analyze")
+    return AnalysisResult()  # Empty result
+```
+
+---
+
+### 🔑 핵심 원칙
+
+#### 1. **소스 타입 무관 (Source-Agnostic)**
+
+```python
+# ❌ 없는 것: 소스별 가중치
+weights = {
+    "pdf": 0.5,
+    "url": 0.3,
+    "search": 0.2
+}
+
+# ✅ 실제: 유사도 기반 평등 경쟁
+similarity_scores = [
+    ("pdf_chunk_5", 0.95),
+    ("url_chunk_2", 0.92),
+    ("search_snippet_1", 0.89),
+]
+# 상위 N개 선택 (소스 무관)
+```
+
+#### 2. **RAG 기반 동적 선택**
+
+- 각 섹션마다 독립적으로 RAG 검색
+- 섹션 주제와 가장 관련성 높은 내용 선택
+- 소스 타입이 아닌 내용 유사도로 결정
+
+#### 3. **청크 단위 저장**
+
+```python
+# 모든 문서를 1,000자 청크로 분할
+chunks = text_splitter.split_text(doc["text"], chunk_size=1000)
+
+# PDF 200 pages → ~200 chunks
+# URL 1개 → ~10-20 chunks
+# 검색 snippet → ~1-2 chunks
+```
+
+**장점:**
+
+- ✅ 긴 PDF도 청크 단위로 검색 가능
+- ✅ 짧은 snippet도 동등하게 경쟁
+- ✅ 세밀한 관련성 판단
+
+#### 4. **자연스러운 내용 구성**
+
+- LLM이 RAG 컨텍스트를 자연스럽게 통합
+- 소스별 경계 없이 매끄러운 서술
+- 출처 표기는 자동 (메타데이터 활용)
+
+---
+
+### 📈 실제 활용 예시
+
+#### 예시 1: AI 강의 (180분)
+
+**입력:**
+
+```yaml
+topic: "인공지능 기초부터 응용까지"
+duration: 180
+audience_level: "intermediate"
+pdfs:
+  - "ai_textbook.pdf"  # 300 pages
+urls:
+  - "https://tensorflow.org/tutorials"
+  - "https://pytorch.org/tutorials"
+keywords:
+  - "AI 최신 트렌드 2026"
+```
+
+**결과:**
+
+```
+Vector DB: 450 chunks
+├─ PDF: 300 chunks (67%)
+├─ URL1: 50 chunks (11%)
+├─ URL2: 50 chunks (11%)
+└─ 검색: 50 chunks (11%)
+
+목차 (12 섹션):
+├─ Intro (9분)
+├─ 1. AI 개요 (15분)
+│   → RAG: PDF 80% + 검색 20%
+├─ 2. 머신러닝 기초 (15분)
+│   → RAG: PDF 90% + URL 10%
+├─ 3. 딥러닝 이론 (15분)
+│   → RAG: PDF 95% + URL 5%
+├─ 4. 신경망 구조 (15분)
+│   → RAG: PDF 70% + URL 30%
+├─ 5. TensorFlow 실습 (15분)
+│   → RAG: URL1 70% + PDF 30%
+├─ 6. PyTorch 실습 (15분)
+│   → RAG: URL2 70% + PDF 30%
+├─ 7. CNN (15분)
+│   → RAG: PDF 80% + URL 20%
+├─ 8. RNN (15분)
+│   → RAG: PDF 85% + URL 15%
+├─ 9. Transformer (15분)
+│   → RAG: 검색 50% + PDF 40% + URL 10%
+├─ 10. 응용 사례 (15분)
+│   → RAG: 검색 60% + PDF 30% + URL 10%
+├─ 11. 최신 트렌드 (15분)
+│   → RAG: 검색 70% + URL 20% + PDF 10%
+└─ Conclusion (9분)
+```
+
+**분석:**
+
+- 섹션별로 **동적**으로 소스 비율 변경
+- 이론 섹션: PDF 위주
+- 실습 섹션: URL(공식 문서) 위주
+- 트렌드 섹션: 검색 결과 위주
+
+---
+
+### 💡 최적화 전략
+
+#### 1. **PDF 중심 강의**
+
+```yaml
+# PDF 내용을 상세히 다루고 싶을 때
+pdfs:
+  - "main_textbook.pdf"
+urls: []  # 최소화
+keywords: []  # 최소화
+```
+
+**장점:**
+
+- PDF 내용이 대부분의 RAG 검색 결과 차지
+- 일관된 교재 기반 강의
+
+#### 2. **최신 정보 중심 강의**
+
+```yaml
+# 최신 트렌드와 실무 중심
+pdfs: []  # 최소화
+urls:
+  - "https://공식문서들..."
+keywords:
+  - "2026 최신 트렌드"
+  - "실무 사례"
+hada_keywords:
+  - "기술 뉴스"
+```
+
+**장점:**
+
+- 최신 정보 반영
+- 실무 사례 풍부
+
+#### 3. **균형잡힌 강의**
+
+```yaml
+# 이론 + 실무 균형
+pdfs:
+  - "theory.pdf"
+urls:
+  - "https://실무가이드"
+keywords:
+  - "최신 사례"
+```
+
+**장점:**
+
+- 이론과 실무 조화
+- 다양한 관점 제공
+
+---
+
+### ⚠️ 주의사항
+
+#### 1. **검색 결과의 한계**
+
+```yaml
+keywords:
+  - "매우 상세한 주제"
+```
+
+**문제:**
+
+- 검색 결과는 snippet(요약)만 저장
+- 상세한 설명 부족 가능
+
+**해결:**
+
+```yaml
+# 검색 키워드 대신 URL로 전체 페이지 수집
+urls:
+  - "https://상세가이드.com"
+```
+
+#### 2. **소스 품질**
+
+```yaml
+pdfs:
+  - "low_quality_scan.pdf"  # 스캔 PDF (텍스트 추출 불가)
+```
+
+**문제:**
+
+- OCR 미지원으로 텍스트 추출 실패
+- 벡터 DB에 저장 안 됨
+
+**해결:**
+
+- 텍스트가 포함된 PDF 사용
+- 또는 URL/검색으로 보완
+
+#### 3. **소스 과다**
+
+```yaml
+pdfs:
+  - "book1.pdf"  # 500 pages
+  - "book2.pdf"  # 500 pages
+  - "book3.pdf"  # 500 pages
+# ... 총 10개 PDF
+```
+
+**문제:**
+
+- 벡터 DB 크기 증가 (수천 chunks)
+- RAG 검색 시간 증가
+- 메모리 사용량 증가
+
+**권장:**
+
+- PDF는 3-5개 이내
+- 주제와 직접 관련된 소스만 선택
+
+---
+
 ## 📋 종합 요약표
 
 | 입력 소스 | 제한 방식 | 기본값 | 환경변수 | 최대값 | 실제 활용 |
@@ -627,7 +1249,8 @@ crawler = DeepWebCrawler(max_pages=50)  # 이 인스턴스만 50개
 | 2026-02-08 | 1.1.0 | Location-based 이미지 매칭 및 슬라이드 변환 기능 추가 |
 | 2026-02-09 | 1.2.0 | v0.2.0 개선사항 반영 (RAG 캐싱, API 재시도, 테스트) |
 | 2026-02-09 | 1.3.0 | **Config 리팩토링 반영**: 모든 하드코딩 제거, .env 기반 설정으로 전환 (15+ 환경변수) |
+| 2026-02-10 | 1.4.0 | **멀티소스 컨텐츠 구성 전략 추가**: 7가지 시나리오 분석, RAG 기반 동적 소스 선택 메커니즘 상세 설명 |
 
 ---
 
-**최종 수정**: 2026-02-09
+**최종 수정**: 2026-02-10

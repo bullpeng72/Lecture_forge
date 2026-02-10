@@ -7,13 +7,39 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import click
+import rich_click as click
+from rich_click import RichCommand, RichGroup
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich import box
+
+# Configure rich-click for beautiful help output
+click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.SHOW_ARGUMENTS = True
+click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
+click.rich_click.USE_MARKDOWN = False
+click.rich_click.STYLE_OPTION = "bold cyan"
+click.rich_click.STYLE_ARGUMENT = "bold cyan"
+click.rich_click.STYLE_COMMAND = "bold green"
+click.rich_click.STYLE_SWITCH = "bold magenta"
+click.rich_click.STYLE_METAVAR = "bold yellow"
+click.rich_click.STYLE_METAVAR_SEPARATOR = "dim"
+click.rich_click.STYLE_HEADER_TEXT = "bold yellow"
+click.rich_click.STYLE_FOOTER_TEXT = "dim"
+click.rich_click.STYLE_USAGE = "bold yellow"
+click.rich_click.STYLE_USAGE_COMMAND = "bold"
+click.rich_click.STYLE_HELPTEXT_FIRST_LINE = "bold"
+click.rich_click.STYLE_HELPTEXT = ""
+click.rich_click.STYLE_OPTION_HELP = ""
+click.rich_click.STYLE_OPTION_DEFAULT = "dim"
+click.rich_click.STYLE_REQUIRED_SHORT = "bold red"
+click.rich_click.STYLE_REQUIRED_LONG = "dim"
+click.rich_click.MAX_WIDTH = 100
+click.rich_click.SHOW_METAVARS_COLUMN = True
+click.rich_click.APPEND_METAVARS_HELP = False
 
 from lecture_forge.__version__ import __version__
 from lecture_forge.agents.content_analyzer import ContentAnalyzerAgent
@@ -113,23 +139,31 @@ def print_basic_help() -> None:
         )
     )
 
+    # First-time user notice
+    console.print("\n[bold magenta]🎉 First time here?[/bold magenta] Run [bold cyan]lecture-forge init[/bold cyan] to set up your API keys!")
+
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
-    console.print("  [cyan]lecture-forge create[/cyan]                        # Interactive mode (easiest)")
-    console.print("  [cyan]lecture-forge create --image-search[/cyan]         # With web images")
-    console.print("  [cyan]lecture-forge chat[/cyan]                          # Q&A with knowledge base")
+    console.print("  [bold cyan]1.[/bold cyan] [cyan]lecture-forge init[/cyan]                        [dim]# First-time setup (required)[/dim]")
+    console.print("  [bold cyan]2.[/bold cyan] [cyan]lecture-forge create[/cyan]                      [dim]# Generate your first lecture[/dim]")
+    console.print("  [bold cyan]3.[/bold cyan] [cyan]lecture-forge chat[/cyan]                        [dim]# Q&A with knowledge base[/dim]")
 
     # Commands Table
     console.print("\n[bold yellow]📖 Commands:[/bold yellow]")
     table = Table(show_header=True, header_style="bold cyan", box=box.ROUNDED, padding=(0, 1))
     table.add_column("Command", style="cyan", width=14)
-    table.add_column("Description", width=32)
-    table.add_column("Key Options", style="green", width=28)
+    table.add_column("Description", width=40)
+    table.add_column("Key Options", style="green", width=20)
 
-    table.add_row("create", "Generate lecture materials", "--image-search, --quality-level")
-    table.add_row("chat", "Interactive Q&A (RAG-based)", "--knowledge-base, -kb")
-    table.add_row("edit-images", "Edit lecture images", "--output, -o")
+    table.add_row(
+        "[bold magenta]init[/bold magenta]",
+        "[bold]Set up API keys[/bold] (first-time setup)",
+        "--path"
+    )
+    table.add_row("create", "Generate lecture materials", "--image-search")
+    table.add_row("chat", "Interactive Q&A (RAG-based)", "-kb PATH")
+    table.add_row("edit-images", "Edit lecture images", "-o FILE")
     table.add_row("improve", "Enhance or convert lecture", "--to-slides")
-    table.add_row("cleanup", "Manage knowledge bases", "--all (delete all)")
+    table.add_row("cleanup", "Manage knowledge bases", "--all")
     console.print(table)
 
     # Common Options
@@ -156,6 +190,9 @@ def print_basic_help() -> None:
 
     # Examples
     console.print("\n[bold yellow]💡 Usage Examples:[/bold yellow]")
+    console.print("  [dim]# First-time setup (interactive wizard)[/dim]")
+    console.print("  $ [bold magenta]lecture-forge init[/bold magenta]")
+    console.print()
     console.print("  [dim]# Basic usage (interactive)[/dim]")
     console.print("  $ [cyan]lecture-forge create[/cyan]")
     console.print()
@@ -171,14 +208,6 @@ def print_basic_help() -> None:
     console.print("  [dim]# Q&A with auto-selected knowledge base[/dim]")
     console.print("  $ [cyan]lecture-forge chat[/cyan]")
 
-    # v0.2.0 Highlights
-    console.print("\n[bold yellow]✨ v0.2.0 Highlights:[/bold yellow]")
-    console.print("  [green]⚡[/green] RAG query caching           [green]+60% speed[/green]")
-    console.print("  [green]🔄[/green] Auto-retry API calls        [green]3× robust[/green]")
-    console.print("  [green]🧪[/green] 53+ unit tests             [green]45-50% coverage[/green]")
-    console.print("  [green]📍[/green] Location-based images      [green]+750% PDF usage[/green]")
-    console.print("  [green]🔧[/green] Config system (.env)       [green]15+ settings[/green]")
-
     # More Help
     console.print("\n[bold yellow]📚 Get More Help:[/bold yellow]")
     console.print("  [cyan]lecture-forge --help[/cyan]              # Full documentation")
@@ -190,123 +219,95 @@ def print_basic_help() -> None:
     console.print("[dim]📊 Stats: 10 agents | 9 tools | 2,896 lines CLI | 15+ env vars[/dim]\n")
 
 
-@click.group(invoke_without_command=True)
+@click.group(cls=RichGroup, invoke_without_command=True)
 @click.pass_context
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    📚 LectureForge Pro v0.2.0 (Beta) - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.2.0 - AI-Powered Lecture Material Generator
 
-    Transform PDFs, URLs, and web content into comprehensive lecture materials
-    using a multi-agent AI pipeline system with RAG-based knowledge management.
-
-    \b
-    ✨ Key Features:
-      • Multi-source collection (PDF, URLs, web search)
-      • Location-based image matching (+750% PDF image usage)
-      • Interactive image editing (Vector DB-powered alternatives)
-      • RAG knowledge base with Q&A (+60% speed via caching)
-      • Auto-retry API calls (3× attempts, exponential backoff)
-      • 6-dimension quality evaluation with auto-improvement
-      • .env-based configuration (15+ customizable settings)
-      • HTML output with Mermaid diagrams & code highlighting
-      • Reveal.js presentation slides
-      • 53+ tests (45-50% coverage)
+    Transform PDFs, URLs, and web content into comprehensive lecture materials.
+    Multi-agent pipeline system with RAG-based knowledge management.
 
     \b
-    📚 Commands:
-      create          Generate lecture from multiple sources
-      chat            Interactive Q&A with knowledge base (RAG)
-      edit-images     Edit lecture images (delete/replace)
-      improve         Convert to slides or enhance content
-      cleanup         Manage knowledge base storage
+    📊 Stats: 10 Agents | 9 Tools | 53+ Tests | ~$0.22 per 180min lecture
+
+    \b
+    🎉 FIRST TIME HERE?
+       Run: lecture-forge init
+       → Set up your API keys (OpenAI, Serper)
+
+    \b
+    📚 Commands Overview:
+       ┌─────────────┬────────────────────────────────────────┬─────────────┐
+       │ Command     │ Description                            │ Key Option  │
+       ├─────────────┼────────────────────────────────────────┼─────────────┤
+       │ init        │ Configure API keys (first-time)        │ --path      │
+       │ create      │ Generate lecture from sources          │ --config    │
+       │ chat        │ Interactive Q&A with knowledge base    │ -kb PATH    │
+       │ edit-images │ Edit/replace lecture images            │ -o FILE     │
+       │ improve     │ Convert to slides or enhance           │ --to-slides │
+       │ cleanup     │ Delete knowledge bases (free space)    │ --all       │
+       └─────────────┴────────────────────────────────────────┴─────────────┘
 
     \b
     🚀 Quick Start:
-      $ lecture-forge create                        # Interactive (easiest)
-      $ lecture-forge create --image-search         # With web images
-      $ lecture-forge chat                          # Q&A mode
-      $ lecture-forge edit-images file.html         # Edit images
-      $ lecture-forge improve file.html --to-slides # To presentation
+       1. lecture-forge init              # Configure API keys (one-time)
+       2. lecture-forge create            # Generate your first lecture
+       3. lecture-forge chat              # Ask questions about it
 
     \b
-    ⚙️  Common Options:
-      --image-search              Enable Pexels/Unsplash image search
-      --quality-level LEVEL       lenient(70) | balanced(80) | strict(90)
-      --config, -c FILE           Use YAML configuration file
-      --output, -o FILE           Specify output filename
-      --to-slides                 Convert HTML to Reveal.js slides
-      --knowledge-base, -kb PATH  Specify knowledge base directory
-      --help                      Show this help and exit
+    ⚙️  Key Options:
+       --image-search            Enable Pexels/Unsplash image search
+       --quality-level LEVEL     lenient(70) | balanced(80) | strict(90)
+       --config, -c FILE         Use YAML configuration file
+       --output, -o FILE         Specify output filename
+       --to-slides               Convert HTML to Reveal.js slides
+       -kb, --knowledge-base     Specify knowledge base directory
 
     \b
-    🔧 Environment Configuration (.env):
-      Customize without code changes:
-        SEARCH_NUM_RESULTS=20             # Search results (default: 10)
-        DEEP_CRAWLER_MAX_PAGES=30         # Crawl pages (default: 10)
-        IMAGE_SEARCH_PER_PAGE=15          # Images/search (default: 10)
-        QUALITY_THRESHOLD=90              # Quality bar (default: 80)
-      See .env.example for 15+ configurable settings
+    💡 Common Usage Examples:
+       # Interactive mode (easiest)
+       lecture-forge create
+    \b
+       # High-quality with web images
+       lecture-forge create --image-search --quality-level strict
+    \b
+       # Use config file
+       lecture-forge create -c lecture.yaml
+    \b
+       # Edit lecture images
+       lecture-forge edit-images outputs/lecture.html -o final.html
+    \b
+       # Q&A mode
+       lecture-forge chat
+    \b
+       # Convert to presentation
+       lecture-forge improve outputs/lecture.html --to-slides
 
     \b
-    💡 Usage Examples:
-      # Basic usage (interactive prompts)
-      $ lecture-forge create
-
-      # High-quality with web images
-      $ lecture-forge create --image-search --quality-level strict
-
-      # Use YAML config
-      $ lecture-forge create -c my_lecture.yaml
-
-      # Edit generated images
-      $ lecture-forge edit-images outputs/lecture.html -o outputs/final.html
-
-      # Q&A with auto-selected knowledge base
-      $ lecture-forge chat
-
-      # Q&A with specific knowledge base
-      $ lecture-forge chat -kb data/vector_db/AI_Engineering_xxx
-
-      # Convert to presentation
-      $ lecture-forge improve outputs/lecture.html --to-slides
+    🔧 Environment Config (.env):
+       Customize: SEARCH_NUM_RESULTS, QUALITY_THRESHOLD, etc.
+       See .env.example for 15+ configurable settings
 
     \b
-    📊 Performance Stats:
-      • Generation Time: 3-5 min per 60-min lecture
-      • Cost: ~$0.10 per 60-min (~$0.22 per 180-min, GPT-4o-mini)
-      • Quality Score: 80+ (auto-improved up to 3 iterations)
-      • Architecture: 10 agents | 9 tools | 2,896 lines CLI
-      • Test Coverage: 53+ tests (45-50% coverage)
-      • Configuration: 15+ environment variables
-
-    \b
-    ✨ v0.2.0 Highlights:
-      • RAG query caching (+60% speed improvement)
-      • Auto-retry API calls (3× attempts, exponential backoff)
-      • Config system (.env-based, 15+ customizable settings)
-      • Location-based images (+750% PDF image usage)
-      • Comprehensive testing (53+ unit tests)
-
-    \b
-    📚 More Information:
-      README:    cat README.md
-      Guide:     cat CLAUDE.md
-      Analysis:  cat INPUT_LIMITS_ANALYSIS.md
-      Config:    cat .env.example
-      Help:      lecture-forge <command> --help
+    📖 More Help:
+       lecture-forge <command> --help    # Command-specific help
+       cat README.md                     # Full documentation
     """
+    # Commands that don't require .env validation
+    no_config_commands = ["init"]
+
     # Validate configuration when a command is actually invoked
-    # (skip for --help, --version, or when no command is provided)
-    if ctx.invoked_subcommand is not None:
+    # (skip for --help, --version, init, or when no command is provided)
+    if ctx.invoked_subcommand is not None and ctx.invoked_subcommand not in no_config_commands:
         try:
             Config.validate()
             Config.ensure_directories()
         except ValueError as e:
             console.print(f"\n[bold red]❌ Configuration Error:[/bold red]")
             console.print(f"[red]{e}[/red]\n")
-            console.print("[yellow]Please create a .env file based on .env.example and set required API keys.[/yellow]")
-            console.print("[dim]Example: cp .env.example .env[/dim]\n")
+            console.print("[yellow]💡 Quick fix: Run 'lecture-forge init' to set up your API keys[/yellow]\n")
             sys.exit(1)
     elif ctx.invoked_subcommand is None:
         # Show basic help when no command is provided
@@ -925,6 +926,279 @@ def cleanup(all: bool):
             console.print(f"\n[red]❌ Invalid selection: {e}[/red]\n")
 
 
+@cli.command()
+@click.option(
+    "--path",
+    type=click.Path(),
+    default=None,
+    help="Custom directory for .env file (default: platform-specific user directory)",
+)
+def init(path: Optional[str]) -> None:
+    """
+    Initialize LectureForge configuration.
+
+    Creates a .env file with your API keys in the appropriate location.
+    This command guides you through setting up required and optional API keys.
+
+    \b
+    Default .env Location (Platform-specific):
+      • Windows: %LOCALAPPDATA%\\lecture-forge\\.env
+                 (e.g., C:\\Users\\username\\AppData\\Local\\lecture-forge\\.env)
+      • Mac/Linux: ~/.lecture-forge/.env
+                   (e.g., /Users/username/.lecture-forge/.env)
+
+    \b
+    What This Command Does:
+      1. Creates configuration directory if it doesn't exist
+      2. Prompts for required API keys (OpenAI, Serper)
+      3. Optionally prompts for image search APIs (Pexels, Unsplash)
+      4. Creates .env file with your settings
+      5. Sets secure file permissions (Unix/Mac only)
+
+    \b
+    Required API Keys:
+      • OpenAI API Key
+        - Get from: https://platform.openai.com
+        - Used for: Content generation, analysis, embeddings
+        - Cost: Pay-per-use (~$0.10 per 60-min lecture)
+
+      • Serper API Key
+        - Get from: https://serper.dev
+        - Used for: Web search
+        - Free tier: 2,500 searches/month
+
+    \b
+    Optional API Keys:
+      • Pexels API Key (https://pexels.com/api)
+        - Free unlimited searches (with rate limits)
+        - Used for: Royalty-free stock images
+
+      • Unsplash Access Key (https://unsplash.com/developers)
+        - Free tier: 50 requests/hour
+        - Used for: High-quality stock photos
+
+    \b
+    Examples:
+      # Use default location (recommended)
+      $ lecture-forge init
+
+      # Use custom directory
+      $ lecture-forge init --path /path/to/custom/dir
+
+      # Use current directory
+      $ lecture-forge init --path .
+
+    \b
+    After Setup:
+      Once configured, you can start generating lectures:
+        $ lecture-forge create
+
+    \b
+    Notes:
+      • Existing .env files will prompt for overwrite confirmation
+      • API keys are stored locally and never uploaded
+      • You can edit .env file manually later
+      • File permissions are set to owner-only (Unix/Mac)
+    """
+    import shutil
+    from datetime import datetime
+
+    console.print()
+    console.print(
+        Panel.fit(
+            "[bold cyan]🚀 LectureForge Configuration Setup[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+    console.print()
+
+    # Determine target path
+    if path:
+        env_dir = Path(path).expanduser().resolve()
+        env_path = env_dir / ".env"
+        console.print(f"📁 [dim]Using custom directory: {env_dir}[/dim]\n")
+    else:
+        from lecture_forge.config import get_default_config_dir
+
+        env_dir = get_default_config_dir()
+        env_path = env_dir / ".env"
+        console.print(f"📁 [dim]Using default directory: {env_dir}[/dim]\n")
+
+    # Check if already exists
+    if env_path.exists():
+        console.print(f"[yellow]⚠️  .env file already exists at:[/yellow]")
+        console.print(f"[yellow]   {env_path}[/yellow]\n")
+        overwrite = Confirm.ask("   Overwrite existing file?", default=False)
+        if not overwrite:
+            console.print("\n[green]✓ Setup cancelled[/green]\n")
+            return
+        console.print()
+
+    # Create directory
+    try:
+        env_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        console.print(f"[red]❌ Failed to create directory: {e}[/red]\n")
+        sys.exit(1)
+
+    # Collect API keys
+    console.print("[bold cyan]📝 Required API Keys[/bold cyan]\n")
+
+    # OpenAI
+    console.print("[bold]1. OpenAI API Key[/bold]")
+    console.print("   • Get from: [link]https://platform.openai.com[/link]")
+    console.print("   • Used for: LLM generation, embeddings")
+    console.print("   • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)\n")
+
+    openai_key = Prompt.ask(
+        "   [cyan]Enter your OpenAI API Key[/cyan] (starts with sk-)", password=True
+    )
+
+    while not openai_key or not openai_key.startswith(("sk-", "sk-proj-")):
+        console.print(
+            "   [red]Invalid format. Should start with 'sk-' or 'sk-proj-'[/red]"
+        )
+        openai_key = Prompt.ask("   [cyan]Enter your OpenAI API Key[/cyan]", password=True)
+
+    console.print("   [green]✓ OpenAI key saved[/green]\n")
+
+    # Serper
+    console.print("[bold]2. Serper API Key[/bold]")
+    console.print("   • Get from: [link]https://serper.dev[/link]")
+    console.print("   • Used for: Web search")
+    console.print("   • Free tier: 2,500 searches/month\n")
+
+    serper_key = Prompt.ask("   [cyan]Enter your Serper API Key[/cyan]", password=True)
+
+    while not serper_key or len(serper_key) < 10:
+        console.print("   [red]Invalid key. Please check your API key.[/red]")
+        serper_key = Prompt.ask("   [cyan]Enter your Serper API Key[/cyan]", password=True)
+
+    console.print("   [green]✓ Serper key saved[/green]\n")
+
+    # Optional keys
+    console.print("[bold cyan]📸 Optional: Image Search APIs[/bold cyan]")
+    console.print("[dim]Press Enter to skip if you don't need web image search[/dim]\n")
+
+    # Pexels
+    console.print("[bold]3. Pexels API Key (Optional)[/bold]")
+    console.print("   • Get from: [link]https://pexels.com/api[/link]")
+    console.print("   • Free: Unlimited with rate limits\n")
+
+    pexels_key = Prompt.ask(
+        "   [cyan]Pexels API Key[/cyan] [dim](or press Enter to skip)[/dim]",
+        default="",
+        show_default=False,
+        password=True,
+    )
+
+    if pexels_key:
+        console.print("   [green]✓ Pexels key saved[/green]\n")
+    else:
+        console.print("   [dim]⊘ Skipped[/dim]\n")
+
+    # Unsplash
+    console.print("[bold]4. Unsplash Access Key (Optional)[/bold]")
+    console.print("   • Get from: [link]https://unsplash.com/developers[/link]")
+    console.print("   • Free tier: 50 requests/hour\n")
+
+    unsplash_key = Prompt.ask(
+        "   [cyan]Unsplash Access Key[/cyan] [dim](or press Enter to skip)[/dim]",
+        default="",
+        show_default=False,
+        password=True,
+    )
+
+    if unsplash_key:
+        console.print("   [green]✓ Unsplash key saved[/green]\n")
+    else:
+        console.print("   [dim]⊘ Skipped[/dim]\n")
+
+    # Create .env content
+    env_content = f"""# LectureForge Configuration
+# Generated by: lecture-forge init
+# Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+# Platform: {sys.platform}
+
+# ===== Required API Keys =====
+OPENAI_API_KEY={openai_key}
+SERPER_API_KEY={serper_key}
+
+# ===== Optional Image Search APIs =====
+"""
+
+    if pexels_key:
+        env_content += f"PEXELS_API_KEY={pexels_key}\n"
+    else:
+        env_content += "# PEXELS_API_KEY=\n"
+
+    if unsplash_key:
+        env_content += f"UNSPLASH_ACCESS_KEY={unsplash_key}\n"
+    else:
+        env_content += "# UNSPLASH_ACCESS_KEY=\n"
+
+    env_content += """
+# ===== LLM Settings =====
+DEFAULT_MODEL=gpt-4o-mini
+VISION_MODEL=gpt-4o
+EMBEDDING_MODEL=text-embedding-3-small
+TEMPERATURE=0.7
+
+# ===== Quality Settings =====
+QUALITY_THRESHOLD=80
+MAX_ITERATIONS=3
+DIAGRAM_QUALITY_THRESHOLD=70
+
+# ===== Search Settings =====
+SEARCH_NUM_RESULTS=10
+SEARCH_TIMEOUT=30
+
+# ===== Image Settings =====
+MAX_IMAGES_PER_SEARCH=10
+IMAGE_SEARCH_PER_PAGE=10
+IMAGE_FORMAT=webp
+IMAGE_MAX_WIDTH=1200
+
+# ===== Other Settings =====
+LOG_LEVEL=INFO
+
+# For more settings, see: .env.example in the package source
+# Or visit: https://github.com/bullpeng72/Lecture_forge
+"""
+
+    # Write .env file
+    try:
+        env_path.write_text(env_content, encoding="utf-8")
+    except Exception as e:
+        console.print(f"[red]❌ Failed to write .env file: {e}[/red]\n")
+        sys.exit(1)
+
+    # Set appropriate permissions (Unix-like systems)
+    if sys.platform != "win32":
+        try:
+            env_path.chmod(0o600)  # Read/write for owner only
+            console.print("[dim]🔒 File permissions set to owner-only (600)[/dim]\n")
+        except Exception:
+            pass
+
+    # Success message
+    console.print("[bold green]✅ Configuration completed successfully![/bold green]\n")
+    console.print(f"📄 Configuration saved to: [cyan]{env_path}[/cyan]\n")
+
+    # Next steps
+    console.print("[bold cyan]🎉 Next Steps:[/bold cyan]")
+    console.print("   1. Start generating lectures:")
+    console.print("      [bold]$ lecture-forge create[/bold]\n")
+    console.print("   2. Or see all available commands:")
+    console.print("      [bold]$ lecture-forge --help[/bold]\n")
+
+    # Tips
+    console.print("[bold cyan]💡 Tips:[/bold cyan]")
+    console.print(f"   • Edit settings: [dim]{env_path}[/dim]")
+    console.print("   • Generate with images: [dim]lecture-forge create --image-search[/dim]")
+    console.print("   • High quality mode: [dim]lecture-forge create --quality-level strict[/dim]\n")
+
+
 def get_dir_size(path: Path) -> int:
     """Calculate total size of directory in bytes."""
     total = 0
@@ -1215,10 +1489,21 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
                             Cost: ~$0.04 per 400 images (384 pages)
                             Expected improvement: +50% PDF image usage
 
-      --to-slides:          Convert lecture HTML to Reveal.js presentation slides
-                            Creates a separate slides.html file optimized for presentations
+      --to-slides:          Convert lecture HTML to Reveal.js slides
+                            Creates separate slides.html file
                             Automatically splits content into slides
-                            Preserves images, code blocks, and diagrams
+                            Preserves images, code, and diagrams
+
+    \b
+    Slide Keyboard Shortcuts:
+      Arrow Keys / Space    - Navigate slides (→ next, ← previous, ↑↓ vertical)
+      Home / End            - First / last slide
+      Esc / O               - Overview mode (see all slides)
+      S                     - Speaker notes (if available)
+      F                     - Full screen mode
+      B / .                 - Pause/blackout (blank screen)
+      Alt+Click             - Zoom to clicked element
+      ?                     - Show keyboard shortcuts help
 
     \b
     Examples:
@@ -1227,9 +1512,11 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
           --enhance-pdf-images \\
           --source-pdf "AI Engineering Guidebook.pdf"
 
+    \b
       # Convert to presentation slides
       $ lecture-forge improve outputs/lecture.html --to-slides
 
+    \b
       # Combine both enhancements
       $ lecture-forge improve outputs/lecture.html \\
           --enhance-pdf-images --source-pdf "doc.pdf" --to-slides
@@ -2170,21 +2457,40 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         # Content slides - group content into logical slides
         current_slide_content = []
         slide_item_count = 0
-        max_items_per_slide = 3  # Maximum content blocks per slide
+        max_items_per_slide = 4  # Maximum content blocks per slide (increased from 3 to reduce fragmentation)
 
-        for block in blocks:
+        # Slide composition strategy:
+        # - h3 (subsection): Always starts new slide
+        # - h4 (subsubsection): Stay with following content via look-ahead
+        # - Avoid orphaned h4 at slide end (look-ahead prevents this)
+
+        for idx, block in enumerate(blocks):
             block_type = block["type"]
 
             if block_type == "subsection":
-                # Subsection starts a new slide
+                # Subsection starts a new slide (always)
                 if current_slide_content:
                     slides_content.append(_create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
+                # Add h3 to new slide
                 current_slide_content.append(f"<h3>{block['content']}</h3>")
                 slide_item_count += 1
 
             elif block_type == "subsubsection":
+                # Look-ahead: Check if we can fit h4 + next content in current slide
+                next_block_weight = 0
+                if idx + 1 < len(blocks):
+                    next_block = blocks[idx + 1]
+                    if next_block["type"] in ["paragraph", "list"]:
+                        next_block_weight = 1
+
+                # If h4 + next content exceeds limit, start new slide
+                if slide_item_count + 0.5 + next_block_weight > max_items_per_slide and current_slide_content:
+                    slides_content.append(_create_content_slide(current_slide_content))
+                    current_slide_content = []
+                    slide_item_count = 0
+
                 current_slide_content.append(f"<h4>{block['content']}</h4>")
                 slide_item_count += 0.5  # Smaller weight for h4
 
@@ -2257,7 +2563,21 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                 )
 
             # Check if we should start a new slide
-            if slide_item_count >= max_items_per_slide:
+            # Look ahead to avoid orphaned h4 at the end
+            should_break = slide_item_count >= max_items_per_slide
+
+            # If next block is h4, don't break yet (keep h4 with its content)
+            if should_break and idx + 1 < len(blocks):
+                next_block = blocks[idx + 1]
+                if next_block["type"] == "subsubsection":
+                    # Check if we can fit next h4 + one more block
+                    if idx + 2 < len(blocks):
+                        next_next_block = blocks[idx + 2]
+                        if next_next_block["type"] in ["paragraph", "list"]:
+                            # Don't break yet, let h4 and content stay together
+                            should_break = False
+
+            if should_break:
                 slides_content.append(_create_content_slide(current_slide_content))
                 current_slide_content = []
                 slide_item_count = 0
@@ -2558,9 +2878,30 @@ def edit_images(html_path: str, output: str):
     - Save changes to new HTML file
 
     \b
-    Example:
-        lecture-forge edit-images outputs/lecture.html
-        lecture-forge edit-images lecture.html --output new_lecture.html
+    Features:
+      • Real-time preview of all images in the lecture
+      • Delete unwanted images (d <number>)
+      • Undo deletions (u <number>)
+      • Replace images with RAG-based alternatives (r <number>)
+      • Save changes to new file (preserves original)
+
+    \b
+    Examples:
+      # Interactive editing mode
+      $ lecture-forge edit-images outputs/lecture.html
+
+    \b
+      # Specify output file
+      $ lecture-forge edit-images lecture.html -o new_lecture.html
+
+    \b
+    Interactive Commands:
+      d <number>    - Delete image (e.g., d 3)
+      u <number>    - Undo deletion (e.g., u 3)
+      r <number>    - Replace image (search alternatives)
+      s             - Save changes
+      q             - Quit without saving
+      h             - Show help
     """
     from rich.console import Console
     from rich.prompt import Prompt, Confirm

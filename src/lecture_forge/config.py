@@ -2,29 +2,106 @@
 Configuration management for LectureForge.
 
 Loads settings from environment variables (.env file).
+
+The .env file is searched in the following order:
+  1. LECTURE_FORGE_ENV_FILE environment variable (if set)
+  2. ./.env (current working directory)
+  3. Platform-specific user directory:
+     - Windows: %LOCALAPPDATA%\\lecture-forge\\.env
+     - Mac/Linux: ~/.lecture-forge/.env
 """
 
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
 
-# Load .env file
-load_dotenv()
-
 # Module-level logger (uses standard logging, not rich)
 logger = logging.getLogger("lecture_forge.config")
+
+
+def get_default_config_dir() -> Path:
+    """
+    Get the default configuration directory based on platform.
+
+    Returns:
+        Path to the platform-specific config directory
+    """
+    if sys.platform == "win32":
+        # Windows: Use LOCALAPPDATA
+        local_appdata = os.getenv("LOCALAPPDATA")
+        if local_appdata:
+            return Path(local_appdata) / "lecture-forge"
+        else:
+            # Fallback to home directory
+            return Path.home() / "lecture-forge"
+    else:
+        # Unix-like systems (Mac, Linux)
+        return Path.home() / ".lecture-forge"
+
+
+def find_and_load_env() -> Optional[Path]:
+    """
+    Find and load .env file from multiple locations.
+
+    Search order:
+      1. LECTURE_FORGE_ENV_FILE environment variable (if set)
+      2. ./.env (current working directory)
+      3. Platform-specific user directory
+
+    Returns:
+        Path to the loaded .env file, or None if not found
+    """
+    # 1. Explicitly specified path via environment variable
+    explicit_path = os.getenv("LECTURE_FORGE_ENV_FILE")
+    if explicit_path:
+        env_path = Path(explicit_path).expanduser().resolve()
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+            logger.info(f"✓ Loaded .env from: {env_path}")
+            return env_path
+        else:
+            logger.warning(
+                f"⚠️  LECTURE_FORGE_ENV_FILE points to non-existent file: {env_path}"
+            )
+
+    # 2. Current working directory
+    cwd_env = Path.cwd() / ".env"
+    if cwd_env.exists():
+        load_dotenv(cwd_env)
+        logger.info(f"✓ Loaded .env from current directory: {cwd_env}")
+        return cwd_env
+
+    # 3. Platform-specific user directory
+    user_config_dir = get_default_config_dir()
+    user_env = user_config_dir / ".env"
+    if user_env.exists():
+        load_dotenv(user_env)
+        logger.info(f"✓ Loaded .env from user config directory: {user_env}")
+        return user_env
+
+    # Not found
+    logger.warning("⚠️  No .env file found in any standard location")
+    return None
+
+
+# Load .env file at module import
+ENV_FILE_PATH = find_and_load_env()
 
 
 class Config:
     """Global configuration class."""
 
     # ===== Project Paths =====
-    PROJECT_ROOT = Path(__file__).parent.parent.parent
-    DATA_DIR = PROJECT_ROOT / "data"
-    OUTPUT_DIR = PROJECT_ROOT / "outputs"
+    # For installed packages, use user's directories
+    USER_CONFIG_DIR = get_default_config_dir()
+    DATA_DIR = Path(os.getenv("DATA_DIR", str(USER_CONFIG_DIR / "data")))
+    OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", str(USER_CONFIG_DIR / "outputs")))
+
+    # Templates are always in the package directory
     TEMPLATES_DIR = Path(__file__).parent / "templates"
 
     # ===== OpenAI API =====
@@ -91,30 +168,82 @@ class Config:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     @classmethod
+    def get_env_file_locations(cls) -> list[str]:
+        """Get list of .env file search locations for user guidance."""
+        locations = []
+
+        # 1. Environment variable
+        locations.append("LECTURE_FORGE_ENV_FILE environment variable (if set)")
+
+        # 2. Current directory
+        locations.append("./.env (current working directory)")
+
+        # 3. Platform-specific user directory
+        user_config_dir = get_default_config_dir()
+        if sys.platform == "win32":
+            locations.append(f"{user_config_dir}\\.env (recommended for Windows)")
+        else:
+            locations.append(f"{user_config_dir}/.env (recommended)")
+
+        return locations
+
+    @classmethod
+    def get_recommended_env_path(cls) -> Path:
+        """Get the recommended .env file path for the current platform."""
+        return get_default_config_dir() / ".env"
+
+    @classmethod
     def validate(cls) -> None:
         """Validate required configuration."""
         errors = []
 
+        # Check if .env file was found
+        if not ENV_FILE_PATH:
+            error_msg = "❌ No .env file found!\n\n"
+            error_msg += "📍 LectureForge searches for .env files in these locations:\n"
+            for i, location in enumerate(cls.get_env_file_locations(), 1):
+                error_msg += f"   {i}. {location}\n"
+
+            error_msg += "\n🚀 Quick start:\n"
+            error_msg += "   Run: lecture-forge init\n\n"
+            error_msg += "   Or manually create a .env file at:\n"
+            error_msg += f"   {cls.get_recommended_env_path()}\n"
+
+            errors.append(error_msg)
+
         # Required keys
         if not cls.OPENAI_API_KEY:
-            errors.append("OPENAI_API_KEY is required in .env file")
+            errors.append(
+                "❌ OPENAI_API_KEY is required\n"
+                "   Get your key from: https://platform.openai.com"
+            )
         else:
             # Validate OpenAI API key format
-            if not (cls.OPENAI_API_KEY.startswith(("sk-", "sk-proj-")) and len(cls.OPENAI_API_KEY) > 20):
+            if not (
+                cls.OPENAI_API_KEY.startswith(("sk-", "sk-proj-"))
+                and len(cls.OPENAI_API_KEY) > 20
+            ):
                 errors.append(
-                    "OPENAI_API_KEY has invalid format. "
-                    "Should start with 'sk-' or 'sk-proj-' and be at least 20 characters long."
+                    "❌ OPENAI_API_KEY has invalid format\n"
+                    "   Should start with 'sk-' or 'sk-proj-' and be at least 20 characters long."
                 )
 
         if not cls.SERPER_API_KEY:
-            errors.append("SERPER_API_KEY is required in .env file")
+            errors.append(
+                "❌ SERPER_API_KEY is required\n"
+                "   Get your free key from: https://serper.dev\n"
+                "   (2,500 searches/month free)"
+            )
         else:
             # Validate Serper API key format (basic length check)
             if len(cls.SERPER_API_KEY) < 10:
-                errors.append("SERPER_API_KEY appears invalid (too short). " "Please verify your API key from serper.dev")
+                errors.append(
+                    "❌ SERPER_API_KEY appears invalid (too short)\n"
+                    "   Please verify your API key from serper.dev"
+                )
 
         if errors:
-            raise ValueError("Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
+            raise ValueError("\n" + "\n".join(errors))
 
         # Warnings for optional keys
         if not cls.UNSPLASH_ACCESS_KEY:
@@ -130,6 +259,7 @@ class Config:
     @classmethod
     def ensure_directories(cls) -> None:
         """Ensure required directories exist."""
+        cls.USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         cls.DATA_DIR.mkdir(parents=True, exist_ok=True)
         cls.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         cls.VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)

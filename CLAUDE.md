@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-09)
-> **버전**: 0.2.0 (Beta Release)
+> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-10)
+> **버전**: 0.2.1 (Beta Release)
 > **진행률**: Phase 1-8 완료 ✅ | 품질 개선 완료 ✨
 
 ## 📚 프로젝트 개요
@@ -487,6 +487,13 @@ lecture-forge --help
 - ✅ API 안정성 강화 (재시도 로직)
 - ✅ Type safety 75% 적용
 - ✅ Config validation 개선
+
+**v0.2.1 개선사항** (2026-02-10):
+- 🐛 Visual score 버그 수정 (이미지 카운팅)
+- 🐛 품질 평가 무한 반복 해결 (임계값 완화 + 조기 종료)
+- 🐛 슬라이드 orphaned heading 개선 (look-ahead 로직)
+- ✨ CLI 도움말 가독성 향상 (줄바꿈 + Reveal.js 단축키)
+- 📚 멀티소스 전략 문서화 (INPUT_LIMITS_ANALYSIS.md)
 
 ---
 

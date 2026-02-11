@@ -19,6 +19,20 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+# ===== CRITICAL: Disable ChromaDB telemetry BEFORE any imports =====
+# This MUST be set before ChromaDB is imported anywhere in the application
+# to prevent PostHog telemetry errors (capture() API incompatibility)
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+# Also set CHROMA_TELEMETRY for redundancy
+os.environ["CHROMA_TELEMETRY"] = "False"
+
+# Suppress ChromaDB telemetry error messages (non-fatal PostHog API errors)
+# ChromaDB 0.4.24 has a bug with PostHog capture() API that causes error logs
+# but doesn't affect functionality. We suppress these specific error messages.
+logging.getLogger("chromadb.telemetry.posthog").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb").setLevel(logging.WARNING)  # Only show warnings and above
+
 # Module-level logger (uses standard logging, not rich)
 logger = logging.getLogger("lecture_forge.config")
 

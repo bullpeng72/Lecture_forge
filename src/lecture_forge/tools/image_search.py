@@ -107,8 +107,9 @@ class UnsplashSearchTool:
 
                 for idx, photo in enumerate(data["results"]):
                     try:
-                        # Get image URL (regular quality)
-                        image_url = photo["urls"]["regular"]
+                        # Get image URL (full quality for better resolution)
+                        # "full" = 2400px max, "regular" = 1080px, "raw" = original
+                        image_url = photo["urls"]["full"]
                         download_url = photo["links"]["download_location"]
 
                         # Get metadata
@@ -174,9 +175,15 @@ class UnsplashSearchTool:
                             filename = f"unsplash_{image_id}_{image_hash[:8]}.{image_format}"
                             image_path = session_dir / filename
 
-                            # Save with configured format
+                            # Save with configured format and high quality
                             output_buffer = io.BytesIO()
-                            pil_image.save(output_buffer, format=image_format.upper())
+
+                            # Use high quality settings for WebP
+                            if image_format.lower() == 'webp':
+                                pil_image.save(output_buffer, format='WEBP', quality=95, method=6)
+                            else:
+                                pil_image.save(output_buffer, format=image_format.upper(), quality=95)
+
                             image_bytes = output_buffer.getvalue()
 
                             with open(image_path, "wb") as f:
@@ -316,8 +323,9 @@ class PexelsSearchTool:
 
                 for idx, photo in enumerate(data["photos"]):
                     try:
-                        # Get image URL (large size)
-                        image_url = photo["src"]["large"]
+                        # Get image URL (original quality for best resolution)
+                        # "original" = full size, "large2x" = 1940px, "large" = 940px
+                        image_url = photo["src"]["original"]
 
                         # Get metadata
                         image_id = photo["id"]
@@ -368,9 +376,15 @@ class PexelsSearchTool:
                             filename = f"pexels_{image_id}_{image_hash[:8]}.{image_format}"
                             image_path = session_dir / filename
 
-                            # Save with configured format
+                            # Save with configured format and high quality
                             output_buffer = io.BytesIO()
-                            pil_image.save(output_buffer, format=image_format.upper())
+
+                            # Use high quality settings for WebP
+                            if image_format.lower() == 'webp':
+                                pil_image.save(output_buffer, format='WEBP', quality=95, method=6)
+                            else:
+                                pil_image.save(output_buffer, format=image_format.upper(), quality=95)
+
                             image_bytes = output_buffer.getvalue()
 
                             with open(image_path, "wb") as f:

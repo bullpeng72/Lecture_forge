@@ -53,23 +53,25 @@ class ImageEditor:
         """Initialize Vector Store if available."""
         try:
             # Try to find the most recent vector DB
-            vector_db_base = Path(Config.DATA_DIR) / "vector_db"
+            vector_db_base = Config.VECTOR_DB_PATH
             if not vector_db_base.exists():
                 logger.warning("Vector DB not found - alternative image search disabled")
                 return
 
             # Find all collection directories
-            collections = [d for d in vector_db_base.iterdir() if d.is_dir()]
+            collections = [d for d in vector_db_base.iterdir() if d.is_dir() and not d.name.startswith(".")]
             if not collections:
                 logger.warning("No vector DB collections found")
                 return
 
             # Use the most recent one
             latest_collection = max(collections, key=lambda d: d.stat().st_mtime)
+            collection_name = latest_collection.name
 
-            # Load Vector Store
-            self.vector_store = VectorStore(persist_directory=str(latest_collection))
-            logger.info(f"Loaded Vector DB: {latest_collection.name}")
+            # Load Vector Store with collection name (not persist_directory)
+            # VectorStore will construct the full path: Config.VECTOR_DB_PATH / collection_name
+            self.vector_store = VectorStore(collection_name=collection_name)
+            logger.info(f"Loaded Vector DB: {collection_name}")
 
         except Exception as e:
             logger.warning(f"Could not initialize Vector Store: {e}")
@@ -209,7 +211,7 @@ class ImageEditor:
 
     def find_alternative_images(self, image_index: int, max_results: int = 5) -> List[Dict]:
         """
-        Find alternative images from Vector DB.
+        Find alternative images from Vector DB or filesystem.
 
         Args:
             image_index: Image index to replace
@@ -222,13 +224,30 @@ class ImageEditor:
             logger.error(f"Invalid image index: {image_index}")
             return []
 
-        if not self.vector_store:
-            logger.warning("Vector DB not available")
-            return []
-
         # Get current image info
         current_img = self.images[image_index - 1]
 
+        # Try Vector DB first (if available)
+        if self.vector_store:
+            alternatives = self._search_vector_db(current_img, max_results)
+            if alternatives:
+                return alternatives
+            logger.info("No alternatives in Vector DB, trying filesystem search...")
+
+        # Fallback to filesystem search
+        return self._search_filesystem(current_img, max_results)
+
+    def _search_vector_db(self, current_img: Dict, max_results: int) -> List[Dict]:
+        """
+        Search for alternative images in Vector DB.
+
+        Args:
+            current_img: Current image info
+            max_results: Maximum number of results
+
+        Returns:
+            List of alternative images
+        """
         # Build search query from context
         query_parts = []
         if current_img["section"]:
@@ -241,17 +260,14 @@ class ImageEditor:
         query = " ".join(query_parts)
 
         if not query:
-            logger.warning("No context available for search")
             return []
 
-        logger.info(f"Searching for alternatives: '{query[:100]}'")
+        logger.info(f"Searching Vector DB: '{query[:100]}'")
 
-        # Search Vector DB for image documents
         try:
             results = self.vector_store.query(query, n_results=max_results * 3)
 
             if not results or not results.get("documents"):
-                logger.info("No alternative images found")
                 return []
 
             # Filter for image-type documents
@@ -277,12 +293,132 @@ class ImageEditor:
                     if len(alternatives) >= max_results:
                         break
 
-            logger.info(f"Found {len(alternatives)} alternative images")
+            if alternatives:
+                logger.info(f"Found {len(alternatives)} images in Vector DB")
             return alternatives
 
         except Exception as e:
-            logger.error(f"Error searching for alternatives: {e}")
+            logger.debug(f"Vector DB search error: {e}")
             return []
+
+    def _search_filesystem(self, current_img: Dict, max_results: int) -> List[Dict]:
+        """
+        Search for alternative images in filesystem.
+
+        Searches in data/images/ directory for images from the same source
+        or nearby pages.
+
+        Args:
+            current_img: Current image info
+            max_results: Maximum number of results
+
+        Returns:
+            List of alternative images
+        """
+        logger.info("Searching filesystem for alternative images...")
+
+        # Try multiple locations for image directories
+        # Prioritize current working directory (development mode)
+        possible_bases = [
+            Path.cwd() / "data" / "images",  # Current working directory (dev mode)
+            self.html_path.parent.parent / "data" / "images",  # Relative to HTML
+            Config.DATA_DIR / "images",  # User config directory (installed mode)
+        ]
+
+        images_base = None
+        for base in possible_bases:
+            if base.exists():
+                # Check if there are actually images in this directory
+                has_images = any(
+                    f.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".gif"]
+                    for d in base.iterdir() if d.is_dir()
+                    for f in d.rglob("*") if f.is_file()
+                )
+                if has_images:
+                    images_base = base
+                    logger.info(f"Found images directory: {base}")
+                    break
+
+        if not images_base:
+            logger.warning("Images directory not found in any location")
+            return []
+
+        alternatives = []
+        current_page = current_img.get("page")
+        current_src = current_img.get("src", "")
+
+        logger.info(f"Searching for images near page {current_page}...")
+
+        # Search all session directories
+        session_count = 0
+        for session_dir in images_base.iterdir():
+            if not session_dir.is_dir() or session_dir.name.startswith("."):
+                continue
+            session_count += 1
+
+            # Check for PDF images
+            for img_file in session_dir.rglob("*"):
+                if not img_file.is_file():
+                    continue
+
+                # Check if it's an image file
+                if img_file.suffix.lower() not in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+                    continue
+
+                # Skip if it's the current image
+                if str(img_file) == current_src or img_file.name in current_src:
+                    continue
+
+                # Try to extract page number from filename or metadata
+                page_match = None
+                import re
+                page_pattern = re.search(r"page_?(\d+)", img_file.stem, re.IGNORECASE)
+                if page_pattern:
+                    page_match = int(page_pattern.group(1))
+
+                # Calculate relevance score
+                score = 0
+                if page_match and current_page:
+                    # Prefer images from nearby pages
+                    page_diff = abs(page_match - current_page)
+                    if page_diff == 0:
+                        score = 100
+                    elif page_diff <= 2:
+                        score = 50
+                    elif page_diff <= 5:
+                        score = 25
+                    else:
+                        score = 10
+                else:
+                    score = 5  # Unknown page
+
+                alternatives.append({
+                    "path": str(img_file),
+                    "page": page_match,
+                    "source": img_file.parent.name,
+                    "filename": img_file.name,
+                    "score": score,
+                })
+
+        logger.info(f"Scanned {session_count} session(s), found {len(alternatives)} candidates")
+
+        # Sort by score and limit results
+        alternatives.sort(key=lambda x: x["score"], reverse=True)
+        alternatives = alternatives[:max_results]
+
+        # Add index and description
+        for idx, alt in enumerate(alternatives, 1):
+            alt["index"] = idx
+            alt["description"] = f"Image from {alt['source']}"
+            if alt["page"]:
+                alt["description"] += f" (page {alt['page']})"
+
+        if alternatives:
+            logger.info(f"Found {len(alternatives)} alternative images in filesystem")
+        else:
+            logger.warning("No alternative images found")
+
+        return alternatives
 
     def replace_image(self, image_index: int, new_image_path: str) -> bool:
         """

@@ -155,10 +155,16 @@ class PDFImageExtractorTool:
                         filename = f"page{page_num + 1}_img{img_index + 1}_{image_hash[:8]}.{image_format}"
                         image_path = session_dir / filename
 
-                        # Save image with configured format
+                        # Save image with configured format and high quality
                         import io
                         output_buffer = io.BytesIO()
-                        pil_image.save(output_buffer, format=image_format.upper())
+
+                        # Use high quality settings for WebP
+                        if image_format.lower() == 'webp':
+                            pil_image.save(output_buffer, format='WEBP', quality=95, method=6)
+                        else:
+                            pil_image.save(output_buffer, format=image_format.upper(), quality=95)
+
                         image_bytes = output_buffer.getvalue()
 
                         with open(image_path, "wb") as f:
@@ -755,10 +761,16 @@ class WebImageScraperTool:
                     filename = f"web_img{idx + 1}_{image_hash[:8]}.{image_format}"
                     image_path = session_dir / filename
 
-                    # Save image with configured format
+                    # Save image with configured format and high quality
                     import io
                     output_buffer = io.BytesIO()
-                    pil_image.save(output_buffer, format=image_format.upper())
+
+                    # Use high quality settings for WebP
+                    if image_format.lower() == 'webp':
+                        pil_image.save(output_buffer, format='WEBP', quality=95, method=6)
+                    else:
+                        pil_image.save(output_buffer, format=image_format.upper(), quality=95)
+
                     image_bytes = output_buffer.getvalue()
 
                     with open(image_path, "wb") as f:

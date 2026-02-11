@@ -137,7 +137,7 @@ class Config:
     IMAGE_SEARCH_PER_PAGE: int = int(os.getenv("IMAGE_SEARCH_PER_PAGE", "10"))
     IMAGE_SEARCH_TIMEOUT: int = int(os.getenv("IMAGE_SEARCH_TIMEOUT", "30"))
     IMAGE_FORMAT: str = os.getenv("IMAGE_FORMAT", "webp")
-    IMAGE_MAX_WIDTH: int = int(os.getenv("IMAGE_MAX_WIDTH", "1200"))
+    IMAGE_MAX_WIDTH: int = int(os.getenv("IMAGE_MAX_WIDTH", "1920"))  # Full HD support
 
     # ===== Image Extraction & Quality =====
     # Minimum dimensions for extracted images (filters out icons/logos)

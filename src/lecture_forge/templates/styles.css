@@ -102,13 +102,33 @@ pre[class*="language-"] {
     border-radius: 0.5rem;
 }
 
-/* Image hover effect */
+/* Image quality and display improvements */
 figure img {
     transition: transform 0.3s ease;
+    /* Prevent image upscaling blur */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    /* Smooth high-quality rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Center alignment */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    /* Minimum readable size */
+    min-width: 600px;
+    max-width: 100%;
 }
 
 figure img:hover {
     transform: scale(1.02);
+}
+
+/* Responsive image sizing */
+@media (max-width: 768px) {
+    figure img {
+        min-width: 100%;
+    }
 }
 
 /* Print styles */

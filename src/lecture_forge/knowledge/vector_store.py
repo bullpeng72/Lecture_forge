@@ -2,6 +2,7 @@
 Vector store wrapper for ChromaDB.
 """
 
+import os
 from typing import Dict, List, Optional
 
 import chromadb
@@ -9,6 +10,9 @@ from chromadb.config import Settings
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger, timestamp
+
+# Disable ChromaDB telemetry to avoid PostHog capture() errors
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
 
 class VectorStore:

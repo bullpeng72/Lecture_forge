@@ -121,18 +121,20 @@ class ContentWriterAgent(BaseAgent):
         # 1. RAG query to get relevant context
         contexts, context_metadatas = self._query_knowledge(section)
 
-        # 2. Generate markdown content with LLM
+        # 2. Select relevant images FIRST (for accurate quality evaluation)
+        images = self._select_images(section, available_images or [], context_metadatas)
+        logger.info(f"   🖼️  Selected {len(images)} images for quality evaluation")
+
+        # 3. Generate markdown content with LLM (pass image count for quality evaluation)
         markdown_content = self._generate_content(
             section=section,
             curriculum=curriculum,
             contexts=contexts,
+            available_image_count=len(images),  # Pass actual image count
         )
 
-        # 3. Extract code blocks (if any)
+        # 4. Extract code blocks (if any)
         code_blocks = self._extract_code_blocks(markdown_content)
-
-        # 4. Select relevant images (with location-based matching)
-        images = self._select_images(section, available_images or [], context_metadatas)
 
         # 5. Count words
         word_count = len(markdown_content.split())
@@ -185,23 +187,33 @@ class ContentWriterAgent(BaseAgent):
         section: Section,
         curriculum: Curriculum,
         contexts: List[str],
+        available_image_count: int = 0,
     ) -> str:
-        """Generate detailed, comprehensive markdown content using LLM with RAG."""
+        """Generate detailed, comprehensive markdown content using LLM with RAG.
+
+        Args:
+            section: Section to write
+            curriculum: Full curriculum
+            contexts: RAG contexts
+            available_image_count: Number of images selected for this section (for quality evaluation)
+        """
         # Calculate target metrics
         targets = calculate_target_metrics(section.estimated_time, section.difficulty_level)
 
-        # Use more contexts (increase from 3 to 8)
-        context_text = "\n\n---\n\n".join(contexts[:8]) if contexts else "No additional context available."
+        # Use more contexts (increase from 8 to 10 for better content)
+        context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
 
         # Enhanced prompt with VERY strict requirements
         prompt = f"""🚨🚨🚨 CRITICAL MISSION: Write COMPREHENSIVE and DETAILED lecture content 🚨🚨🚨
 
 ⚠️⚠️⚠️ CRITICAL FAILURE CONDITIONS (ANY = AUTO REJECT):
-1. ❌ WORD COUNT < {targets['min_words']:,} words → REJECTED
-2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED
-3. ❌ NO PRACTICE PROBLEMS → REJECTED
+1. ❌ WORD COUNT < {targets['min_words']:,} words → REJECTED AND YOU WILL BE FIRED
+2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED
+3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED
+4. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
 
 ⚠️ You MUST satisfy ALL requirements or your output will be REJECTED.
+⚠️ This is NOT negotiable. Write AT LEAST {targets['min_words']:,} words or FAIL.
 
 **Lecture Information:**
 - Topic: {curriculum.topic}
@@ -218,45 +230,78 @@ class ContentWriterAgent(BaseAgent):
 
 **📏 STRICT CONTENT REQUIREMENTS (MUST MEET):**
 
-1. **Length**: {targets['target_words']:,} words minimum ({targets['min_words']:,} - {targets['max_words']:,} words)
-   - This is NOT optional. The content MUST be this long.
-   - If you write less, the content is REJECTED.
+1. **🚨 LENGTH (MOST CRITICAL): {targets['target_words']:,} words TARGET 🚨**
+   - **MINIMUM**: {targets['min_words']:,} words (ABSOLUTE MINIMUM - DO NOT GO BELOW!)
+   - **TARGET**: {targets['target_words']:,} words (AIM FOR THIS)
+   - **MAXIMUM**: {targets['max_words']:,} words
 
-   **Break down your writing:**
-   - Introduction: ~{int(targets['target_words'] * 0.10)} words
-   - Main Content ({targets['target_subsections']} subsections): ~{int(targets['target_words'] * 0.70)} words
-     * Each subsection: ~{int(targets['target_words'] * 0.70 / max(1, targets['target_subsections']))} words
-   - Summary & Practice: ~{int(targets['target_words'] * 0.20)} words
+   ⚠️ **IF YOUR CONTENT IS LESS THAN {targets['min_words']:,} WORDS, IT WILL BE REJECTED!**
+
+   **📊 MANDATORY Word Count Breakdown (CHECK EACH SECTION):**
+   - Introduction: **{int(targets['target_words'] * 0.10):,} words** (10% - 개요, 중요성, 학습 목표)
+   - Main Content ({targets['target_subsections']} subsections): **{int(targets['target_words'] * 0.70):,} words** (70%)
+     * **Each subsection MUST be ~{int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,} words**
+     * **Write 3-5 paragraphs per subsection**
+     * **Include 2-3 examples per concept**
+     * **Explain WHY and HOW, not just WHAT**
+   - Summary & Practice: **{int(targets['target_words'] * 0.20):,} words** (20% - 요약, 핵심 포인트, 실습)
+
+   **✅ HOW TO VERIFY YOUR WORD COUNT:**
+   - Count your words BEFORE submitting
+   - If below {targets['min_words']:,}, ADD MORE CONTENT
+   - Better to write TOO MUCH than too little
 
 2. **Structure**: {targets['target_subsections']}+ subsections (use ### headers)
    - Introduction (10% of content)
    - Main content in {targets['target_subsections']} detailed subsections (70%)
    - Summary & Practice (20%)
 
-3. **Code Examples**: {targets['target_code_examples']}+ complete, runnable examples
-   - ⚠️ CRITICAL: NO CODE = AUTOMATIC FAIL
-   - Each example: 20-50 lines MINIMUM
-   - Include comments in Korean
-   - Show real-world use cases
+3. **🚨 Code Examples: MINIMUM {targets['target_code_examples']} examples 🚨**
+   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
+   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
+   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
+   - Show complete, runnable, real-world examples
+   - Include setup, execution, and output
    - Both basic AND advanced examples
 
-   **MANDATORY CODE EXAMPLE FORMAT:**
+   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
    ```python
-   # [설명: 무엇을 보여주는 예제인가]
+   # ========================================
+   # 예제 #N: [예제 제목]
+   # ========================================
+   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
+   # 난이도: [쉬움/보통/어려움]
+   # ========================================
 
-   # 코드 (20-50 lines)
-   def example_function():
-       # 상세 주석
-       pass
+   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
+   variable1 = "example"
 
-   # 실행 결과 설명
+   # Step 2: [두 번째 단계 설명]
+   variable2 = process(variable1)
+
+   # Step 3: [세 번째 단계 설명]
+   result = finalize(variable2)
+
+   # ... (continue for 30-80 lines)
+
+   # 예상 출력:
+   # 결과: ...
    ```
 
-4. **Practice Problems**: {targets['target_practice_problems']}+ exercises
-   - Clear problem statement
+   **After EACH code block, add 100-150 words explaining:**
+   - 코드가 무엇을 하는가
+   - 각 단계의 의미
+   - 실무에서 어떻게 활용하는가
+   - 주의할 점
+
+4. **Practice Problems: {targets['target_practice_problems']}+ detailed exercises**
+   - **Each problem: 100-150 words description**
+   - Clear problem statement (what needs to be solved)
+   - Requirements specification (3-5 requirements)
    - Difficulty level indicator (쉬움/보통/어려움)
-   - Hints or guidance
-   - Expected outcome
+   - 2-3 hints or guidance points
+   - Expected outcome and success criteria
+   - Bonus challenges for advanced learners
 
 **🚨 CRITICAL FORMATTING RULES:**
 - **NEVER use h1 (#) headings** - The section already has a title
@@ -266,35 +311,66 @@ class ContentWriterAgent(BaseAgent):
 - **Keep paragraphs short** - Max 4-5 sentences each
 - **Add blank lines** - Between sections for readability
 
-**✍️ HOW TO REACH THE WORD COUNT:**
-1. **Explain EVERY concept in extreme detail**:
-   - 무엇인가? (What is it?) - 2-3 paragraphs
-   - 왜 중요한가? (Why does it matter?) - 2 paragraphs with examples
-   - 어떻게 작동하는가? (How does it work?) - 3-4 paragraphs step-by-step
+**✍️ HOW TO REACH THE WORD COUNT (MANDATORY TECHNIQUES):**
 
-2. **Give 2-3 examples for EACH point**:
-   - Simple example
-   - Real-world example
-   - Edge case example
+🚨 **YOU MUST USE ALL OF THESE TECHNIQUES TO REACH {targets['min_words']:,}+ WORDS:**
 
-3. **Include real-world analogies**:
-   - Compare to everyday situations
-   - Use metaphors to explain complex ideas
+1. **Explain EVERY concept in EXTREME detail (300-500 words per concept)**:
+   - 무엇인가? (What is it?) - 3-4 paragraphs, 150+ words
+     * 정의를 3가지 다른 방식으로 설명
+     * 핵심 특징 5가지 이상 나열
+   - 왜 중요한가? (Why does it matter?) - 3 paragraphs, 100+ words
+     * 실무에서의 필요성
+     * 이것이 없으면 발생하는 문제들
+     * 비즈니스/기술적 가치
+   - 어떻게 작동하는가? (How does it work?) - 4-5 paragraphs, 200+ words
+     * 내부 동작 원리를 단계별로 상세히
+     * 각 단계마다 "왜 이렇게 하는가" 설명
+     * 시각적으로 상상할 수 있도록 묘사
 
-4. **Discuss edge cases and common mistakes**:
-   - What mistakes do beginners make?
-   - How to avoid them?
-   - Warning signs to watch for
+2. **Give 3-4 examples for EACH major point (NOT 1, but 3-4!)**:
+   - 초급 예제 (기본 개념 설명)
+   - 중급 예제 (실무 시나리오)
+   - 고급 예제 (복잡한 활용)
+   - 안티패턴 예제 (이렇게 하면 안 됨)
+   - **각 예제마다 50-100 단어로 설명**
 
-5. **Add historical context or background**:
-   - How did this concept develop?
-   - Who invented it and why?
-   - What problems does it solve?
+3. **Include detailed analogies (50-100 words per analogy)**:
+   - 일상생활 비유 (예: "이것은 마치 ~와 같습니다")
+   - 비유를 구체적으로 확장 (어떤 점이 비슷한가, 어떤 점이 다른가)
+   - 비유를 통해 이해했을 때의 인사이트
 
-6. **Include step-by-step walkthroughs**:
-   - Break complex processes into 5-10 steps
-   - Explain what happens at each step
-   - Show intermediate results
+4. **Discuss edge cases, pitfalls, and best practices (200+ words)**:
+   - 초보자가 저지르는 실수 5가지
+   - 각 실수를 피하는 방법
+   - 실수 시 나타나는 증상
+   - 모범 사례 3-5가지
+   - 각 모범 사례를 사용하는 이유
+
+5. **Add background and context (100-150 words)**:
+   - 역사적 맥락 (이 개념이 왜 생겨났는가)
+   - 어떤 문제를 해결하기 위해 만들어졌는가
+   - 이전 접근법과의 차이점
+   - 현재 산업에서의 위치
+
+6. **Include detailed step-by-step walkthroughs (200-300 words)**:
+   - 복잡한 과정을 8-12 단계로 분해
+   - **각 단계마다 20-30 단어 설명**
+   - 중간 결과물 설명
+   - 각 단계에서 주의할 점
+
+7. **Add comparison sections (150+ words)**:
+   - A vs B 비교 (장단점 각각 3가지씩)
+   - 언제 어떤 것을 사용하는가
+   - 실무 선택 기준
+
+8. **Include troubleshooting guides (100+ words)**:
+   - 자주 발생하는 문제 3-5가지
+   - 각 문제의 원인과 해결법
+   - 디버깅 팁
+
+🚨 **EACH SUBSECTION MUST BE {int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,}+ WORDS!**
+🚨 **Count your words as you write. DO NOT submit short content!**
 
 **💡 CONTENT DEPTH REQUIREMENTS:**
 
@@ -345,15 +421,35 @@ print(f"결과: {{result}}")
 **Knowledge Base Context:**
 {context_text}
 
-**🚨 CRITICAL REQUIREMENTS:**
-- ALL content in KOREAN (한국어)
-- Code comments in Korean
-- MUST exceed {targets['min_words']:,} words
-- MUST include {targets['target_code_examples']}+ code blocks
-- MUST include {targets['target_practice_problems']}+ practice problems
-- MUST have {targets['target_subsections']}+ subsections
+**🚨🚨🚨 FINAL CRITICAL REQUIREMENTS CHECKLIST 🚨🚨🚨**
 
-Write the comprehensive content NOW:"""
+Before you submit, verify EVERY requirement:
+
+✅ **Word Count**: My content has AT LEAST {targets['min_words']:,} words
+   - Introduction: {int(targets['target_words'] * 0.10):,}+ words
+   - Each subsection: {int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,}+ words
+   - Summary: {int(targets['target_words'] * 0.20):,}+ words
+
+✅ **Code Examples**: I included {targets['target_code_examples']}+ code blocks
+   - Each 30-80 lines with detailed Korean comments
+   - Followed by 100-150 word explanation
+
+✅ **Practice Problems**: I included {targets['target_practice_problems']}+ detailed problems
+   - Each 100-150 words with hints and requirements
+
+✅ **Structure**: I have {targets['target_subsections']}+ subsections (### headers)
+
+✅ **Language**: ALL content in KOREAN (한국어)
+
+✅ **Depth**: I explained EVERY concept in extreme detail with examples
+
+🚨 **IF ANY CHECKBOX IS UNCHECKED, YOUR CONTENT WILL BE REJECTED!**
+
+🎯 **TARGET**: Write {targets['target_words']:,} words (MINIMUM {targets['min_words']:,} words)
+🎯 **STRATEGY**: Write LONG paragraphs, MANY examples, DETAILED explanations
+🎯 **QUALITY**: Better too much than too little - aim for {targets['max_words']:,} words!
+
+**NOW WRITE THE COMPREHENSIVE, DETAILED, LONG LECTURE CONTENT:**"""
 
         try:
             response = self.invoke_llm(prompt, phase="content_writing")
@@ -365,17 +461,16 @@ Write the comprehensive content NOW:"""
             elif content.startswith("```"):
                 content = content.split("```")[1].split("```")[0].strip()
 
-            # Validate content quality
+            # Validate content quality (use actual image count from selected images)
             code_blocks = self._extract_code_blocks(content)
-            image_count = self._count_images(content)
             quality = evaluate_content_quality(
                 content=content,
                 targets=targets,
                 code_block_count=len(code_blocks),
-                image_count=image_count,
+                image_count=available_image_count,  # Use actual selected images count
             )
 
-            logger.info(f"  📊 Initial quality score: {quality['overall_score']}/100")
+            logger.info(f"  📊 Initial quality score: {quality['overall_score']}/100 (with {available_image_count} images)")
 
             # CRITICAL: If NO code examples, generate them separately
             if len(code_blocks) == 0 and targets["target_code_examples"] > 0:
@@ -394,13 +489,12 @@ Write the comprehensive content NOW:"""
                 code_blocks = self._extract_code_blocks(content)
                 logger.info(f"  ✅ Added {len(code_blocks)} code examples")
 
-                # Re-evaluate
-                image_count = self._count_images(content)
+                # Re-evaluate (use actual image count)
                 quality = evaluate_content_quality(
                     content=content,
                     targets=targets,
                     code_block_count=len(code_blocks),
-                    image_count=image_count,
+                    image_count=available_image_count,  # Use actual selected images count
                 )
                 logger.info(f"  📊 Quality after adding code: {quality['overall_score']}/100")
 
@@ -430,14 +524,13 @@ Write the comprehensive content NOW:"""
                         if expanded_content != content and len(expanded_content) > len(content):
                             content = expanded_content
 
-                            # Re-evaluate
+                            # Re-evaluate (use actual image count)
                             code_blocks = self._extract_code_blocks(content)
-                            image_count = self._count_images(content)
                             quality = evaluate_content_quality(
                                 content=content,
                                 targets=targets,
                                 code_block_count=len(code_blocks),
-                                image_count=image_count,
+                                image_count=available_image_count,  # Use actual selected images count
                             )
 
                             logger.info(f"  📊 Quality after expansion {iteration + 1}: {quality['overall_score']}/100")
@@ -498,25 +591,30 @@ Write the comprehensive content NOW:"""
 
         shortfall_text = "\n".join(shortfalls)
 
-        context_text = "\n\n---\n\n".join(contexts[:8]) if contexts else ""
+        # Use more contexts for expansion (10 instead of 8)
+        context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else ""
 
         word_gap = targets["target_words"] - previous_quality["word_count"]
 
         prompt = f"""🚨🚨🚨 EMERGENCY: CONTENT TOO SHORT - IMMEDIATE ACTION REQUIRED 🚨🚨🚨
 
-**CRITICAL FAILURE:**
-The content you provided is REJECTED because it's too short.
+**🔴 CRITICAL FAILURE - YOU WILL BE FIRED IF YOU DON'T FIX THIS! 🔴**
 
-**Current Status:**
+The content you provided is REJECTED because it's FAR TOO SHORT!
+
+**Current Status (UNACCEPTABLE):**
 {shortfall_text}
 
-**YOUR MISSION:**
+**YOUR MISSION (DO OR DIE):**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CURRENT LENGTH: {previous_quality['word_count']:,} words ❌
-MINIMUM REQUIRED: {targets['min_words']:,} words
-TARGET: {targets['target_words']:,} words ✅
-YOU MUST ADD: {word_gap:,}+ WORDS NOW
+CURRENT LENGTH: {previous_quality['word_count']:,} words ❌ (TOO SHORT!)
+MINIMUM REQUIRED: {targets['min_words']:,} words ⚠️ (MUST REACH!)
+TARGET: {targets['target_words']:,} words ✅ (AIM FOR THIS!)
+YOU MUST ADD: {word_gap:,}+ WORDS RIGHT NOW!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ **THIS IS YOUR LAST CHANCE TO FIX THE CONTENT!**
+⚠️ **If you fail to add {word_gap:,}+ words, this content will be PERMANENTLY REJECTED!**
 
 **Section**: {section.title} ({section.estimated_time} minutes)
 

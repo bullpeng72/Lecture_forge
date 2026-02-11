@@ -9,6 +9,7 @@ import markdown
 from bs4 import BeautifulSoup
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture, SectionContent
 from lecture_forge.utils import logger
 

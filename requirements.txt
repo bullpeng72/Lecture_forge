@@ -9,7 +9,8 @@ langchain-core>=0.1.0,<0.3.0
 openai>=1.12.0,<2.0.0
 
 # ===== Vector Database =====
-chromadb>=0.4.22,<0.6.0
+# Fixed to 0.4.24 to avoid telemetry issues in 0.5.x
+chromadb==0.4.24
 
 # ===== PDF Processing =====
 pymupdf>=1.23.0,<2.0.0

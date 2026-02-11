@@ -1,4 +1,4 @@
-# LectureForge Pro 🎓
+# LectureForge 🎓
 
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 

@@ -33,6 +33,7 @@ class PlaywrightCrawler:
         delay: float = None,
         timeout: int = None,
         headless: bool = True,
+        wait_state: str = None,
     ):
         """
         Initialize Playwright crawler.
@@ -43,6 +44,7 @@ class PlaywrightCrawler:
             delay: Delay between requests in seconds (default from Config)
             timeout: Page load timeout in milliseconds (default from Config)
             headless: Run browser in headless mode
+            wait_state: Load state to wait for (networkidle, domcontentloaded, load)
         """
         if not PLAYWRIGHT_AVAILABLE:
             raise ImportError(
@@ -54,6 +56,7 @@ class PlaywrightCrawler:
         self.max_pages = max_pages if max_pages is not None else Config.PLAYWRIGHT_MAX_PAGES
         self.delay = delay if delay is not None else Config.PLAYWRIGHT_DELAY
         self.timeout = timeout if timeout is not None else Config.PLAYWRIGHT_TIMEOUT
+        self.wait_state = wait_state if wait_state is not None else Config.PLAYWRIGHT_WAIT_STATE
         self.headless = headless
         self.visited_urls: Set[str] = set()
 
@@ -70,7 +73,7 @@ class PlaywrightCrawler:
         logger.info(f"Starting Playwright crawl for: {keyword}")
 
         all_content = []
-        search_url = f"https://news.hada.io/search?q={keyword}"
+        search_url = f"{Config.DEEP_CRAWLER_BASE_URL}/search?q={keyword}"
 
         with sync_playwright() as p:
             # Launch browser
@@ -88,11 +91,10 @@ class PlaywrightCrawler:
                 try:
                     # Wait for search results or "no results" message
                     page.wait_for_selector("main, .search-results, .topic-list, article", timeout=10000)
+                    # Wait for dynamic content to fully load
+                    page.wait_for_load_state(self.wait_state, timeout=5000)
                 except PlaywrightTimeout:
-                    logger.warning("Timeout waiting for search results")
-
-                # Additional wait for dynamic content
-                time.sleep(2)
+                    logger.warning("Timeout waiting for search results, continuing anyway")
 
                 # Get page content
                 html_content = page.content()
@@ -137,10 +139,9 @@ class PlaywrightCrawler:
                             # Wait for article content
                             try:
                                 article_page.wait_for_selector("article, .topic-content, main", timeout=10000)
+                                article_page.wait_for_load_state(self.wait_state, timeout=3000)
                             except PlaywrightTimeout:
-                                logger.warning(f"Timeout loading article: {link}")
-
-                            time.sleep(1)
+                                logger.warning(f"Timeout loading article: {link}, continuing anyway")
 
                             # Get content
                             article_html = article_page.content()
@@ -210,7 +211,8 @@ class PlaywrightCrawler:
                 full_url = urljoin(base_url, href)
 
                 # Filter out duplicates and external links
-                if "news.hada.io" in full_url and full_url not in links:
+                base_domain = urlparse(Config.DEEP_CRAWLER_BASE_URL).netloc
+                if base_domain in full_url and full_url not in links:
                     links.append(full_url)
 
         return links
@@ -238,8 +240,11 @@ class PlaywrightCrawler:
                 page = context.new_page()
                 page.goto(url, timeout=self.timeout)
 
-                # Wait for content
-                time.sleep(2)
+                # Wait for content to fully load
+                try:
+                    page.wait_for_load_state(self.wait_state, timeout=5000)
+                except PlaywrightTimeout:
+                    logger.warning("Timeout waiting for page load, continuing anyway")
 
                 html_content = page.content()
                 soup = BeautifulSoup(html_content, "html.parser")
@@ -285,7 +290,12 @@ class PlaywrightCrawler:
                     try:
                         link_page = context.new_page()
                         link_page.goto(link, timeout=self.timeout)
-                        time.sleep(1)
+
+                        # Wait for page load
+                        try:
+                            link_page.wait_for_load_state(self.wait_state, timeout=3000)
+                        except PlaywrightTimeout:
+                            logger.warning(f"Timeout waiting for {link}, continuing anyway")
 
                         link_html = link_page.content()
                         link_soup = BeautifulSoup(link_html, "html.parser")

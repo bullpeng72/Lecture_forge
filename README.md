@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/yourusername/lecture-forge)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/yourusername/lecture-forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/yourusername/lecture-forge)
-[![Test Coverage](https://img.shields.io/badge/coverage-45--50%25-brightgreen.svg)](https://github.com/yourusername/lecture-forge)
+[![Test Coverage](https://img.shields.io/badge/coverage-35%2B-brightgreen.svg)](https://github.com/yourusername/lecture-forge)
 
-> 🚀 **v0.2.1 Beta Release** | Bug Fixes & Improvements
+> 🚀 **v0.2.2 Beta Release** | Documentation & Consistency Updates
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 2,896줄 CLI | 53+ 테스트 (45-50% 커버리지) | $0.22/강의
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 3,288줄 CLI | 77+ 테스트 (35%+ 커버리지) | $0.22/강의
 
 ---
 
@@ -42,7 +42,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
 - 🔄 **자동 개선**: 품질 기준 미달 시 최대 3회 자동 수정
-- 🧪 **테스트 커버리지**: 53+ 단위 테스트 (45-50% 커버리지)
+- 🧪 **테스트 커버리지**: 77+ 단위 테스트 (35%+ 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -67,8 +67,8 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - **지수 백오프**: 2초 → 4초 → 10초 대기로 일시적 오류 복구
 
 ### 품질 보증 🧪
-- **53+ 단위 테스트**: 전체 10개 에이전트 테스트 완료
-- **45-50% 커버리지**: pytest 기반 자동화 테스트
+- **77+ 단위 테스트**: 전체 10개 에이전트 테스트 완료
+- **35%+ 커버리지**: pytest 기반 자동화 테스트
 - **타입 힌트 75%**: 40% → 75% 향상
 
 ### 설정 시스템 개선 🔧
@@ -80,7 +80,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 통계 비교
 | 메트릭 | v0.1.0 | v0.2.0 | 개선 |
 |--------|--------|--------|------|
-| 테스트 커버리지 | 15% | 45-50% | +200% |
+| 테스트 커버리지 | 15% | 35%+ | +130% |
 | 타입 힌트 | 40% | 75% | +87% |
 | 테스트된 에이전트 | 3/10 | 10/10 | +233% |
 | RAG 성능 | Baseline | +60% | 캐싱 |
@@ -765,6 +765,13 @@ lecture-forge create
 
 ## 📝 변경 이력
 
+### v0.2.2 (2026-02-11) - Documentation & Consistency Updates 📝
+
+**문서화**
+- 📝 버전 정보 통일 (setup.py, pyproject.toml, __version__.py, CLI, 문서)
+- 📖 CLAUDE.md, README.md, INPUT_LIMITS_ANALYSIS.md 업데이트
+- ✨ 코드와 문서 일치성 개선
+
 ### v0.2.1 (2026-02-10) - Bug Fixes & Improvements 🐛
 
 **버그 수정**
@@ -789,7 +796,7 @@ lecture-forge create
 - 🔄 자동 API 재시도 로직 (지수 백오프)
 
 **품질 개선**
-- 🧪 53+ 단위 테스트 작성 (45-50% 커버리지)
+- 🧪 77+ 단위 테스트 작성 (35%+ 커버리지)
 - 🔧 타입 힌트 75% 커버리지 (40% → 75%)
 - 🐛 Config 검증 런타임 이동
 - 🐛 Bare except 안티패턴 수정

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-10)
-> **버전**: 0.2.1 (Beta Release)
+> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-11)
+> **버전**: 0.2.2 (Beta Release)
 > **진행률**: Phase 1-8 완료 ✅ | 품질 개선 완료 ✨
 
 ## 📚 프로젝트 개요
@@ -120,14 +120,14 @@ lecture-forge/
 ├── requirements.txt             ✅ 의존성
 │
 ├── src/lecture_forge/
-│   ├── agents/                  ✅ 10개 에이전트 (488KB)
+│   ├── agents/                  ✅ 10개 에이전트 (496KB)
 │   ├── tools/                   ✅ 9개 도구 (image_editor 포함)
 │   ├── knowledge/               ✅ Vector DB & RAG (캐싱)
 │   ├── quality/                 ✅ 품질 평가 시스템
 │   ├── models/                  ✅ 데이터 모델
 │   ├── utils/                   ✅ 유틸리티
 │   ├── templates/               ✅ HTML 템플릿
-│   ├── cli.py                   ✅ CLI (2,896줄, 108KB)
+│   ├── cli.py                   ✅ CLI (3,288줄, 124KB)
 │   └── config.py                ✅ 설정 관리
 │
 ├── data/                        📁 런타임 생성 (gitignored)
@@ -308,14 +308,14 @@ OUTPUT_DIR=./outputs
 
 ### ✅ 완료된 작업 (Production Ready+!)
 
-- ✅ **전체 Agent 시스템** (10개 에이전트, 488KB)
-- ✅ **완전한 CLI** (2,896줄, 5개 명령어, 12개 옵션)
+- ✅ **전체 Agent 시스템** (10개 에이전트, 496KB)
+- ✅ **완전한 CLI** (3,288줄, 6개 명령어, 12개 옵션)
 - ✅ **Knowledge Base & RAG** (ChromaDB, 임베딩, 검색, 캐싱)
 - ✅ **Tools** (9개: PDF, 웹, 이미지, 검색, 이미지 편집)
 - ✅ **이미지 편집** (대화형 UI, Vector DB 기반 대안 검색)
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
 - ✅ **Templates** (HTML, CSS, JS)
-- ✅ **자동화 테스트** (45-50% 커버리지, 10/10 에이전트 테스트)
+- ✅ **자동화 테스트** (35%+ 커버리지, 10/10 에이전트 테스트)
 - ✅ **Type Safety** (75% type hints, mypy 설정)
 - ✅ **성능 최적화** (RAG 캐싱, API 재시도)
 
@@ -368,7 +368,7 @@ OUTPUT_DIR=./outputs
 - **RAG 쿼리 캐싱**: 60% 성능 향상, 캐시 히트율 추적
 - **API 재시도 로직**: 네트워크 오류 자동 복구 (최대 3회, exponential backoff)
 - **Type Safety 개선**: 75% type hints 적용, mypy 지원
-- **전체 에이전트 테스트**: 10/10 에이전트 자동화 테스트 (45-50% 커버리지)
+- **전체 에이전트 테스트**: 10/10 에이전트 자동화 테스트 (35%+ 커버리지)
 - **Config 개선**: CLI entry point validation (--help가 .env 없이 작동)
 
 ### 계획 중인 기능
@@ -406,7 +406,7 @@ A: **네, 있습니다!** 45-50% 자동화 테스트 커버리지를 제공합�
 
 ### 우선순위 1: 테스트 확장 ✅ (기본 완료, 확장 가능)
 ```bash
-# 현재 상태: 45-50% 커버리지
+# 현재 상태: 35%+ 커버리지
 pytest tests/ -v --cov=lecture_forge
 
 # 목표: 80%+ 커버리지
@@ -451,14 +451,14 @@ twine upload dist/*
 
 ## 📊 프로젝트 통계
 
-- 📊 **총 코드**: ~600KB (에이전트 488KB + CLI 108KB + 기타)
+- 📊 **총 코드**: ~1.1MB (에이전트 496KB + CLI 124KB + 기타)
 - 🤖 **에이전트**: 10개 (모두 구현 및 테스트)
 - 🛠️ **Tools**: 9개 (모두 구현, image_editor 포함)
-- 💻 **CLI**: 2,896줄 (5개 명령어: create, chat, edit-images, improve, cleanup)
+- 💻 **CLI**: 3,288줄 (6개 명령어: init, create, chat, edit-images, improve, cleanup)
 - 📦 **패키지**: pip installable
 - 🎨 **Templates**: HTML, CSS, JS (13.7KB)
 - 💰 **비용**: ~$0.22 per 180분 강의
-- 🧪 **테스트**: 53+ 테스트, 45-50% 커버리지
+- 🧪 **테스트**: 77+ 테스트, 35%+ 커버리지
 - 📝 **Type Hints**: 75% 적용
 
 ---
@@ -482,11 +482,14 @@ lecture-forge --help
 **현재 상태**: 🌟 **Production Ready+ (Enhanced Quality)** 🌟
 
 **품질 개선 완료** (2026-02-09):
-- ✅ 45-50% 테스트 커버리지
+- ✅ 35%+ 테스트 커버리지 (77+ 테스트)
 - ✅ RAG 성능 60% 향상 (캐싱)
 - ✅ API 안정성 강화 (재시도 로직)
 - ✅ Type safety 75% 적용
 - ✅ Config validation 개선
+
+**v0.2.2 개선사항** (2026-02-11):
+- 📝 문서 업데이트: 버전 정보 및 코드 일치성 개선
 
 **v0.2.1 개선사항** (2026-02-10):
 - 🐛 Visual score 버그 수정 (이미지 카운팅)

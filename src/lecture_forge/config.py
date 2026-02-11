@@ -131,22 +131,63 @@ class Config:
     IMAGE_MIN_HEIGHT: int = int(os.getenv("IMAGE_MIN_HEIGHT", "200"))
 
     # Quality thresholds (0.0 ~ 1.0)
-    # Extraction phase: Conservative filtering (reject obvious junk only)
-    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.25"))
-    # Selection phase: Strict filtering (select best images for lecture)
-    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.30"))
+    # Extraction phase: Filter for meaningful images (diagrams, charts, text-rich images)
+    # Enhanced algorithm: size(15%) + aspect(15%) + compression(20%) + content(30%) + meaningful(20%)
+    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.35"))
+    # Selection phase: Strict filtering (select best images for lecture inclusion)
+    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.40"))
 
     # ===== Vector DB =====
     VECTOR_DB_PATH: Path = Path(os.getenv("VECTOR_DB_PATH", str(DATA_DIR / "vector_db")))
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "200"))
 
+    # ===== RAG Cache =====
+    RAG_CACHE_PATH: Path = Path(os.getenv("RAG_CACHE_PATH", str(DATA_DIR / "rag_cache")))
+    RAG_CACHE_TTL: int = int(os.getenv("RAG_CACHE_TTL", "86400"))  # 24 hours in seconds
+    RAG_CACHE_MAX_SIZE: int = int(os.getenv("RAG_CACHE_MAX_SIZE", "1000"))  # Max number of cached queries
+
     # ===== Quality Assurance =====
     QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
+    QUALITY_THRESHOLD_SECTION: int = int(os.getenv("QUALITY_THRESHOLD_SECTION", "70"))  # Relaxed for section-level
     MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
 
     # Diagram quality threshold (0-100)
     DIAGRAM_QUALITY_THRESHOLD: int = int(os.getenv("DIAGRAM_QUALITY_THRESHOLD", "70"))
+
+    # ===== Content Metrics =====
+    # Lecture speed (words per minute)
+    # Reading speed: 200-250 wpm, but lectures are slower due to:
+    #   - Pauses for comprehension
+    #   - Code demonstrations
+    #   - Interactive elements
+    LECTURE_WORDS_PER_MINUTE: int = int(os.getenv("LECTURE_WORDS_PER_MINUTE", "120"))
+
+    # Difficulty multipliers for word count
+    DIFFICULTY_MULTIPLIER_BEGINNER: float = float(os.getenv("DIFFICULTY_MULTIPLIER_BEGINNER", "1.3"))
+    DIFFICULTY_MULTIPLIER_INTERMEDIATE: float = float(os.getenv("DIFFICULTY_MULTIPLIER_INTERMEDIATE", "1.0"))
+    DIFFICULTY_MULTIPLIER_ADVANCED: float = float(os.getenv("DIFFICULTY_MULTIPLIER_ADVANCED", "1.1"))
+
+    # Code examples per time (minutes per example)
+    CODE_EXAMPLES_PER_TIME_BEGINNER: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_BEGINNER", "20"))
+    CODE_EXAMPLES_PER_TIME_INTERMEDIATE: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_INTERMEDIATE", "15"))
+    CODE_EXAMPLES_PER_TIME_ADVANCED: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_ADVANCED", "12"))
+
+    # Practice problems per time (minutes per problem)
+    PRACTICE_PER_TIME_BEGINNER: int = int(os.getenv("PRACTICE_PER_TIME_BEGINNER", "25"))
+    PRACTICE_PER_TIME_INTERMEDIATE: int = int(os.getenv("PRACTICE_PER_TIME_INTERMEDIATE", "20"))
+    PRACTICE_PER_TIME_ADVANCED: int = int(os.getenv("PRACTICE_PER_TIME_ADVANCED", "30"))
+
+    # Subsections and visuals
+    SUBSECTION_MINUTES: int = int(os.getenv("SUBSECTION_MINUTES", "12"))  # Minutes per subsection
+    VISUAL_PER_MINUTES: int = int(os.getenv("VISUAL_PER_MINUTES", "10"))  # Minutes per visual
+
+    # Word count tolerance
+    MIN_WORDS_RATIO: float = float(os.getenv("MIN_WORDS_RATIO", "0.75"))  # Allow 25% under
+    MAX_WORDS_RATIO: float = float(os.getenv("MAX_WORDS_RATIO", "1.3"))  # Allow 30% over
+
+    # ===== Slide Generation =====
+    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "4"))  # Maximum content blocks per slide
 
     # ===== Web Scraping =====
     WEB_SCRAPER_TIMEOUT: int = int(os.getenv("WEB_SCRAPER_TIMEOUT", "30"))
@@ -163,6 +204,7 @@ class Config:
     PLAYWRIGHT_MAX_PAGES: int = int(os.getenv("PLAYWRIGHT_MAX_PAGES", "10"))
     PLAYWRIGHT_DELAY: float = float(os.getenv("PLAYWRIGHT_DELAY", "2.0"))
     PLAYWRIGHT_TIMEOUT: int = int(os.getenv("PLAYWRIGHT_TIMEOUT", "30000"))
+    PLAYWRIGHT_WAIT_STATE: str = os.getenv("PLAYWRIGHT_WAIT_STATE", "networkidle")  # networkidle, domcontentloaded, load
 
     # ===== Logging =====
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

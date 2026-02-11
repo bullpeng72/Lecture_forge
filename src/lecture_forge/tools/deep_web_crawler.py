@@ -45,7 +45,7 @@ class DeepWebCrawler:
 
     def crawl_hada_search(self, keyword: str) -> List[Dict]:
         """
-        Crawl news.hada.io search results and linked articles.
+        Crawl search results and linked articles from configured base URL.
 
         Args:
             keyword: Search keyword
@@ -56,7 +56,7 @@ class DeepWebCrawler:
         logger.info(f"Starting deep crawl for keyword: {keyword}")
 
         all_content = []
-        search_url = f"https://news.hada.io/search?q={keyword}"
+        search_url = f"{Config.DEEP_CRAWLER_BASE_URL}/search?q={keyword}"
 
         # Step 1: Crawl search results page
         logger.info(f"Crawling search page: {search_url}")
@@ -222,8 +222,9 @@ class DeepWebCrawler:
             if "/topic" in href and ("topic/" in href or "topic?" in href):
                 full_url = urljoin(base_url, href)
 
-                # Filter only Hada.io article URLs
-                if "news.hada.io" in full_url and full_url not in links:
+                # Filter only article URLs from configured base domain
+                base_domain = urlparse(Config.DEEP_CRAWLER_BASE_URL).netloc
+                if base_domain in full_url and full_url not in links:
                     links.append(full_url)
 
         return links

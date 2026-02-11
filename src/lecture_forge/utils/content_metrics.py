@@ -6,6 +6,8 @@ Calculates target metrics for lecture content based on duration and difficulty.
 
 from typing import Dict
 
+from lecture_forge.config import Config
+
 
 def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict[str, int]:
     """
@@ -18,67 +20,50 @@ def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict
     Returns:
         Dictionary of target metrics
     """
-    # Base calculation: words per minute
-    # For lecture content, account for:
-    # - Speaking time (~60% of total)
-    # - Example demonstrations (~20%)
-    # - Student questions/interaction (~20%)
-    # Target: 120 words per minute (realistic for actual lecture delivery)
-    # Note: Reading speed is 200-250 wpm, but lectures are slower due to:
-    #   - Pauses for comprehension
-    #   - Code demonstrations
-    #   - Interactive elements
+    # Base calculation: words per minute (from Config)
+    base_words_per_minute = Config.LECTURE_WORDS_PER_MINUTE
 
-    base_words_per_minute = 120  # Realistic lecture speed (was 250 - too high!)
-
-    # Difficulty multipliers
-    # Beginner needs more explanation = more words
-    # Advanced can move faster but needs deeper content
+    # Difficulty multipliers (from Config)
     difficulty_multipliers = {
-        "beginner": 1.3,  # More verbose explanations
-        "intermediate": 1.0,  # Balanced
-        "advanced": 1.1,  # Dense content with nuance
+        "beginner": Config.DIFFICULTY_MULTIPLIER_BEGINNER,
+        "intermediate": Config.DIFFICULTY_MULTIPLIER_INTERMEDIATE,
+        "advanced": Config.DIFFICULTY_MULTIPLIER_ADVANCED,
     }
 
     multiplier = difficulty_multipliers.get(difficulty_level.lower(), 1.0)
 
     target_words = int(estimated_time * base_words_per_minute * multiplier)
 
-    # Code examples calculation
-    # Beginner: more, simpler examples
-    # Advanced: fewer but more complex examples
+    # Code examples calculation (from Config)
     code_examples_per_time = {
-        "beginner": 20,  # 1 example per 20 minutes
-        "intermediate": 15,  # 1 per 15 minutes
-        "advanced": 12,  # 1 per 12 minutes
+        "beginner": Config.CODE_EXAMPLES_PER_TIME_BEGINNER,
+        "intermediate": Config.CODE_EXAMPLES_PER_TIME_INTERMEDIATE,
+        "advanced": Config.CODE_EXAMPLES_PER_TIME_ADVANCED,
     }
 
-    time_per_example = code_examples_per_time.get(difficulty_level.lower(), 15)
+    time_per_example = code_examples_per_time.get(difficulty_level.lower(), Config.CODE_EXAMPLES_PER_TIME_INTERMEDIATE)
     target_code_examples = max(1, estimated_time // time_per_example)
 
-    # Practice problems
-    # Should have enough for assessment but not overwhelming
+    # Practice problems (from Config)
     practice_per_time = {
-        "beginner": 25,  # 1 per 25 minutes
-        "intermediate": 20,  # 1 per 20 minutes
-        "advanced": 30,  # 1 per 30 minutes (more complex problems)
+        "beginner": Config.PRACTICE_PER_TIME_BEGINNER,
+        "intermediate": Config.PRACTICE_PER_TIME_INTERMEDIATE,
+        "advanced": Config.PRACTICE_PER_TIME_ADVANCED,
     }
 
-    time_per_practice = practice_per_time.get(difficulty_level.lower(), 20)
+    time_per_practice = practice_per_time.get(difficulty_level.lower(), Config.PRACTICE_PER_TIME_INTERMEDIATE)
     target_practice_problems = max(1, estimated_time // time_per_practice)
 
-    # Subsections: logical breaks in content
-    # Aim for 10-15 minutes per subsection
-    target_subsections = max(3, estimated_time // 12)
+    # Subsections: logical breaks in content (from Config)
+    target_subsections = max(3, estimated_time // Config.SUBSECTION_MINUTES)
 
-    # Visual elements (images/diagrams)
-    # 1 per 10 minutes is a good rule of thumb
-    target_visuals = max(2, estimated_time // 10)
+    # Visual elements (images/diagrams) (from Config)
+    target_visuals = max(2, estimated_time // Config.VISUAL_PER_MINUTES)
 
     return {
         "target_words": target_words,
-        "min_words": int(target_words * 0.75),  # Allow 25% under
-        "max_words": int(target_words * 1.3),  # Allow 30% over
+        "min_words": int(target_words * Config.MIN_WORDS_RATIO),
+        "max_words": int(target_words * Config.MAX_WORDS_RATIO),
         "target_code_examples": target_code_examples,
         "min_code_examples": max(1, target_code_examples - 1),
         "target_practice_problems": target_practice_problems,
@@ -162,7 +147,7 @@ def evaluate_content_quality(
 
     return {
         "overall_score": round(overall_score, 1),
-        "meets_requirements": overall_score >= 70,  # 70% threshold (relaxed for section-level evaluation)
+        "meets_requirements": overall_score >= Config.QUALITY_THRESHOLD_SECTION,
         "word_count": word_count,
         "word_score": round(word_score, 1),
         "code_block_count": code_block_count,

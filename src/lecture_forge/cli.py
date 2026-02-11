@@ -48,6 +48,99 @@ from lecture_forge.agents.content_writer import ContentWriterAgent
 from lecture_forge.agents.curriculum_designer import CurriculumDesignerAgent
 from lecture_forge.agents.diagram_generator import DiagramGeneratorAgent
 from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
+
+
+def prompt_masked_input(console: Console, prompt_text: str, mask_char: str = "*", allow_empty: bool = False) -> str:
+    """
+    Prompt for password input with masked display (shows *** while typing).
+
+    Args:
+        console: Rich console instance
+        prompt_text: Prompt message to display
+        mask_char: Character to use for masking (default: *)
+        allow_empty: Whether to allow empty input (default: False)
+
+    Returns:
+        User input as string
+    """
+    import sys
+
+    console.print(prompt_text, end=" ")
+    # Flush to ensure prompt is displayed
+    sys.stdout.flush()
+
+    # Check platform
+    if sys.platform == "win32":
+        # Windows implementation using msvcrt
+        import msvcrt
+
+        chars = []
+        while True:
+            char = msvcrt.getwch()
+
+            if char in ("\r", "\n"):  # Enter
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                break
+            elif char == "\b":  # Backspace
+                if chars:
+                    chars.pop()
+                    # Clear the last asterisk: move back, write space, move back again
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+            elif char == "\x03":  # Ctrl+C
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                raise KeyboardInterrupt
+            else:
+                chars.append(char)
+                sys.stdout.write(mask_char)
+                sys.stdout.flush()
+
+        result = "".join(chars)
+        if not allow_empty and not result:
+            console.print("   [dim](Empty input - skipped)[/dim]")
+        return result
+    else:
+        # Unix/Linux/Mac implementation using termios
+        import tty
+        import termios
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+
+        try:
+            tty.setraw(fd)
+            chars = []
+
+            while True:
+                char = sys.stdin.read(1)
+
+                if char in ("\r", "\n"):  # Enter
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
+                    break
+                elif char in ("\x7f", "\x08"):  # Backspace/Delete
+                    if chars:
+                        chars.pop()
+                        # Clear the last asterisk: move back, write space, move back again
+                        sys.stdout.write("\b \b")
+                        sys.stdout.flush()
+                elif char == "\x03":  # Ctrl+C
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
+                    raise KeyboardInterrupt
+                elif char >= " ":  # Printable character
+                    chars.append(char)
+                    sys.stdout.write(mask_char)
+                    sys.stdout.flush()
+
+            result = "".join(chars)
+            if not allow_empty and not result:
+                console.print("   [dim](Empty input - skipped)[/dim]")
+            return result
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 from lecture_forge.agents.image_collector import ImageCollectorAgent
 from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture
@@ -224,13 +317,13 @@ def print_basic_help() -> None:
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    📚 LectureForge Pro v0.2.0 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.2.2 - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
     Multi-agent pipeline system with RAG-based knowledge management.
 
     \b
-    📊 Stats: 10 Agents | 9 Tools | 53+ Tests | ~$0.22 per 180min lecture
+    📊 Stats: 10 Agents | 9 Tools | 77+ Tests | ~$0.22 per 180min lecture
 
     \b
     🎉 FIRST TIME HERE?
@@ -1050,17 +1143,17 @@ def init(path: Optional[str]) -> None:
     console.print("   • Used for: LLM generation, embeddings")
     console.print("   • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)\n")
 
-    openai_key = Prompt.ask(
-        "   [cyan]Enter your OpenAI API Key[/cyan] (starts with sk-)", password=True
+    openai_key = prompt_masked_input(
+        console, "   [cyan]Enter your OpenAI API Key[/cyan] (starts with sk-):"
     )
 
     while not openai_key or not openai_key.startswith(("sk-", "sk-proj-")):
         console.print(
             "   [red]Invalid format. Should start with 'sk-' or 'sk-proj-'[/red]"
         )
-        openai_key = Prompt.ask("   [cyan]Enter your OpenAI API Key[/cyan]", password=True)
+        openai_key = prompt_masked_input(console, "   [cyan]Enter your OpenAI API Key[/cyan]:")
 
-    console.print("   [green]✓ OpenAI key saved[/green]\n")
+    console.print(f"   [green]✓ OpenAI key saved ({len(openai_key)} characters)[/green]\n")
 
     # Serper
     console.print("[bold]2. Serper API Key[/bold]")
@@ -1068,13 +1161,13 @@ def init(path: Optional[str]) -> None:
     console.print("   • Used for: Web search")
     console.print("   • Free tier: 2,500 searches/month\n")
 
-    serper_key = Prompt.ask("   [cyan]Enter your Serper API Key[/cyan]", password=True)
+    serper_key = prompt_masked_input(console, "   [cyan]Enter your Serper API Key[/cyan]:")
 
     while not serper_key or len(serper_key) < 10:
         console.print("   [red]Invalid key. Please check your API key.[/red]")
-        serper_key = Prompt.ask("   [cyan]Enter your Serper API Key[/cyan]", password=True)
+        serper_key = prompt_masked_input(console, "   [cyan]Enter your Serper API Key[/cyan]:")
 
-    console.print("   [green]✓ Serper key saved[/green]\n")
+    console.print(f"   [green]✓ Serper key saved ({len(serper_key)} characters)[/green]\n")
 
     # Optional keys
     console.print("[bold cyan]📸 Optional: Image Search APIs[/bold cyan]")
@@ -1085,15 +1178,14 @@ def init(path: Optional[str]) -> None:
     console.print("   • Get from: [link]https://pexels.com/api[/link]")
     console.print("   • Free: Unlimited with rate limits\n")
 
-    pexels_key = Prompt.ask(
-        "   [cyan]Pexels API Key[/cyan] [dim](or press Enter to skip)[/dim]",
-        default="",
-        show_default=False,
-        password=True,
+    pexels_key = prompt_masked_input(
+        console,
+        "   [cyan]Pexels API Key[/cyan] [dim](or press Enter to skip)[/dim]:",
+        allow_empty=True,
     )
 
     if pexels_key:
-        console.print("   [green]✓ Pexels key saved[/green]\n")
+        console.print(f"   [green]✓ Pexels key saved ({len(pexels_key)} characters)[/green]\n")
     else:
         console.print("   [dim]⊘ Skipped[/dim]\n")
 
@@ -1102,69 +1194,78 @@ def init(path: Optional[str]) -> None:
     console.print("   • Get from: [link]https://unsplash.com/developers[/link]")
     console.print("   • Free tier: 50 requests/hour\n")
 
-    unsplash_key = Prompt.ask(
-        "   [cyan]Unsplash Access Key[/cyan] [dim](or press Enter to skip)[/dim]",
-        default="",
-        show_default=False,
-        password=True,
+    unsplash_key = prompt_masked_input(
+        console,
+        "   [cyan]Unsplash Access Key[/cyan] [dim](or press Enter to skip)[/dim]:",
+        allow_empty=True,
     )
 
     if unsplash_key:
-        console.print("   [green]✓ Unsplash key saved[/green]\n")
+        console.print(f"   [green]✓ Unsplash key saved ({len(unsplash_key)} characters)[/green]\n")
     else:
         console.print("   [dim]⊘ Skipped[/dim]\n")
 
-    # Create .env content
-    env_content = f"""# LectureForge Configuration
+    # Load .env.example template from package
+    try:
+        import importlib.resources as pkg_resources
+
+        try:
+            # Python 3.9+
+            template_text = pkg_resources.files("lecture_forge").joinpath(".env.example").read_text(encoding="utf-8")
+        except AttributeError:
+            # Python 3.7-3.8 fallback
+            with pkg_resources.path("lecture_forge", ".env.example") as template_path:
+                template_text = template_path.read_text(encoding="utf-8")
+    except Exception as e:
+        # Fallback: if template not found, use minimal hardcoded version
+        console.print(f"[yellow]⚠️  Template not found, using minimal config[/yellow]")
+        template_text = f"""# LectureForge Configuration
+# Generated by: lecture-forge init
+# Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+# ===== Required API Keys =====
+OPENAI_API_KEY=your_key_here
+SERPER_API_KEY=your_key_here
+
+# ===== Optional Image Search APIs =====
+UNSPLASH_ACCESS_KEY=
+PEXELS_API_KEY=
+
+# For more settings, see: https://github.com/bullpeng72/Lecture_forge
+"""
+
+    # Replace placeholder values with user input
+    env_content = template_text.replace(
+        "OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        f"OPENAI_API_KEY={openai_key}"
+    ).replace(
+        "SERPER_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        f"SERPER_API_KEY={serper_key}"
+    )
+
+    # Replace optional keys
+    if unsplash_key:
+        env_content = env_content.replace(
+            "UNSPLASH_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            f"UNSPLASH_ACCESS_KEY={unsplash_key}"
+        )
+    # If user skipped, keep the example value (they can edit later)
+
+    if pexels_key:
+        env_content = env_content.replace(
+            "PEXELS_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            f"PEXELS_API_KEY={pexels_key}"
+        )
+    # If user skipped, keep the example value (they can edit later)
+
+    # Add generation metadata at the top
+    metadata = f"""# LectureForge Configuration
 # Generated by: lecture-forge init
 # Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 # Platform: {sys.platform}
 
-# ===== Required API Keys =====
-OPENAI_API_KEY={openai_key}
-SERPER_API_KEY={serper_key}
-
-# ===== Optional Image Search APIs =====
 """
-
-    if pexels_key:
-        env_content += f"PEXELS_API_KEY={pexels_key}\n"
-    else:
-        env_content += "# PEXELS_API_KEY=\n"
-
-    if unsplash_key:
-        env_content += f"UNSPLASH_ACCESS_KEY={unsplash_key}\n"
-    else:
-        env_content += "# UNSPLASH_ACCESS_KEY=\n"
-
-    env_content += """
-# ===== LLM Settings =====
-DEFAULT_MODEL=gpt-4o-mini
-VISION_MODEL=gpt-4o
-EMBEDDING_MODEL=text-embedding-3-small
-TEMPERATURE=0.7
-
-# ===== Quality Settings =====
-QUALITY_THRESHOLD=80
-MAX_ITERATIONS=3
-DIAGRAM_QUALITY_THRESHOLD=70
-
-# ===== Search Settings =====
-SEARCH_NUM_RESULTS=10
-SEARCH_TIMEOUT=30
-
-# ===== Image Settings =====
-MAX_IMAGES_PER_SEARCH=10
-IMAGE_SEARCH_PER_PAGE=10
-IMAGE_FORMAT=webp
-IMAGE_MAX_WIDTH=1200
-
-# ===== Other Settings =====
-LOG_LEVEL=INFO
-
-# For more settings, see: .env.example in the package source
-# Or visit: https://github.com/bullpeng72/Lecture_forge
-"""
+    env_content = metadata + env_content
 
     # Write .env file
     try:
@@ -2030,7 +2131,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                 "urls": inputs.get("urls", []),
                 "image_keywords": inputs.get("image_keywords", []),
             },
-            max_images_per_keyword=3,
+            # max_images_per_keyword: uses Config.MAX_IMAGES_PER_SEARCH by default
             auto_describe_images=inputs.get("auto_describe_images", True),
         )
         progress.update(task2, completed=True)
@@ -2109,7 +2210,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
 
         # Phase 5: Quality Assurance (optional but enabled by default)
         quality_threshold = {"lenient": 70, "balanced": 80, "strict": 90}.get(inputs.get("quality_level", "balanced"), 80)
-        max_iterations = 3
+        max_iterations = Config.MAX_ITERATIONS
 
         # Import quality agents
         from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
@@ -2457,7 +2558,7 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         # Content slides - group content into logical slides
         current_slide_content = []
         slide_item_count = 0
-        max_items_per_slide = 4  # Maximum content blocks per slide (increased from 3 to reduce fragmentation)
+        max_items_per_slide = Config.MAX_ITEMS_PER_SLIDE  # From config (default: 4)
 
         # Slide composition strategy:
         # - h3 (subsection): Always starts new slide

@@ -149,14 +149,35 @@ class UnsplashSearchTool:
                                 logger.debug(f"Failed to trigger Unsplash download endpoint: {e}")
 
                             # Download actual image
-                            img_response = requests.get(image_url, timeout=30)
+                            img_response = requests.get(image_url, timeout=Config.IMAGE_SEARCH_TIMEOUT)
                             img_response.raise_for_status()
 
                             image_bytes = img_response.content
                             image_hash = hashlib.md5(image_bytes).hexdigest()
 
-                            filename = f"unsplash_{image_id}_{image_hash[:8]}.jpg"
+                            # Process image with PIL to apply format and max width
+                            from PIL import Image
+                            import io
+                            pil_image = Image.open(io.BytesIO(image_bytes))
+                            width, height = pil_image.size
+
+                            # Apply IMAGE_MAX_WIDTH if configured
+                            if width > Config.IMAGE_MAX_WIDTH:
+                                aspect_ratio = height / width
+                                new_width = Config.IMAGE_MAX_WIDTH
+                                new_height = int(new_width * aspect_ratio)
+                                pil_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                                width, height = pil_image.size
+
+                            # Use configured image format
+                            image_format = Config.IMAGE_FORMAT
+                            filename = f"unsplash_{image_id}_{image_hash[:8]}.{image_format}"
                             image_path = session_dir / filename
+
+                            # Save with configured format
+                            output_buffer = io.BytesIO()
+                            pil_image.save(output_buffer, format=image_format.upper())
+                            image_bytes = output_buffer.getvalue()
 
                             with open(image_path, "wb") as f:
                                 f.write(image_bytes)
@@ -165,6 +186,8 @@ class UnsplashSearchTool:
                             image_metadata["filename"] = filename
                             image_metadata["size_bytes"] = len(image_bytes)
                             image_metadata["hash"] = image_hash
+                            image_metadata["width"] = width  # Update with actual saved dimensions
+                            image_metadata["height"] = height
 
                         images.append(image_metadata)
 
@@ -320,14 +343,35 @@ class PexelsSearchTool:
 
                         # Download image if requested
                         if download:
-                            img_response = requests.get(image_url, timeout=30)
+                            img_response = requests.get(image_url, timeout=Config.IMAGE_SEARCH_TIMEOUT)
                             img_response.raise_for_status()
 
                             image_bytes = img_response.content
                             image_hash = hashlib.md5(image_bytes).hexdigest()
 
-                            filename = f"pexels_{image_id}_{image_hash[:8]}.jpg"
+                            # Process image with PIL to apply format and max width
+                            from PIL import Image
+                            import io
+                            pil_image = Image.open(io.BytesIO(image_bytes))
+                            img_width, img_height = pil_image.size
+
+                            # Apply IMAGE_MAX_WIDTH if configured
+                            if img_width > Config.IMAGE_MAX_WIDTH:
+                                aspect_ratio = img_height / img_width
+                                new_width = Config.IMAGE_MAX_WIDTH
+                                new_height = int(new_width * aspect_ratio)
+                                pil_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                                img_width, img_height = pil_image.size
+
+                            # Use configured image format
+                            image_format = Config.IMAGE_FORMAT
+                            filename = f"pexels_{image_id}_{image_hash[:8]}.{image_format}"
                             image_path = session_dir / filename
+
+                            # Save with configured format
+                            output_buffer = io.BytesIO()
+                            pil_image.save(output_buffer, format=image_format.upper())
+                            image_bytes = output_buffer.getvalue()
 
                             with open(image_path, "wb") as f:
                                 f.write(image_bytes)
@@ -336,6 +380,8 @@ class PexelsSearchTool:
                             image_metadata["filename"] = filename
                             image_metadata["size_bytes"] = len(image_bytes)
                             image_metadata["hash"] = image_hash
+                            image_metadata["width"] = img_width  # Update with actual saved dimensions
+                            image_metadata["height"] = img_height
 
                         images.append(image_metadata)
 

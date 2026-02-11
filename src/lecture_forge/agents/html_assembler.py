@@ -47,7 +47,7 @@ class HTMLAssemblerAgent(BaseAgent):
         if not output_path:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{lecture.topic.replace(' ', '_')}_{timestamp}.html"
-            output_dir = Path("outputs")
+            output_dir = Config.OUTPUT_DIR  # Use configured output directory
             output_dir.mkdir(parents=True, exist_ok=True)
             output_path = str(output_dir / filename)
 

@@ -23,11 +23,17 @@ class PDFImageDescriber:
         Initialize PDF Image Describer.
 
         Args:
-            model: LLM model to use (default: gpt-4o-mini for cost efficiency)
+            model: LLM model to use (default: Config.DEFAULT_MODEL)
         """
         from openai import OpenAI
 
-        self.model = model or "gpt-4o-mini"
+        if not Config.OPENAI_API_KEY:
+            raise ValueError(
+                "OPENAI_API_KEY not configured. "
+                "Set it in .env or run 'lecture-forge init'."
+            )
+
+        self.model = model or Config.DEFAULT_MODEL
         self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
     def enhance_images(self, pdf_path: str, image_dir: str, batch_size: int = 5) -> Dict:
@@ -188,7 +194,7 @@ If you can't infer from text, describe the general topic of the page."""
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.3,
+                temperature=0.3,  # Low temperature for consistent, factual image descriptions
                 max_tokens=300,
             )
 

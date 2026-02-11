@@ -48,7 +48,7 @@ class ImageCollectorAgent(BaseAgent):
         self,
         sources: Dict[str, List[str]],
         download_search_images: bool = True,
-        max_images_per_keyword: int = 5,
+        max_images_per_keyword: int = None,
         auto_describe_images: bool = True,
     ) -> Dict:
         """
@@ -64,6 +64,10 @@ class ImageCollectorAgent(BaseAgent):
             Image collection result
         """
         logger.info("Starting image collection")
+
+        # Use config default if not specified
+        if max_images_per_keyword is None:
+            max_images_per_keyword = Config.MAX_IMAGES_PER_SEARCH
 
         pdfs = sources.get("pdfs", [])
         urls = sources.get("urls", [])
@@ -119,7 +123,7 @@ class ImageCollectorAgent(BaseAgent):
                     from bs4 import BeautifulSoup
                     import requests
 
-                    response = requests.get(url, timeout=30)
+                    response = requests.get(url, timeout=Config.WEB_SCRAPER_TIMEOUT)
                     soup = BeautifulSoup(response.content, "html.parser")
 
                     result = self.web_scraper.run(url, soup, session_id=self.session_id)

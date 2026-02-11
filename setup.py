@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.2.1",
+    version="0.2.2",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator using CrewAI",
@@ -38,6 +38,7 @@ setup(
             "templates/*.html",
             "templates/*.css",
             "templates/*.js",
+            ".env.example",
         ],
     },
 )

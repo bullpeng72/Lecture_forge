@@ -3,27 +3,48 @@ RAG retriever for querying knowledge base with caching.
 """
 
 import hashlib
-from typing import Dict, List
+import shelve
+import time
+from pathlib import Path
+from typing import Dict, List, Optional
 
+from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.utils import logger
 
 
 class RAGRetriever:
-    """Retriever for RAG (Retrieval Augmented Generation) with query caching."""
+    """Retriever for RAG (Retrieval Augmented Generation) with persistent query caching."""
 
-    def __init__(self, vector_store: VectorStore):
+    def __init__(self, vector_store: VectorStore, cache_path: Optional[Path] = None):
         """
-        Initialize RAG retriever with caching.
+        Initialize RAG retriever with persistent caching.
 
         Args:
             vector_store: Vector store instance
+            cache_path: Path to cache directory (default from Config)
         """
         self.vector_store = vector_store
-        self._query_cache: Dict[str, List[Dict]] = {}
+
+        # Setup persistent cache
+        self.cache_path = cache_path if cache_path is not None else Config.RAG_CACHE_PATH
+        self.cache_path.mkdir(parents=True, exist_ok=True)
+
+        # Cache settings
+        self.cache_ttl = Config.RAG_CACHE_TTL
+        self.cache_max_size = Config.RAG_CACHE_MAX_SIZE
+
+        # Shelve database for persistent cache
+        self._cache_file = str(self.cache_path / "query_cache.db")
+
+        # Statistics (in-memory)
         self._cache_hits = 0
         self._cache_misses = 0
-        logger.info("Initializing RAG retriever with query cache")
+
+        logger.info(
+            f"Initializing RAG retriever with persistent cache "
+            f"(path: {self.cache_path}, TTL: {self.cache_ttl}s, max: {self.cache_max_size})"
+        )
 
     def _get_cache_key(self, query: str, k: int) -> str:
         """
@@ -41,7 +62,7 @@ class RAGRetriever:
 
     def retrieve(self, query: str, k: int = 5) -> List[Dict]:
         """
-        Retrieve relevant documents for a query with caching.
+        Retrieve relevant documents for a query with persistent caching.
 
         Args:
             query: Query text
@@ -53,10 +74,25 @@ class RAGRetriever:
         # Check cache first
         cache_key = self._get_cache_key(query, k)
 
-        if cache_key in self._query_cache:
-            self._cache_hits += 1
-            logger.debug(f"Cache HIT for query: {query[:50]}... " f"(hits: {self._cache_hits}, misses: {self._cache_misses})")
-            return self._query_cache[cache_key]
+        with shelve.open(self._cache_file) as cache:
+            if cache_key in cache:
+                cached_data = cache[cache_key]
+                timestamp = cached_data.get("timestamp", 0)
+                current_time = time.time()
+
+                # Check if cache entry is still valid (TTL)
+                if current_time - timestamp < self.cache_ttl:
+                    self._cache_hits += 1
+                    logger.debug(
+                        f"Cache HIT for query: {query[:50]}... "
+                        f"(age: {int(current_time - timestamp)}s, "
+                        f"hits: {self._cache_hits}, misses: {self._cache_misses})"
+                    )
+                    return cached_data["documents"]
+                else:
+                    # Expired - remove from cache
+                    logger.debug(f"Cache entry expired for query: {query[:50]}...")
+                    del cache[cache_key]
 
         # Cache miss - query vector store
         self._cache_misses += 1
@@ -76,33 +112,70 @@ class RAGRetriever:
                     }
                 )
 
-        # Store in cache
-        self._query_cache[cache_key] = documents
+        # Store in persistent cache
+        with shelve.open(self._cache_file) as cache:
+            # Check cache size limit
+            if len(cache) >= self.cache_max_size:
+                # Remove oldest entries (simple LRU)
+                self._evict_oldest(cache)
+
+            cache[cache_key] = {"timestamp": time.time(), "documents": documents}
 
         return documents
 
+    def _evict_oldest(self, cache: shelve.Shelf) -> None:
+        """
+        Evict oldest cache entries when cache is full.
+
+        Args:
+            cache: Shelve cache instance
+        """
+        # Get all entries with timestamps
+        entries = [(key, data["timestamp"]) for key, data in cache.items()]
+
+        # Sort by timestamp (oldest first)
+        entries.sort(key=lambda x: x[1])
+
+        # Remove oldest 10% of entries
+        remove_count = max(1, len(entries) // 10)
+        for key, _ in entries[:remove_count]:
+            del cache[key]
+
+        logger.debug(f"Evicted {remove_count} oldest cache entries")
+
     def clear_cache(self) -> None:
-        """Clear the query cache."""
-        self._query_cache.clear()
-        logger.info(f"Query cache cleared (had {self._cache_hits} hits, {self._cache_misses} misses)")
+        """Clear the persistent query cache."""
+        with shelve.open(self._cache_file) as cache:
+            cache.clear()
+
+        logger.info(f"Persistent cache cleared (had {self._cache_hits} hits, {self._cache_misses} misses)")
         self._cache_hits = 0
         self._cache_misses = 0
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> Dict[str, any]:
         """
         Get cache statistics.
 
         Returns:
-            Dictionary with cache hits, misses, and size
+            Dictionary with cache hits, misses, size, and hit rate
         """
         total = self._cache_hits + self._cache_misses
         hit_rate = (self._cache_hits / total * 100) if total > 0 else 0.0
 
+        # Get cache size from disk
+        try:
+            with shelve.open(self._cache_file) as cache:
+                cache_size = len(cache)
+        except Exception:
+            cache_size = 0
+
         return {
             "cache_hits": self._cache_hits,
             "cache_misses": self._cache_misses,
-            "cache_size": len(self._query_cache),
+            "cache_size": cache_size,
             "hit_rate_percent": round(hit_rate, 2),
+            "cache_path": str(self.cache_path),
+            "cache_ttl_seconds": self.cache_ttl,
         }
 
     def format_context(self, documents: List[Dict]) -> str:

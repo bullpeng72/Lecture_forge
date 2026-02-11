@@ -934,11 +934,28 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                         )
                         continue
 
-                    # Calculate final score
+                    # Calculate final score with content-type-aware weighting
+                    content_type = full_img.get("content_type", "unknown")
+
+                    # Adjust weights based on content type
+                    # Diagrams/charts get higher quality weight (more important than page location)
+                    if content_type in ["diagram", "chart"]:
+                        quality_weight = 0.35  # Increase quality importance
+                        importance_weight = 0.55
+                        position_weight = 0.10
+                    elif content_type in ["screenshot", "technical"]:
+                        quality_weight = 0.25
+                        importance_weight = 0.65
+                        position_weight = 0.10
+                    else:
+                        quality_weight = 0.20  # Default
+                        importance_weight = 0.70
+                        position_weight = 0.10
+
                     final_score = (
-                        importance_score * 0.7  # Page importance
-                        + quality_score * 0.2  # Image quality
-                        + (1.0 / (idx + 1)) * 0.1  # Position in page (first is best)
+                        importance_score * importance_weight  # Page importance
+                        + quality_score * quality_weight     # Image quality (includes content type bonus)
+                        + (1.0 / (idx + 1)) * position_weight  # Position in page
                     )
 
                     candidates.append(
@@ -1066,15 +1083,20 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
     def _evaluate_image_quality_simple(self, image: dict) -> float:
         """
-        Enhanced image quality evaluation (Vision AI free).
+        Enhanced image quality evaluation with content type awareness.
+
+        Priority system:
+        1. Use extraction_quality if available (from enhanced extraction algorithm)
+        2. Apply content_type bonus (diagrams/charts prioritized)
+        3. Fallback to basic quality evaluation if no extraction_quality
 
         Criteria:
         - Size: Is it large enough?
         - Aspect ratio: Is it in normal range?
         - File size: Not too small?
-        - Color distribution: Not a solid color box?
-        - Edge density: Has actual content?
         - Compression ratio: Meaningful content vs empty space?
+        - Content type: Diagram/chart/screenshot detection
+        - Extraction quality: Pre-calculated quality score
 
         Args:
             image: Image metadata dict
@@ -1082,6 +1104,27 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
         Returns:
             Quality score (0.0 ~ 1.0)
         """
+        # ✨ NEW: Use pre-calculated extraction_quality if available
+        extraction_quality = image.get("extraction_quality")
+        content_type = image.get("content_type", "unknown")
+
+        if extraction_quality is not None:
+            # Use the enhanced quality score from extraction phase
+            base_score = extraction_quality
+
+            # Apply content type bonus
+            content_bonus = self._get_content_type_bonus(content_type)
+            final_score = min(1.0, base_score + content_bonus)
+
+            logger.debug(
+                f"           📊 Quality (enhanced): {extraction_quality:.2f} "
+                f"+ type_bonus({content_type})={content_bonus:.2f} "
+                f"= {final_score:.2f}"
+            )
+
+            return final_score
+
+        # Fallback: Calculate quality if extraction_quality not available
         score = 0.0
 
         width = image.get("width", 0)
@@ -1155,6 +1198,35 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                 score += 0.10
 
         return min(1.0, score)
+
+    def _get_content_type_bonus(self, content_type: str) -> float:
+        """
+        Get bonus score based on content type.
+
+        Educational priority:
+        - diagram: Highest priority (technical diagrams, flowcharts, architecture)
+        - chart: High priority (graphs, data visualizations)
+        - screenshot: Medium-high priority (UI examples, demos)
+        - technical: Medium priority (technical illustrations)
+        - photo: Low priority (general photos)
+        - unknown: No bonus
+
+        Args:
+            content_type: Content type classification
+
+        Returns:
+            Bonus score (0.0 ~ 0.15)
+        """
+        bonuses = {
+            "diagram": 0.15,      # Highest - technical diagrams
+            "chart": 0.12,        # High - data visualizations
+            "screenshot": 0.10,   # Medium-high - UI examples
+            "technical": 0.08,    # Medium - technical content
+            "photo": 0.03,        # Low - general photos
+            "unknown": 0.0,       # No bonus
+        }
+
+        return bonuses.get(content_type, 0.0)
 
     def _analyze_image_content(self, img_path: str) -> float:
         """

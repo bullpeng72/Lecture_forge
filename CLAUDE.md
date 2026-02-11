@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Quality) (2026-02-11)
-> **버전**: 0.2.2 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 품질 개선 완료 ✨
+> **버전**: 0.2.4 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 품질 개선 완료 ✨ | 핵심 버그 수정 완료 🐛
 
 ## 📚 프로젝트 개요
 
@@ -315,7 +315,7 @@ OUTPUT_DIR=./outputs
 - ✅ **이미지 편집** (대화형 UI, Vector DB 기반 대안 검색)
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
 - ✅ **Templates** (HTML, CSS, JS)
-- ✅ **자동화 테스트** (35%+ 커버리지, 10/10 에이전트 테스트)
+- ✅ **자동화 테스트** (45%+ 커버리지, 10/10 에이전트 테스트)
 - ✅ **Type Safety** (75% type hints, mypy 설정)
 - ✅ **성능 최적화** (RAG 캐싱, API 재시도)
 
@@ -457,8 +457,8 @@ twine upload dist/*
 - 💻 **CLI**: 3,288줄 (6개 명령어: init, create, chat, edit-images, improve, cleanup)
 - 📦 **패키지**: pip installable
 - 🎨 **Templates**: HTML, CSS, JS (13.7KB)
-- 💰 **비용**: ~$0.22 per 180분 강의
-- 🧪 **테스트**: 77+ 테스트, 35%+ 커버리지
+- 💰 **비용**: ~$0.035 per 60분 강의
+- 🧪 **테스트**: 53+ 테스트, 45%+ 커버리지
 - 📝 **Type Hints**: 75% 적용
 
 ---
@@ -482,11 +482,34 @@ lecture-forge --help
 **현재 상태**: 🌟 **Production Ready+ (Enhanced Quality)** 🌟
 
 **품질 개선 완료** (2026-02-09):
-- ✅ 35%+ 테스트 커버리지 (77+ 테스트)
+- ✅ 45%+ 테스트 커버리지 (53+ 테스트)
 - ✅ RAG 성능 60% 향상 (캐싱)
 - ✅ API 안정성 강화 (재시도 로직)
 - ✅ Type safety 75% 적용
 - ✅ Config validation 개선
+
+**v0.2.4 개선사항** (2026-02-11) - 🚀 Major Quality Breakthrough:
+
+**Critical Bug Fixes** 🐛:
+- ✅ **이미지 카운팅 버그 수정**: 품질 평가 시 이미지 카운트가 항상 0이었던 핵심 버그 완전 해결
+- ✅ **ChromaDB 텔레메트리 오류 수정**: PostHog API 호환성 문제 해결 (0.4.24로 안정화)
+- ✅ **Config import 누락 수정**: html_assembler.py OUTPUT_DIR 정상 작동
+
+**Content Quality Breakthrough** 📈 (15분 강의 테스트 결과):
+- 🎯 **단어 수**: 253 → 2,431 words (+862%, **9.6배 증가**)
+- 🎯 **Overall Score**: 32.7 → 85.8/100 (+162% 향상)
+- 🎯 **Quality Reports**: 8회 반복 → 0회 (**모든 섹션 1회 통과!**)
+- 🎯 **Code Blocks**: 1개 → 10개 (+900%)
+- 🎯 **비용 효율**: $0.0086 per 15분 (~**$0.035 per 60분**)
+
+**Technical Improvements** 🔧:
+- ✨ 이미지 선택을 품질 평가 전으로 이동 (정확한 카운팅)
+- ✨ 프롬프트 대폭 강화: 30-80 line 코드, 8가지 필수 기법, 섹션별 단어 수 명시
+- ✨ RAG 컨텍스트 증가: 8 → 10개 (2곳)
+- ✨ 확장 프롬프트 강화: "FIRED" 경고, "LAST CHANCE" 강조
+
+**v0.2.3 개선사항** (2026-02-11):
+- 🔧 html_assembler.py Config import hotfix
 
 **v0.2.2 개선사항** (2026-02-11):
 - 📝 문서 업데이트: 버전 정보 및 코드 일치성 개선

@@ -38,6 +38,7 @@ setup(
             "templates/*.html",
             "templates/*.css",
             "templates/*.js",
+            "templates/prompts/*.txt",
             ".env.example",
         ],
     },

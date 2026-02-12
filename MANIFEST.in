@@ -13,7 +13,7 @@ include requirements-dev.txt
 include .env.example
 
 # Include templates and static files
-recursive-include src/lecture_forge/templates *.html *.css *.js
+recursive-include src/lecture_forge/templates *.html *.css *.js *.txt .env.example
 
 # Exclude unnecessary files
 global-exclude __pycache__

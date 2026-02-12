@@ -2568,7 +2568,8 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         # Content slides - group content into logical slides
         current_slide_content = []
         slide_item_count = 0
-        max_items_per_slide = Config.MAX_ITEMS_PER_SLIDE  # From config (default: 4)
+        max_items_per_slide = 3  # Reduced from 4 to 3 for better presentation
+        max_bullet_points = 5  # Maximum bullet points per slide
 
         # Slide composition strategy:
         # - h3 (subsection): Always starts new slide
@@ -2584,37 +2585,65 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     slides_content.append(_create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
-                # Add h3 to new slide
-                current_slide_content.append(f"<h3>{block['content']}</h3>")
-                slide_item_count += 1
+
+                # Create a dedicated title slide for subsection (presentation style)
+                slides_content.append(
+                    f"""
+    <section data-transition="slide">
+        <h2>{block['content']}</h2>
+    </section>
+                    """
+                )
 
             elif block_type == "subsubsection":
-                # Look-ahead: Check if we can fit h4 + next content in current slide
-                next_block_weight = 0
-                if idx + 1 < len(blocks):
-                    next_block = blocks[idx + 1]
-                    if next_block["type"] in ["paragraph", "list"]:
-                        next_block_weight = 1
-
-                # If h4 + next content exceeds limit, start new slide
-                if slide_item_count + 0.5 + next_block_weight > max_items_per_slide and current_slide_content:
+                # h4 acts as slide title - always start a new slide
+                if current_slide_content:
                     slides_content.append(_create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
 
-                current_slide_content.append(f"<h4>{block['content']}</h4>")
-                slide_item_count += 0.5  # Smaller weight for h4
+                # Add h4 as the slide title
+                current_slide_content.append(f"<h3>{block['content']}</h3>")
+                slide_item_count += 1  # Count as 1 item (title)
 
             elif block_type == "paragraph":
                 current_slide_content.append(f"<p>{block['content']}</p>")
                 slide_item_count += 1
 
             elif block_type == "list":
-                # Format list
+                # Format list - split if too long
+                list_items = block["items"]
                 list_tag = "ol" if block.get("ordered", False) else "ul"
-                items_html = "".join(f"<li>{item}</li>" for item in block["items"])
-                current_slide_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
-                slide_item_count += 1
+
+                # If list is too long, split it into multiple slides
+                if len(list_items) > max_bullet_points:
+                    # Split the list
+                    for i in range(0, len(list_items), max_bullet_points):
+                        chunk = list_items[i:i + max_bullet_points]
+
+                        # If current slide has content, finish it first
+                        if current_slide_content:
+                            slides_content.append(_create_content_slide(current_slide_content))
+                            current_slide_content = []
+                            slide_item_count = 0
+
+                        # Create slide with list chunk
+                        items_html = "".join(f"<li>{item}</li>" for item in chunk)
+                        current_slide_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
+
+                        # Add continuation indicator if needed
+                        if i + max_bullet_points < len(list_items):
+                            current_slide_content.append("<p><em>(계속...)</em></p>")
+
+                        # Finish this slide
+                        slides_content.append(_create_content_slide(current_slide_content))
+                        current_slide_content = []
+                        slide_item_count = 0
+                else:
+                    # Short list - add to current slide
+                    items_html = "".join(f"<li>{item}</li>" for item in list_items)
+                    current_slide_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
+                    slide_item_count += 1
 
             elif block_type == "code":
                 # Code blocks take a full slide
@@ -2624,9 +2653,12 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                     slide_item_count = 0
 
                 language = block.get("language", "")
+                # Add a title for code slides
+                code_title = "코드 예제" if language == "python" else f"{language.upper()} 코드"
                 slides_content.append(
                     f"""
     <section>
+        <h3>{code_title}</h3>
         <pre><code class="language-{language}" data-trim data-noescape>
 {block['content']}
         </code></pre>
@@ -2673,22 +2705,21 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
                 """
                 )
 
-            # Check if we should start a new slide
-            # Look ahead to avoid orphaned h4 at the end
-            should_break = slide_item_count >= max_items_per_slide
+            # Check if we should start a new slide (smarter logic)
+            should_break = False
 
-            # If next block is h4, don't break yet (keep h4 with its content)
+            # Break if we've reached the item limit
+            if slide_item_count >= max_items_per_slide:
+                should_break = True
+
+            # Don't break if next item is closely related
             if should_break and idx + 1 < len(blocks):
                 next_block = blocks[idx + 1]
-                if next_block["type"] == "subsubsection":
-                    # Check if we can fit next h4 + one more block
-                    if idx + 2 < len(blocks):
-                        next_next_block = blocks[idx + 2]
-                        if next_next_block["type"] in ["paragraph", "list"]:
-                            # Don't break yet, let h4 and content stay together
-                            should_break = False
+                # Don't break before a new subsection or subsubsection (they handle their own breaks)
+                if next_block["type"] in ["subsection", "subsubsection", "code", "image", "diagram"]:
+                    should_break = False
 
-            if should_break:
+            if should_break and current_slide_content:
                 slides_content.append(_create_content_slide(current_slide_content))
                 current_slide_content = []
                 slide_item_count = 0
@@ -2727,36 +2758,79 @@ def _generate_reveal_html(title: str, subtitle: str, sections: List[dict]) -> st
         .reveal h1, .reveal h2, .reveal h3, .reveal h4 {{
             text-transform: none;
             font-weight: bold;
+            margin-bottom: 0.8em;
+        }}
+        .reveal h1 {{
+            font-size: 2.5em;
+        }}
+        .reveal h2 {{
+            font-size: 2em;
+            color: #2c3e50;
+        }}
+        .reveal h3 {{
+            font-size: 1.6em;
+            color: #34495e;
+            margin-top: 0.5em;
+        }}
+        .reveal h4 {{
+            font-size: 1.3em;
+            color: #7f8c8d;
         }}
         .reveal p {{
             text-align: left;
-            line-height: 1.6;
+            line-height: 1.8;
+            font-size: 0.9em;
+            margin: 0.6em 0;
         }}
         .reveal ul, .reveal ol {{
             text-align: left;
-            line-height: 1.8;
+            line-height: 2.2;
+            font-size: 0.85em;
+            margin: 1em 0;
+        }}
+        .reveal li {{
+            margin: 0.8em 0;
+        }}
+        .reveal ul li::marker {{
+            color: #3498db;
+            font-size: 1.2em;
+        }}
+        .reveal em {{
+            color: #95a5a6;
+            font-style: italic;
         }}
         .reveal pre {{
             width: 100%;
-            font-size: 0.55em;
+            font-size: 0.5em;
+            margin: 1.5em 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }}
         .reveal code {{
-            max-height: 500px;
-            font-family: "Monaco", "Menlo", "Consolas", monospace;
+            max-height: 520px;
+            font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
+            line-height: 1.5;
+            padding: 1.5em;
         }}
         .reveal .slides section {{
             text-align: left;
-            /* 스크롤 지원 - Reveal.js 높이에 맞춤 */
+            /* Reduced scroll, better presentation fit */
             height: auto !important;
-            max-height: 650px; /* Reveal height(720px) - padding - margin */
+            max-height: 700px;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 20px 30px;
+            padding: 40px 50px;
             box-sizing: border-box;
             display: flex !important;
             flex-direction: column;
             justify-content: flex-start;
             align-items: flex-start;
+        }}
+        /* Center-aligned slides (title, subsection) */
+        .reveal .slides section[data-transition="zoom"],
+        .reveal .slides section[data-transition="slide"] {{
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }}
         .reveal .slides section[data-transition="zoom"] {{
             text-align: center;

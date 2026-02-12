@@ -1,5 +1,5 @@
 """
-Agents for LectureForge CrewAI system.
+Agents for LectureForge multi-agent system.
 """
 
 # Import all agents here as they are implemented

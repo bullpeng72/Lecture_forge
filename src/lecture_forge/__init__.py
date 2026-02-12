@@ -1,7 +1,7 @@
 """
 LectureForge Pro - AI-Powered Lecture Material Generator
 
-A CrewAI-based multi-agent system for generating high-quality lecture materials
+A LangChain-based multi-agent system for generating high-quality lecture materials
 from various sources (PDF, URLs, web search).
 """
 

@@ -141,8 +141,9 @@ class Config:
 
     # ===== Image Extraction & Quality =====
     # Minimum dimensions for extracted images (filters out icons/logos)
-    IMAGE_MIN_WIDTH: int = int(os.getenv("IMAGE_MIN_WIDTH", "200"))
-    IMAGE_MIN_HEIGHT: int = int(os.getenv("IMAGE_MIN_HEIGHT", "200"))
+    # v0.2.5+: Increased default from 200x200 to 500x300 for better quality
+    IMAGE_MIN_WIDTH: int = int(os.getenv("IMAGE_MIN_WIDTH", "500"))
+    IMAGE_MIN_HEIGHT: int = int(os.getenv("IMAGE_MIN_HEIGHT", "300"))
 
     # Quality thresholds (0.0 ~ 1.0)
     # Extraction phase: Filter for meaningful images (diagrams, charts, text-rich images)

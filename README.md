@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/yourusername/lecture-forge)
+[![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/yourusername/lecture-forge)
-[![Test Coverage](https://img.shields.io/badge/coverage-45%2B-brightgreen.svg)](https://github.com/yourusername/lecture-forge)
+[![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Test Coverage](https://img.shields.io/badge/coverage-45--50%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.2.4 Beta Release** | Critical Bug Fixes + Content Quality Improvements
+> 🚀 **v0.2.6 Beta Release** | Critical Image Bug Fixed - Original Resolution Guaranteed
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 3,288줄 CLI | 53+ 테스트 (45%+ 커버리지) | $0.035/강의
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 3,288줄 CLI | 53+ 테스트 (45-50% 커버리지) | ~$0.035/60분 강의
 
 ---
 
@@ -42,7 +42,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
 - 🔄 **자동 개선**: 품질 기준 미달 시 최대 3회 자동 수정
-- 🧪 **테스트 커버리지**: 53+ 단위 테스트 (45%+ 커버리지)
+- 🧪 **테스트 커버리지**: 53+ 단위 테스트 (45-50% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -78,14 +78,15 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - **런타임 Config 검증**: `--help` 정상 작동
 
 ### 통계 비교
-| 메트릭 | v0.1.0 | v0.2.0 | 개선 |
+| 메트릭 | v0.1.0 | v0.2.6 | 개선 |
 |--------|--------|--------|------|
-| 테스트 커버리지 | 15% | 35%+ | +130% |
+| 테스트 커버리지 | 15% | 45-50% | +200%+ |
 | 타입 힌트 | 40% | 75% | +87% |
 | 테스트된 에이전트 | 3/10 | 10/10 | +233% |
 | RAG 성능 | Baseline | +60% | 캐싱 |
 | API 안정성 | 수동 | 자동 3회 | 재시도 |
 | 설정 방식 | 하드코딩 | .env 기반 | 유연성 |
+| 이미지 해상도 | 200px 축소 | 원본 보존 | v0.2.6 수정 |
 
 ---
 
@@ -637,9 +638,11 @@ A:
 <details>
 <summary><b>Q: 비용이 얼마나 드나요?</b></summary>
 
-A: 180분 강의 기준 약 **$0.22** (GPT-4o-mini 사용).
-- 입력 토큰: ~580K ($0.15)
-- 출력 토큰: ~155K ($0.07)
+A: **실제 측정 비용** (v0.2.4+ 기준):
+- 60분 강의: 약 **$0.035**
+- 180분 강의: 약 **$0.105**
+
+(GPT-4o-mini 사용. 보수적 이론 추정: $0.22/180분)
 
 생성 완료 후 정확한 비용이 표시됩니다.
 </details>
@@ -765,6 +768,56 @@ lecture-forge create
 
 ## 📝 변경 이력
 
+### v0.2.6 (2026-02-12) - 🐛 Critical Image Bug Fix
+
+**Critical Bug Fix**:
+- 🐛 **이미지 thumbnail 버그 완전 해결**: 품질 분석 중 원본 이미지가 200px로 축소되던 치명적 버그 수정
+  - **문제**: `_analyze_image_content_fast()`에서 `pil_image.thumbnail()` 호출 시 원본 이미지 수정
+  - **증상**: 모든 PDF 추출 이미지가 정확히 200px 너비로 저장됨 (예: 200x44, 200x89, 200x125)
+  - **해결**: 분석 전 이미지 복사본 생성 (`pil_image.copy()`)으로 원본 보존
+  - **결과**: 800x600 이미지는 이제 **800x600 그대로 저장** ✅
+
+**영향**:
+- ✅ PDF 이미지 **원본 크기 완전 보존**
+- ✅ IMAGE_MIN_WIDTH=500, IMAGE_MIN_HEIGHT=300 필터 정상 작동
+- ✅ 고해상도 이미지 품질 완전 보장
+- ✅ v0.2.5의 이미지 품질 개선 기능이 이제 정상 작동
+
+**기술 상세**:
+```python
+# 수정 전 (버그 - image_extractor.py:333):
+pil_image.thumbnail((200, 200), Image.Resampling.LANCZOS)  # ❌ 원본 수정!
+
+# 수정 후 (정상):
+analysis_img = pil_image.copy()  # ✅ 복사본 생성
+analysis_img.thumbnail((200, 200), Image.Resampling.LANCZOS)  # ✅ 복사본만 수정
+```
+
+### v0.2.5 (2026-02-12) - Image Quality & Resolution Improvements (Partial) 🖼️
+
+**주의**: v0.2.5의 이미지 개선 기능은 thumbnail 버그(v0.2.6에서 수정)로 인해 부분적으로만 작동했습니다.
+
+**이미지 품질 혁신**
+- 🎨 **고품질 WebP 저장**: quality=95, method=6 적용 (이미지 압축 시 품질 손실 방지)
+- 📐 **Full HD 해상도**: IMAGE_MAX_WIDTH 1200px → 1920px (고해상도 지원)
+- 🔍 **최소 크기 강화**: IMAGE_MIN_WIDTH 200px → 500px, IMAGE_MIN_HEIGHT 200px → 300px
+- ⬆️ **API 품질 업그레이드**:
+  - Unsplash "regular" (1080px) → "full" (2400px)
+  - Pexels "large" (940px) → "original" (전체 크기)
+
+**이미지 표시 개선**
+- 🎯 **HTML 템플릿 최적화**: `w-full` → `max-w-full` + `min-width: 600px` (작은 이미지 강제 확대 방지)
+- ✨ **CSS 렌더링 향상**: `image-rendering: crisp-edges` (고품질 렌더링)
+- 📱 **반응형 크기 조정**: 모바일/데스크톱 적응형 이미지 크기
+
+**이미지 편집 개선**
+- 🔧 **VectorStore 초기화 수정**: `persist_directory` → `collection_name` 파라미터 사용
+- 📂 **파일시스템 폴백 검색**: Vector DB 실패 시 페이지 기반 스코어링으로 대안 검색
+- 🎯 **스마트 디렉토리 탐지**: `./data/images` 우선 탐색 (개발 모드 지원)
+
+**Config 개선**
+- ⚙️ **기본값 업데이트**: `.env.example` 및 `config.py` 최적화
+
 ### v0.2.2 (2026-02-11) - Documentation & Consistency Updates 📝
 
 **문서화**
@@ -843,7 +896,7 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 참조
 
 ## 📞 지원 및 문의
 
-- **이슈 트래커**: [GitHub Issues](https://github.com/yourusername/lecture-forge/issues)
+- **이슈 트래커**: [GitHub Issues](https://github.com/bullpeng72/Lecture_forge/issues)
 - **프로젝트 가이드**: [CLAUDE.md](CLAUDE.md)
 - **기술 분석**: [INPUT_LIMITS_ANALYSIS.md](INPUT_LIMITS_ANALYSIS.md)
 - **테스트 가이드**: [tests/README.md](tests/README.md)

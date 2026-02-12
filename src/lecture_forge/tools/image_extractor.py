@@ -329,8 +329,11 @@ class PDFImageExtractorTool:
             if pil_image.mode != "RGB":
                 pil_image = pil_image.convert("RGB")
 
+            # CRITICAL FIX: Create a COPY before resizing to avoid modifying original
             # Resize for faster processing (max 200x200 for extraction phase)
-            pil_image.thumbnail((200, 200), Image.Resampling.LANCZOS)
+            analysis_img = pil_image.copy()
+            analysis_img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+            pil_image = analysis_img  # Use the resized copy for analysis
 
             # Convert to numpy array
             img_array = np.array(pil_image)

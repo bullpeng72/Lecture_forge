@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-45--50%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.2.6 Beta Release** | Critical Image Bug Fixed - Original Resolution Guaranteed
+> 🚀 **v0.3.0 Beta Release** | Presentation Optimized - Professional Slide Design
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -37,7 +37,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 📍 **Location-based 이미지 매칭**: RAG 컨텍스트 기반 자동 이미지 배치 (+750% 활용률)
 - 🖼️ **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 - 🎨 **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 코드 하이라이팅
-- 🎬 **프레젠테이션 슬라이드**: Reveal.js 기반 자동 변환
+- 🎬 **프레젠테이션 슬라이드**: Reveal.js 기반 자동 변환 (v0.3.0 대폭 개선)
 
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
@@ -58,11 +58,23 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 v0.2.0+ 개선사항
+## 🚀 최근 개선사항
 
-### v0.2.7+ (개발 중)
-- **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리, 349줄)
-- **프롬프트 관리**: 템플릿 기반 프롬프트 시스템 (176줄)
+### v0.3.0 (2026-02-12) - 프레젠테이션 최적화 🎯
+- **슬라이드 구성 개선**: 프레젠테이션에 최적화
+  - 슬라이드당 항목 수 감소 (4개 → 3개)
+  - 긴 리스트 자동 분할 (최대 5개씩)
+  - 논리적 슬라이드 구성 (한 주제 = 한 슬라이드)
+- **스타일 개선**: 전문적인 디자인 시스템
+  - 제목 크기/색상 계층화
+  - 타이포그래피 최적화
+  - 코드 블록 입체감
+- **Mermaid 다이어그램**: 문서 시각화 개선
+  - 시스템 아키텍처, 예외 계층, 품질 평가 등
+
+### v0.2.7 (통합)
+- **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
+- **프롬프트 관리**: 템플릿 기반 프롬프트 시스템
 - **콘텐츠 생성 개선**: 더 상세한 프롬프트와 품질 기준
 
 ### v0.2.0-0.2.6
@@ -87,17 +99,19 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - **런타임 Config 검증**: `--help` 정상 작동
 
 ### 통계 비교
-| 메트릭 | v0.1.0 | v0.2.7+ | 개선 |
-|--------|--------|---------|------|
+| 메트릭 | v0.1.0 | v0.3.0 | 개선 |
+|--------|--------|--------|------|
 | 테스트 커버리지 | 15% | 45-50% | +200%+ |
 | 타입 힌트 | 40% | 75% | +87% |
 | 테스트된 에이전트 | 3/10 | 10/10 | +233% |
 | RAG 성능 | Baseline | +60% | 캐싱 |
 | API 안정성 | 수동 | 자동 3회 | 재시도 |
 | 설정 방식 | 하드코딩 | .env 기반 | 유연성 |
-| 이미지 해상도 | 200px 축소 | 원본 보존 | v0.2.6 수정 |
-| 예외 처리 | 기본 | 구조화 (9개) | v0.2.7+ |
-| 프롬프트 관리 | 하드코딩 | 템플릿 기반 | v0.2.7+ |
+| 이미지 해상도 | 200px 축소 | 원본 보존 | v0.2.6 |
+| 예외 처리 | 기본 | 구조화 (9개) | v0.2.7 |
+| 프롬프트 관리 | 하드코딩 | 템플릿 기반 | v0.2.7 |
+| 슬라이드 품질 | 기본 | 전문적 | v0.3.0 |
+| 다이어그램 | 텍스트 | Mermaid | v0.3.0 |
 
 ---
 
@@ -786,6 +800,29 @@ lecture-forge create
 
 ## 📝 변경 이력
 
+### v0.3.0 (2026-02-12) - 🎯 Presentation Optimization
+
+**슬라이드 생성 대폭 개선**:
+- 🎯 **논리적 구성**: 프레젠테이션 최적화
+  - 슬라이드당 항목 수: 4→3 (33% 감소)
+  - 긴 리스트 자동 분할 (최대 5개씩)
+  - 서브섹션 → 독립 제목 슬라이드
+  - 소제목 → 슬라이드 타이틀
+  - 코드 슬라이드 제목 자동 추가
+- 🎨 **스타일 향상**: 전문적 디자인
+  - 제목 크기 계층화 (2.5em/2em/1.6em)
+  - 색상 계층화 (진한/중간/밝은 회색)
+  - 타이포그래피 최적화
+  - 코드 블록 입체감
+- 📊 **Mermaid 다이어그램**: 문서 시각화
+  - 모든 텍스트 다이어그램 → Mermaid
+  - 시스템 아키텍처, 예외 계층, 품질 평가 등
+
+**예외 처리 & 프롬프트 관리** (v0.2.7 통합):
+- 🎯 **예외 처리 시스템**: 구조화된 계층 (9개 카테고리, 349줄)
+- 📝 **프롬프트 관리**: 템플릿 기반 시스템 (176줄)
+- ✍️ **콘텐츠 생성**: 상세한 프롬프트 가이드라인
+
 ### v0.2.6 (2026-02-12) - 🐛 Critical Image Bug Fix
 
 **Critical Bug Fix**:
@@ -811,54 +848,13 @@ analysis_img = pil_image.copy()  # ✅ 복사본 생성
 analysis_img.thumbnail((200, 200), Image.Resampling.LANCZOS)  # ✅ 복사본만 수정
 ```
 
-### v0.2.5 (2026-02-12) - Image Quality & Resolution Improvements (Partial) 🖼️
+### v0.2.1-0.2.5 (2026-02-10~12) - 버그 수정 및 품질 개선
 
-**주의**: v0.2.5의 이미지 개선 기능은 thumbnail 버그(v0.2.6에서 수정)로 인해 부분적으로만 작동했습니다.
-
-**이미지 품질 혁신**
-- 🎨 **고품질 WebP 저장**: quality=95, method=6 적용 (이미지 압축 시 품질 손실 방지)
-- 📐 **Full HD 해상도**: IMAGE_MAX_WIDTH 1200px → 1920px (고해상도 지원)
-- 🔍 **최소 크기 강화**: IMAGE_MIN_WIDTH 200px → 500px, IMAGE_MIN_HEIGHT 200px → 300px
-- ⬆️ **API 품질 업그레이드**:
-  - Unsplash "regular" (1080px) → "full" (2400px)
-  - Pexels "large" (940px) → "original" (전체 크기)
-
-**이미지 표시 개선**
-- 🎯 **HTML 템플릿 최적화**: `w-full` → `max-w-full` + `min-width: 600px` (작은 이미지 강제 확대 방지)
-- ✨ **CSS 렌더링 향상**: `image-rendering: crisp-edges` (고품질 렌더링)
-- 📱 **반응형 크기 조정**: 모바일/데스크톱 적응형 이미지 크기
-
-**이미지 편집 개선**
-- 🔧 **VectorStore 초기화 수정**: `persist_directory` → `collection_name` 파라미터 사용
-- 📂 **파일시스템 폴백 검색**: Vector DB 실패 시 페이지 기반 스코어링으로 대안 검색
-- 🎯 **스마트 디렉토리 탐지**: `./data/images` 우선 탐색 (개발 모드 지원)
-
-**Config 개선**
-- ⚙️ **기본값 업데이트**: `.env.example` 및 `config.py` 최적화
-
-### v0.2.2 (2026-02-11) - Documentation & Consistency Updates 📝
-
-**문서화**
-- 📝 버전 정보 통일 (setup.py, pyproject.toml, __version__.py, CLI, 문서)
-- 📖 CLAUDE.md, README.md, INPUT_LIMITS_ANALYSIS.md 업데이트
-- ✨ 코드와 문서 일치성 개선
-
-### v0.2.1 (2026-02-10) - Bug Fixes & Improvements 🐛
-
-**버그 수정**
-- 🐛 Visual score 항상 0으로 표시되는 문제 수정 (이미지 카운팅 로직 추가)
-- 🐛 품질 평가 무한 반복 문제 해결 (섹션별 임계값 완화 + 조기 종료)
-- 🐛 슬라이드 orphaned heading 문제 개선 (look-ahead 로직 적용)
-
-**개선사항**
-- ✨ CLI 도움말 텍스트 가독성 향상 (줄바꿈 개선)
-- ✨ Reveal.js 키보드 단축키 설명 추가 (--to-slides 도움말)
-- ✨ 슬라이드 구성 알고리즘 개선 (max_items_per_slide 3→4)
-- ✨ 품질 평가 효율성 향상 (3점 미만 개선 시 조기 종료)
-
-**문서**
-- 📚 INPUT_LIMITS_ANALYSIS.md에 멀티소스 전략 상세 분석 추가 (Section 8)
-- 📖 README.md 및 CLAUDE.md v0.2.1 정보 업데이트
+**주요 개선**:
+- 🐛 Visual score, 품질 평가, 슬라이드 생성 버그 수정
+- 🎨 이미지 품질 향상 (Full HD, 고품질 WebP)
+- 📝 문서 업데이트 및 일관성 개선
+- ⚙️ Config 최적화
 
 ### v0.2.0 (2026-02-09) - Enhanced Quality Release 🚀
 

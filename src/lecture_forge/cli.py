@@ -1224,39 +1224,45 @@ def init(path: Optional[str]) -> None:
 # Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 # ===== Required API Keys =====
-OPENAI_API_KEY=your_key_here
-SERPER_API_KEY=your_key_here
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SERPER_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # ===== Optional Image Search APIs =====
-UNSPLASH_ACCESS_KEY=
-PEXELS_API_KEY=
+UNSPLASH_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PEXELS_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # For more settings, see: https://github.com/bullpeng72/Lecture_forge
 """
 
     # Replace placeholder values with user input
-    env_content = template_text.replace(
-        "OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-        f"OPENAI_API_KEY={openai_key}"
-    ).replace(
-        "SERPER_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-        f"SERPER_API_KEY={serper_key}"
+    # Use regex for more flexible replacement (handles both xxxxx and your_key_here patterns)
+    import re
+
+    env_content = re.sub(
+        r"OPENAI_API_KEY=.*",
+        f"OPENAI_API_KEY={openai_key}",
+        template_text
+    )
+    env_content = re.sub(
+        r"SERPER_API_KEY=.*",
+        f"SERPER_API_KEY={serper_key}",
+        env_content
     )
 
     # Replace optional keys
     if unsplash_key:
-        env_content = env_content.replace(
-            "UNSPLASH_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            f"UNSPLASH_ACCESS_KEY={unsplash_key}"
+        env_content = re.sub(
+            r"UNSPLASH_ACCESS_KEY=.*",
+            f"UNSPLASH_ACCESS_KEY={unsplash_key}",
+            env_content
         )
-    # If user skipped, keep the example value (they can edit later)
 
     if pexels_key:
-        env_content = env_content.replace(
-            "PEXELS_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            f"PEXELS_API_KEY={pexels_key}"
+        env_content = re.sub(
+            r"PEXELS_API_KEY=.*",
+            f"PEXELS_API_KEY={pexels_key}",
+            env_content
         )
-    # If user skipped, keep the example value (they can edit later)
 
     # Add generation metadata at the top
     metadata = f"""# LectureForge Configuration

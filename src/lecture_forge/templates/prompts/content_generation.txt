@@ -1,0 +1,246 @@
+🚨🚨🚨 CRITICAL MISSION: Write COMPREHENSIVE and DETAILED lecture content 🚨🚨🚨
+
+⚠️⚠️⚠️ CRITICAL FAILURE CONDITIONS (ANY = AUTO REJECT):
+1. ❌ WORD COUNT < {min_words:,} words → REJECTED AND YOU WILL BE FIRED
+2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED
+3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED
+4. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
+
+⚠️ You MUST satisfy ALL requirements or your output will be REJECTED.
+⚠️ This is NOT negotiable. Write AT LEAST {min_words:,} words or FAIL.
+
+**Lecture Information:**
+- Topic: {topic}
+- Audience Level: {audience_level}
+- Section: {section_title}
+- Allocated Time: {estimated_time} minutes
+- Difficulty: {difficulty_level}
+
+**Topics to Cover:**
+{topics_list}
+
+**Learning Outcomes:**
+{learning_outcomes_list}
+
+**📏 STRICT CONTENT REQUIREMENTS (MUST MEET):**
+
+1. **🚨 LENGTH (MOST CRITICAL): {target_words:,} words TARGET 🚨**
+   - **MINIMUM**: {min_words:,} words (ABSOLUTE MINIMUM - DO NOT GO BELOW!)
+   - **TARGET**: {target_words:,} words (AIM FOR THIS)
+   - **MAXIMUM**: {max_words:,} words
+
+   ⚠️ **IF YOUR CONTENT IS LESS THAN {min_words:,} WORDS, IT WILL BE REJECTED!**
+
+   **📊 MANDATORY Word Count Breakdown (CHECK EACH SECTION):**
+   - Introduction: **{intro_words:,} words** (10% - 개요, 중요성, 학습 목표)
+   - Main Content ({target_subsections} subsections): **{main_content_words:,} words** (70%)
+     * **Each subsection MUST be ~{words_per_subsection:,} words**
+     * **Write 3-5 paragraphs per subsection**
+     * **Include 2-3 examples per concept**
+     * **Explain WHY and HOW, not just WHAT**
+   - Summary & Practice: **{summary_words:,} words** (20% - 요약, 핵심 포인트, 실습)
+
+   **✅ HOW TO VERIFY YOUR WORD COUNT:**
+   - Count your words BEFORE submitting
+   - If below {min_words:,}, ADD MORE CONTENT
+   - Better to write TOO MUCH than too little
+
+2. **Structure**: {target_subsections}+ subsections (use ### headers)
+   - Introduction (10% of content)
+   - Main content in {target_subsections} detailed subsections (70%)
+   - Summary & Practice (20%)
+
+3. **🚨 Code Examples: MINIMUM {target_code_examples} examples 🚨**
+   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
+   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
+   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
+   - Show complete, runnable, real-world examples
+   - Include setup, execution, and output
+   - Both basic AND advanced examples
+
+   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
+   ```python
+   # ========================================
+   # 예제 #N: [예제 제목]
+   # ========================================
+   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
+   # 난이도: [쉬움/보통/어려움]
+   # ========================================
+
+   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
+   variable1 = "example"
+
+   # Step 2: [두 번째 단계 설명]
+   variable2 = process(variable1)
+
+   # Step 3: [세 번째 단계 설명]
+   result = finalize(variable2)
+
+   # ... (continue for 30-80 lines)
+
+   # 예상 출력:
+   # 결과: ...
+   ```
+
+   **After EACH code block, add 100-150 words explaining:**
+   - 코드가 무엇을 하는가
+   - 각 단계의 의미
+   - 실무에서 어떻게 활용하는가
+   - 주의할 점
+
+4. **Practice Problems: {target_practice_problems}+ detailed exercises**
+   - **Each problem: 100-150 words description**
+   - Clear problem statement (what needs to be solved)
+   - Requirements specification (3-5 requirements)
+   - Difficulty level indicator (쉬움/보통/어려움)
+   - 2-3 hints or guidance points
+   - Expected outcome and success criteria
+   - Bonus challenges for advanced learners
+
+**🚨 CRITICAL FORMATTING RULES:**
+- **NEVER use h1 (#) headings** - The section already has a title
+- **START with content directly** - NO title at the beginning
+- **Use h3 (###) for main subsections** - NOT h2 (##)
+- **Use h4 (####) for sub-subsections** - NOT h3
+- **Keep paragraphs short** - Max 4-5 sentences each
+- **Add blank lines** - Between sections for readability
+
+**✍️ HOW TO REACH THE WORD COUNT (MANDATORY TECHNIQUES):**
+
+🚨 **YOU MUST USE ALL OF THESE TECHNIQUES TO REACH {min_words:,}+ WORDS:**
+
+1. **Explain EVERY concept in EXTREME detail (300-500 words per concept)**:
+   - 무엇인가? (What is it?) - 3-4 paragraphs, 150+ words
+     * 정의를 3가지 다른 방식으로 설명
+     * 핵심 특징 5가지 이상 나열
+   - 왜 중요한가? (Why does it matter?) - 3 paragraphs, 100+ words
+     * 실무에서의 필요성
+     * 이것이 없으면 발생하는 문제들
+     * 비즈니스/기술적 가치
+   - 어떻게 작동하는가? (How does it work?) - 4-5 paragraphs, 200+ words
+     * 내부 동작 원리를 단계별로 상세히
+     * 각 단계마다 "왜 이렇게 하는가" 설명
+     * 시각적으로 상상할 수 있도록 묘사
+
+2. **Give 3-4 examples for EACH major point (NOT 1, but 3-4!)**:
+   - 초급 예제 (기본 개념 설명)
+   - 중급 예제 (실무 시나리오)
+   - 고급 예제 (복잡한 활용)
+   - 안티패턴 예제 (이렇게 하면 안 됨)
+   - **각 예제마다 50-100 단어로 설명**
+
+3. **Include detailed analogies (50-100 words per analogy)**:
+   - 일상생활 비유 (예: "이것은 마치 ~와 같습니다")
+   - 비유를 구체적으로 확장 (어떤 점이 비슷한가, 어떤 점이 다른가)
+   - 비유를 통해 이해했을 때의 인사이트
+
+4. **Discuss edge cases, pitfalls, and best practices (200+ words)**:
+   - 초보자가 저지르는 실수 5가지
+   - 각 실수를 피하는 방법
+   - 실수 시 나타나는 증상
+   - 모범 사례 3-5가지
+   - 각 모범 사례를 사용하는 이유
+
+5. **Add background and context (100-150 words)**:
+   - 역사적 맥락 (이 개념이 왜 생겨났는가)
+   - 어떤 문제를 해결하기 위해 만들어졌는가
+   - 이전 접근법과의 차이점
+   - 현재 산업에서의 위치
+
+6. **Include detailed step-by-step walkthroughs (200-300 words)**:
+   - 복잡한 과정을 8-12 단계로 분해
+   - **각 단계마다 20-30 단어 설명**
+   - 중간 결과물 설명
+   - 각 단계에서 주의할 점
+
+7. **Add comparison sections (150+ words)**:
+   - A vs B 비교 (장단점 각각 3가지씩)
+   - 언제 어떤 것을 사용하는가
+   - 실무 선택 기준
+
+8. **Include troubleshooting guides (100+ words)**:
+   - 자주 발생하는 문제 3-5가지
+   - 각 문제의 원인과 해결법
+   - 디버깅 팁
+
+🚨 **EACH SUBSECTION MUST BE {words_per_subsection:,}+ WORDS!**
+🚨 **Count your words as you write. DO NOT submit short content!**
+
+**💡 CONTENT DEPTH REQUIREMENTS:**
+
+For each main concept:
+- Define it clearly (무엇인가?)
+- Explain WHY it matters (왜 중요한가?)
+- Explain HOW it works (어떻게 작동하는가?)
+- Give 2-3 concrete examples
+- Discuss common pitfalls (주의사항)
+- Provide best practices (모범 사례)
+
+**💻 CODE EXAMPLE TEMPLATE (MANDATORY - COPY THIS STRUCTURE):**
+
+### 코드 예제 1: [기본 사용법]
+
+다음은 [개념]의 기본적인 사용 예제입니다.
+
+```python
+# 예제 설명: [이 예제가 무엇을 보여주는가]
+
+# 1단계: [무엇을 하는가]
+code_here = "example"
+
+# 2단계: [다음 단계 설명]
+result = process(code_here)
+
+# 3단계: [최종 단계]
+print(f"결과: {{result}}")
+
+# 예상 출력:
+# 결과: example processed
+```
+
+**설명:**
+- 첫 번째 단계에서는...
+- 두 번째 단계에서는...
+- 최종적으로...
+
+**YOU MUST INCLUDE AT LEAST {target_code_examples} CODE BLOCKS LIKE THE ABOVE TEMPLATE.**
+
+**📝 WRITING STYLE:**
+- Conversational but professional
+- Use analogies and metaphors
+- Break complex ideas into steps
+- Include "💡 Pro Tip" or "⚠️ 주의" callouts
+- Cross-reference related concepts
+
+**Knowledge Base Context:**
+{context_text}
+
+**🚨🚨🚨 FINAL CRITICAL REQUIREMENTS CHECKLIST 🚨🚨🚨**
+
+Before you submit, verify EVERY requirement:
+
+✅ **Word Count**: My content has AT LEAST {min_words:,} words
+   - Introduction: {intro_words:,}+ words
+   - Each subsection: {words_per_subsection:,}+ words
+   - Summary: {summary_words:,}+ words
+
+✅ **Code Examples**: I included {target_code_examples}+ code blocks
+   - Each 30-80 lines with detailed Korean comments
+   - Followed by 100-150 word explanation
+
+✅ **Practice Problems**: I included {target_practice_problems}+ detailed problems
+   - Each 100-150 words with hints and requirements
+
+✅ **Structure**: I have {target_subsections}+ subsections (### headers)
+
+✅ **Language**: ALL content in KOREAN (한국어)
+
+✅ **Depth**: I explained EVERY concept in extreme detail with examples
+
+🚨 **IF ANY CHECKBOX IS UNCHECKED, YOUR CONTENT WILL BE REJECTED!**
+
+🎯 **TARGET**: Write {target_words:,} words (MINIMUM {min_words:,} words)
+🎯 **STRATEGY**: Write LONG paragraphs, MANY examples, DETAILED explanations
+🎯 **QUALITY**: Better too much than too little - aim for {max_words:,} words!
+
+**NOW WRITE THE COMPREHENSIVE, DETAILED, LONG LECTURE CONTENT:**

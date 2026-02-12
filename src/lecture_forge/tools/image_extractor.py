@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from lecture_forge.config import Config
+from lecture_forge.exceptions import ImageExtractionError, ImageProcessingError
 from lecture_forge.utils import logger
 
 
@@ -219,13 +220,24 @@ class PDFImageExtractorTool:
                 "error": None,
             }
 
-        except Exception as e:
-            logger.error(f"Error extracting images from PDF {pdf_path}: {e}")
+        except (OSError, IOError, FileNotFoundError) as e:
+            logger.error(f"File error extracting images from PDF {pdf_path}: {e}")
             return {
                 "success": False,
                 "images": [],
-                "error": str(e),
+                "error": f"File error: {str(e)}",
             }
+        except (ValueError, RuntimeError) as e:
+            logger.error(f"PDF processing error for {pdf_path}: {e}")
+            return {
+                "success": False,
+                "images": [],
+                "error": f"PDF processing error: {str(e)}",
+            }
+        except Exception as e:
+            # Catch any other unexpected errors
+            logger.error(f"Unexpected error extracting images from PDF {pdf_path}: {e}")
+            raise ImageExtractionError(f"Failed to extract images from {pdf_path}: {str(e)}") from e
 
     def _evaluate_image_quality(self, pil_image: Image.Image, width: int, height: int, size_bytes: int) -> float:
         """
@@ -261,7 +273,7 @@ class PDFImageExtractorTool:
             # Standard ratios (diagrams, charts, screenshots)
             if 0.5 <= aspect_ratio <= 2.0:
                 score += 0.15
-            elif 0.3 <= aspect_ratio <= 3.0:
+            elif Config.IMAGE_ASPECT_RATIO_MIN <= aspect_ratio <= Config.IMAGE_ASPECT_RATIO_MAX:
                 score += 0.10
             else:
                 # Very wide or tall = likely decorative banner/sidebar
@@ -273,14 +285,14 @@ class PDFImageExtractorTool:
             bytes_per_pixel = size_bytes / pixels
 
             # Detect solid color images (very low compression ratio)
-            if bytes_per_pixel < 0.05:
+            if bytes_per_pixel < Config.IMAGE_COMPRESSION_SOLID:
                 logger.debug(
                     f"      Low compression: {bytes_per_pixel:.4f} bpp " f"({size_bytes:,} bytes / {pixels:,} pixels)"
                 )
                 return 0.0  # Reject solid color images immediately
 
             # Normal range scoring
-            if 0.2 <= bytes_per_pixel <= 1.5:
+            if Config.IMAGE_COMPRESSION_LOW <= bytes_per_pixel <= Config.IMAGE_COMPRESSION_HIGH:
                 score += 0.20
             elif 0.1 <= bytes_per_pixel <= 2.0:
                 score += 0.15
@@ -301,9 +313,9 @@ class PDFImageExtractorTool:
             score += meaningful_score * 0.20
 
             # Bonus: If image is likely diagram/chart, boost score
-            if meaningful_score >= 0.8:
+            if meaningful_score >= Config.IMAGE_MEANINGFUL_CONTENT_THRESHOLD:
                 logger.debug(f"      ⭐ High-value content detected (diagram/chart/text)")
-                score += 0.10  # Bonus for educational content
+                score += Config.IMAGE_DIAGRAM_BONUS  # Bonus for educational content
         except Exception as e:
             logger.debug(f"      Meaningful content detection skipped: {e}")
             score += 0.05
@@ -375,13 +387,13 @@ class PDFImageExtractorTool:
         avg_std = (std_r + std_g + std_b) / 3.0
 
         # Score based on standard deviation
-        if avg_std >= 50:
+        if avg_std >= Config.IMAGE_STD_HIGH:
             return 1.0
-        elif avg_std >= 30:
+        elif avg_std >= Config.IMAGE_STD_MEDIUM:
             return 0.7
-        elif avg_std >= 15:
+        elif avg_std >= Config.IMAGE_STD_LOW:
             return 0.4
-        elif avg_std >= 5:
+        elif avg_std >= Config.IMAGE_STD_MINIMAL:
             return 0.2
         else:
             # Very low std = solid color
@@ -815,10 +827,21 @@ class WebImageScraperTool:
                 "error": None,
             }
 
-        except Exception as e:
-            logger.error(f"Error extracting images from URL {url}: {e}")
+        except (OSError, IOError) as e:
+            logger.error(f"Network/IO error extracting images from URL {url}: {e}")
             return {
                 "success": False,
                 "images": [],
-                "error": str(e),
+                "error": f"Network error: {str(e)}",
             }
+        except (ValueError, KeyError) as e:
+            logger.error(f"HTML parsing error for URL {url}: {e}")
+            return {
+                "success": False,
+                "images": [],
+                "error": f"Parsing error: {str(e)}",
+            }
+        except Exception as e:
+            # Catch any other unexpected errors
+            logger.error(f"Unexpected error extracting images from URL {url}: {e}")
+            raise ImageExtractionError(f"Failed to extract images from {url}: {str(e)}") from e

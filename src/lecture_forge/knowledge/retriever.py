@@ -60,17 +60,21 @@ class RAGRetriever:
         cache_string = f"{query}:{k}"
         return hashlib.md5(cache_string.encode()).hexdigest()
 
-    def retrieve(self, query: str, k: int = 5) -> List[Dict]:
+    def retrieve(self, query: str, k: int = None) -> List[Dict]:
         """
         Retrieve relevant documents for a query with persistent caching.
 
         Args:
             query: Query text
-            k: Number of documents to retrieve
+            k: Number of documents to retrieve (default from Config)
 
         Returns:
             List of retrieved documents with metadata
         """
+        # Use default from Config if not specified
+        if k is None:
+            k = Config.RAG_TOP_K_RESULTS
+
         # Check cache first
         cache_key = self._get_cache_key(query, k)
 
@@ -166,7 +170,9 @@ class RAGRetriever:
         try:
             with shelve.open(self._cache_file) as cache:
                 cache_size = len(cache)
-        except Exception:
+        except (OSError, IOError, KeyError) as e:
+            # Cache file doesn't exist or can't be read - not a critical error for stats
+            logger.debug(f"Could not read cache size: {e}")
             cache_size = 0
 
         return {

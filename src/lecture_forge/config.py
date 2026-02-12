@@ -19,6 +19,9 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+# Import exceptions (after module-level setup to avoid circular imports)
+# These will be imported after Config class definition
+
 # ===== CRITICAL: Disable ChromaDB telemetry BEFORE any imports =====
 # This MUST be set before ChromaDB is imported anywhere in the application
 # to prevent PostHog telemetry errors (capture() API incompatibility)
@@ -152,6 +155,47 @@ class Config:
     # Selection phase: Strict filtering (select best images for lecture inclusion)
     IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.40"))
 
+    # ===== Image Quality Analysis - Color Diversity =====
+    # Standard deviation thresholds for color diversity scoring
+    # Higher std = more color variation = better content
+    IMAGE_STD_HIGH: int = int(os.getenv("IMAGE_STD_HIGH", "50"))  # High color diversity
+    IMAGE_STD_MEDIUM: int = int(os.getenv("IMAGE_STD_MEDIUM", "30"))  # Medium diversity
+    IMAGE_STD_LOW: int = int(os.getenv("IMAGE_STD_LOW", "15"))  # Low diversity
+    IMAGE_STD_MINIMAL: int = int(os.getenv("IMAGE_STD_MINIMAL", "5"))  # Almost solid color
+
+    # ===== Image Quality Analysis - Edge Density =====
+    # Edge density thresholds for content structure detection
+    # Higher edge density = more structure/detail = better for diagrams
+    IMAGE_EDGE_DENSITY_HIGH: float = float(os.getenv("IMAGE_EDGE_DENSITY_HIGH", "0.15"))  # High detail
+    IMAGE_EDGE_DENSITY_MEDIUM: float = float(os.getenv("IMAGE_EDGE_DENSITY_MEDIUM", "0.08"))  # Medium detail
+    IMAGE_EDGE_DENSITY_LOW: float = float(os.getenv("IMAGE_EDGE_DENSITY_LOW", "0.04"))  # Low detail
+    IMAGE_EDGE_DENSITY_MINIMAL: float = float(os.getenv("IMAGE_EDGE_DENSITY_MINIMAL", "0.02"))  # Minimal edges
+
+    # ===== Image Quality Analysis - Compression Ratio =====
+    # Bytes per pixel thresholds for compression quality
+    # Higher bpp = less compression = better quality
+    IMAGE_COMPRESSION_SOLID: float = float(os.getenv("IMAGE_COMPRESSION_SOLID", "0.05"))  # Solid color/icon
+    IMAGE_COMPRESSION_LOW: float = float(os.getenv("IMAGE_COMPRESSION_LOW", "0.2"))  # Highly compressed
+    IMAGE_COMPRESSION_MEDIUM: float = float(os.getenv("IMAGE_COMPRESSION_MEDIUM", "1.0"))  # Medium quality
+    IMAGE_COMPRESSION_HIGH: float = float(os.getenv("IMAGE_COMPRESSION_HIGH", "1.5"))  # High quality
+
+    # ===== Image Selection - Weighting Factors =====
+    # Weights for image selection scoring (should sum to ~1.0)
+    IMAGE_WEIGHT_QUALITY: float = float(os.getenv("IMAGE_WEIGHT_QUALITY", "0.35"))  # Quality score weight
+    IMAGE_WEIGHT_IMPORTANCE: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE", "0.55"))  # Topic relevance weight
+    IMAGE_WEIGHT_POSITION: float = float(os.getenv("IMAGE_WEIGHT_POSITION", "0.10"))  # Location proximity weight
+
+    # ===== Image Content Detection =====
+    # Threshold for meaningful content detection (diagrams, charts, text)
+    IMAGE_MEANINGFUL_CONTENT_THRESHOLD: float = float(os.getenv("IMAGE_MEANINGFUL_CONTENT_THRESHOLD", "0.8"))
+    # Bonus score for detected high-value content
+    IMAGE_DIAGRAM_BONUS: float = float(os.getenv("IMAGE_DIAGRAM_BONUS", "0.10"))
+
+    # ===== Image Aspect Ratio Bounds =====
+    # Valid aspect ratio range (width/height)
+    IMAGE_ASPECT_RATIO_MIN: float = float(os.getenv("IMAGE_ASPECT_RATIO_MIN", "0.3"))  # Very tall
+    IMAGE_ASPECT_RATIO_MAX: float = float(os.getenv("IMAGE_ASPECT_RATIO_MAX", "3.0"))  # Very wide
+
     # ===== Vector DB =====
     VECTOR_DB_PATH: Path = Path(os.getenv("VECTOR_DB_PATH", str(DATA_DIR / "vector_db")))
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
@@ -161,6 +205,12 @@ class Config:
     RAG_CACHE_PATH: Path = Path(os.getenv("RAG_CACHE_PATH", str(DATA_DIR / "rag_cache")))
     RAG_CACHE_TTL: int = int(os.getenv("RAG_CACHE_TTL", "86400"))  # 24 hours in seconds
     RAG_CACHE_MAX_SIZE: int = int(os.getenv("RAG_CACHE_MAX_SIZE", "1000"))  # Max number of cached queries
+
+    # ===== RAG Query Settings =====
+    # Default number of documents to retrieve per query
+    RAG_DEFAULT_RESULTS: int = int(os.getenv("RAG_DEFAULT_RESULTS", "10"))
+    # Top-k results for context building
+    RAG_TOP_K_RESULTS: int = int(os.getenv("RAG_TOP_K_RESULTS", "5"))
 
     # ===== Quality Assurance =====
     QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
@@ -300,7 +350,10 @@ class Config:
                 )
 
         if errors:
-            raise ValueError("\n" + "\n".join(errors))
+            # Import here to avoid circular dependency
+            from lecture_forge.exceptions import ConfigurationError
+
+            raise ConfigurationError("\n" + "\n".join(errors))
 
         # Warnings for optional keys
         if not cls.UNSPLASH_ACCESS_KEY:

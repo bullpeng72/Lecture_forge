@@ -1865,6 +1865,32 @@ def select_pdf_files() -> List[str]:
     return selected_files
 
 
+def _collect_comma_separated_input(
+    console: Console,
+    prompt_label: str,
+    hint: Optional[str] = None,
+) -> List[str]:
+    """
+    Collect comma-separated input from user.
+
+    Args:
+        console: Rich console instance
+        prompt_label: Label to display in prompt
+        hint: Optional hint to display before prompt
+
+    Returns:
+        List of stripped values, or empty list if no input
+    """
+    if hint:
+        console.print(f"[dim]{hint}[/dim]")
+
+    input_text = Prompt.ask(f"[bold]{prompt_label}[/bold] (comma-separated, or press Enter to skip)")
+
+    if input_text:
+        return [item.strip().strip('"').strip("'") for item in input_text.split(",")]
+    return []
+
+
 def collect_inputs_interactive() -> Dict[str, Any]:
     """Collect inputs interactively from user."""
     console.print("[bold cyan]📝 Lecture Information[/bold cyan]")
@@ -1901,11 +1927,10 @@ def collect_inputs_interactive() -> Dict[str, Any]:
         if inputs["pdfs"]:
             add_more = Confirm.ask("\n[bold]Add more PDF files manually?[/bold]", default=False)
             if add_more:
-                console.print("[dim]💡 Tip: For filenames with spaces, just type without quotes[/dim]")
-                pdf_input = Prompt.ask("[bold]Additional PDF files[/bold] (comma-separated)")
-                if pdf_input:
-                    additional = [p.strip().strip('"').strip("'") for p in pdf_input.split(",")]
-                    inputs["pdfs"].extend(additional)
+                additional = _collect_comma_separated_input(
+                    console, "Additional PDF files", hint="💡 Tip: For filenames with spaces, just type without quotes"
+                )
+                inputs["pdfs"].extend(additional)
 
     elif pdf_choice == "2":
         # Manual input
@@ -1922,33 +1947,18 @@ def collect_inputs_interactive() -> Dict[str, Any]:
         inputs["pdfs"] = []
 
     # URLs
-    url_input = Prompt.ask("[bold]URLs[/bold] (comma-separated, or press Enter to skip)")
-    if url_input:
-        inputs["urls"] = [u.strip().strip('"').strip("'") for u in url_input.split(",")]
-    else:
-        inputs["urls"] = []
+    inputs["urls"] = _collect_comma_separated_input(console, "URLs")
 
     # Search keywords
-    keyword_input = Prompt.ask("[bold]Search keywords[/bold] (comma-separated, or press Enter to skip)")
-    if keyword_input:
-        inputs["keywords"] = [k.strip().strip('"').strip("'") for k in keyword_input.split(",")]
-    else:
-        inputs["keywords"] = []
+    inputs["keywords"] = _collect_comma_separated_input(console, "Search keywords")
 
     # Hada.io deep search keywords
-    console.print("\n[dim]💡 Deep Crawling: Hada.io search will crawl article links too[/dim]")
-    hada_keyword_input = Prompt.ask("[bold]Hada.io search keywords[/bold] (comma-separated, or press Enter to skip)")
-    if hada_keyword_input:
-        inputs["hada_keywords"] = [k.strip().strip('"').strip("'") for k in hada_keyword_input.split(",")]
-    else:
-        inputs["hada_keywords"] = []
+    inputs["hada_keywords"] = _collect_comma_separated_input(
+        console, "Hada.io search keywords", hint="\n💡 Deep Crawling: Hada.io search will crawl article links too"
+    )
 
     # Image search keywords (if enabled via flag)
-    image_keyword_input = Prompt.ask("[bold]Image search keywords[/bold] (comma-separated, or press Enter to skip)")
-    if image_keyword_input:
-        inputs["image_keywords"] = [k.strip().strip('"').strip("'") for k in image_keyword_input.split(",")]
-    else:
-        inputs["image_keywords"] = []
+    inputs["image_keywords"] = _collect_comma_separated_input(console, "Image search keywords")
 
     return inputs
 

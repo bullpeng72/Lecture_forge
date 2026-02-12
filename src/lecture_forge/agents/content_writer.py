@@ -18,6 +18,7 @@ from lecture_forge.utils.content_metrics import (
     evaluate_content_quality,
     format_quality_report,
 )
+from lecture_forge.utils.prompt_manager import load_prompt
 
 
 class ContentWriterAgent(BaseAgent):
@@ -203,253 +204,35 @@ class ContentWriterAgent(BaseAgent):
         # Use more contexts (increase from 8 to 10 for better content)
         context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
 
-        # Enhanced prompt with VERY strict requirements
-        prompt = f"""🚨🚨🚨 CRITICAL MISSION: Write COMPREHENSIVE and DETAILED lecture content 🚨🚨🚨
+        # Prepare template variables
+        template_vars = {
+            # Basic information
+            "topic": curriculum.topic,
+            "audience_level": curriculum.audience_level,
+            "section_title": section.title,
+            "estimated_time": section.estimated_time,
+            "difficulty_level": section.difficulty_level,
+            # Topics and outcomes
+            "topics_list": ', '.join(section.topics),
+            "learning_outcomes_list": '\n'.join(f'- {outcome}' for outcome in section.learning_outcomes),
+            # Target metrics
+            "min_words": targets['min_words'],
+            "target_words": targets['target_words'],
+            "max_words": targets['max_words'],
+            "target_subsections": targets['target_subsections'],
+            "target_code_examples": targets['target_code_examples'],
+            "target_practice_problems": targets['target_practice_problems'],
+            # Word count breakdown
+            "intro_words": int(targets['target_words'] * 0.10),
+            "main_content_words": int(targets['target_words'] * 0.70),
+            "summary_words": int(targets['target_words'] * 0.20),
+            "words_per_subsection": int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])),
+            # Context
+            "context_text": context_text,
+        }
 
-⚠️⚠️⚠️ CRITICAL FAILURE CONDITIONS (ANY = AUTO REJECT):
-1. ❌ WORD COUNT < {targets['min_words']:,} words → REJECTED AND YOU WILL BE FIRED
-2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED
-3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED
-4. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
-
-⚠️ You MUST satisfy ALL requirements or your output will be REJECTED.
-⚠️ This is NOT negotiable. Write AT LEAST {targets['min_words']:,} words or FAIL.
-
-**Lecture Information:**
-- Topic: {curriculum.topic}
-- Audience Level: {curriculum.audience_level}
-- Section: {section.title}
-- Allocated Time: {section.estimated_time} minutes
-- Difficulty: {section.difficulty_level}
-
-**Topics to Cover:**
-{', '.join(section.topics)}
-
-**Learning Outcomes:**
-{chr(10).join(f'- {outcome}' for outcome in section.learning_outcomes)}
-
-**📏 STRICT CONTENT REQUIREMENTS (MUST MEET):**
-
-1. **🚨 LENGTH (MOST CRITICAL): {targets['target_words']:,} words TARGET 🚨**
-   - **MINIMUM**: {targets['min_words']:,} words (ABSOLUTE MINIMUM - DO NOT GO BELOW!)
-   - **TARGET**: {targets['target_words']:,} words (AIM FOR THIS)
-   - **MAXIMUM**: {targets['max_words']:,} words
-
-   ⚠️ **IF YOUR CONTENT IS LESS THAN {targets['min_words']:,} WORDS, IT WILL BE REJECTED!**
-
-   **📊 MANDATORY Word Count Breakdown (CHECK EACH SECTION):**
-   - Introduction: **{int(targets['target_words'] * 0.10):,} words** (10% - 개요, 중요성, 학습 목표)
-   - Main Content ({targets['target_subsections']} subsections): **{int(targets['target_words'] * 0.70):,} words** (70%)
-     * **Each subsection MUST be ~{int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,} words**
-     * **Write 3-5 paragraphs per subsection**
-     * **Include 2-3 examples per concept**
-     * **Explain WHY and HOW, not just WHAT**
-   - Summary & Practice: **{int(targets['target_words'] * 0.20):,} words** (20% - 요약, 핵심 포인트, 실습)
-
-   **✅ HOW TO VERIFY YOUR WORD COUNT:**
-   - Count your words BEFORE submitting
-   - If below {targets['min_words']:,}, ADD MORE CONTENT
-   - Better to write TOO MUCH than too little
-
-2. **Structure**: {targets['target_subsections']}+ subsections (use ### headers)
-   - Introduction (10% of content)
-   - Main content in {targets['target_subsections']} detailed subsections (70%)
-   - Summary & Practice (20%)
-
-3. **🚨 Code Examples: MINIMUM {targets['target_code_examples']} examples 🚨**
-   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
-   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
-   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
-   - Show complete, runnable, real-world examples
-   - Include setup, execution, and output
-   - Both basic AND advanced examples
-
-   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
-   ```python
-   # ========================================
-   # 예제 #N: [예제 제목]
-   # ========================================
-   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
-   # 난이도: [쉬움/보통/어려움]
-   # ========================================
-
-   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
-   variable1 = "example"
-
-   # Step 2: [두 번째 단계 설명]
-   variable2 = process(variable1)
-
-   # Step 3: [세 번째 단계 설명]
-   result = finalize(variable2)
-
-   # ... (continue for 30-80 lines)
-
-   # 예상 출력:
-   # 결과: ...
-   ```
-
-   **After EACH code block, add 100-150 words explaining:**
-   - 코드가 무엇을 하는가
-   - 각 단계의 의미
-   - 실무에서 어떻게 활용하는가
-   - 주의할 점
-
-4. **Practice Problems: {targets['target_practice_problems']}+ detailed exercises**
-   - **Each problem: 100-150 words description**
-   - Clear problem statement (what needs to be solved)
-   - Requirements specification (3-5 requirements)
-   - Difficulty level indicator (쉬움/보통/어려움)
-   - 2-3 hints or guidance points
-   - Expected outcome and success criteria
-   - Bonus challenges for advanced learners
-
-**🚨 CRITICAL FORMATTING RULES:**
-- **NEVER use h1 (#) headings** - The section already has a title
-- **START with content directly** - NO title at the beginning
-- **Use h3 (###) for main subsections** - NOT h2 (##)
-- **Use h4 (####) for sub-subsections** - NOT h3
-- **Keep paragraphs short** - Max 4-5 sentences each
-- **Add blank lines** - Between sections for readability
-
-**✍️ HOW TO REACH THE WORD COUNT (MANDATORY TECHNIQUES):**
-
-🚨 **YOU MUST USE ALL OF THESE TECHNIQUES TO REACH {targets['min_words']:,}+ WORDS:**
-
-1. **Explain EVERY concept in EXTREME detail (300-500 words per concept)**:
-   - 무엇인가? (What is it?) - 3-4 paragraphs, 150+ words
-     * 정의를 3가지 다른 방식으로 설명
-     * 핵심 특징 5가지 이상 나열
-   - 왜 중요한가? (Why does it matter?) - 3 paragraphs, 100+ words
-     * 실무에서의 필요성
-     * 이것이 없으면 발생하는 문제들
-     * 비즈니스/기술적 가치
-   - 어떻게 작동하는가? (How does it work?) - 4-5 paragraphs, 200+ words
-     * 내부 동작 원리를 단계별로 상세히
-     * 각 단계마다 "왜 이렇게 하는가" 설명
-     * 시각적으로 상상할 수 있도록 묘사
-
-2. **Give 3-4 examples for EACH major point (NOT 1, but 3-4!)**:
-   - 초급 예제 (기본 개념 설명)
-   - 중급 예제 (실무 시나리오)
-   - 고급 예제 (복잡한 활용)
-   - 안티패턴 예제 (이렇게 하면 안 됨)
-   - **각 예제마다 50-100 단어로 설명**
-
-3. **Include detailed analogies (50-100 words per analogy)**:
-   - 일상생활 비유 (예: "이것은 마치 ~와 같습니다")
-   - 비유를 구체적으로 확장 (어떤 점이 비슷한가, 어떤 점이 다른가)
-   - 비유를 통해 이해했을 때의 인사이트
-
-4. **Discuss edge cases, pitfalls, and best practices (200+ words)**:
-   - 초보자가 저지르는 실수 5가지
-   - 각 실수를 피하는 방법
-   - 실수 시 나타나는 증상
-   - 모범 사례 3-5가지
-   - 각 모범 사례를 사용하는 이유
-
-5. **Add background and context (100-150 words)**:
-   - 역사적 맥락 (이 개념이 왜 생겨났는가)
-   - 어떤 문제를 해결하기 위해 만들어졌는가
-   - 이전 접근법과의 차이점
-   - 현재 산업에서의 위치
-
-6. **Include detailed step-by-step walkthroughs (200-300 words)**:
-   - 복잡한 과정을 8-12 단계로 분해
-   - **각 단계마다 20-30 단어 설명**
-   - 중간 결과물 설명
-   - 각 단계에서 주의할 점
-
-7. **Add comparison sections (150+ words)**:
-   - A vs B 비교 (장단점 각각 3가지씩)
-   - 언제 어떤 것을 사용하는가
-   - 실무 선택 기준
-
-8. **Include troubleshooting guides (100+ words)**:
-   - 자주 발생하는 문제 3-5가지
-   - 각 문제의 원인과 해결법
-   - 디버깅 팁
-
-🚨 **EACH SUBSECTION MUST BE {int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,}+ WORDS!**
-🚨 **Count your words as you write. DO NOT submit short content!**
-
-**💡 CONTENT DEPTH REQUIREMENTS:**
-
-For each main concept:
-- Define it clearly (무엇인가?)
-- Explain WHY it matters (왜 중요한가?)
-- Explain HOW it works (어떻게 작동하는가?)
-- Give 2-3 concrete examples
-- Discuss common pitfalls (주의사항)
-- Provide best practices (모범 사례)
-
-**💻 CODE EXAMPLE TEMPLATE (MANDATORY - COPY THIS STRUCTURE):**
-
-### 코드 예제 1: [기본 사용법]
-
-다음은 [개념]의 기본적인 사용 예제입니다.
-
-```python
-# 예제 설명: [이 예제가 무엇을 보여주는가]
-
-# 1단계: [무엇을 하는가]
-code_here = "example"
-
-# 2단계: [다음 단계 설명]
-result = process(code_here)
-
-# 3단계: [최종 단계]
-print(f"결과: {{result}}")
-
-# 예상 출력:
-# 결과: example processed
-```
-
-**설명:**
-- 첫 번째 단계에서는...
-- 두 번째 단계에서는...
-- 최종적으로...
-
-**YOU MUST INCLUDE AT LEAST {targets['target_code_examples']} CODE BLOCKS LIKE THE ABOVE TEMPLATE.**
-
-**📝 WRITING STYLE:**
-- Conversational but professional
-- Use analogies and metaphors
-- Break complex ideas into steps
-- Include "💡 Pro Tip" or "⚠️ 주의" callouts
-- Cross-reference related concepts
-
-**Knowledge Base Context:**
-{context_text}
-
-**🚨🚨🚨 FINAL CRITICAL REQUIREMENTS CHECKLIST 🚨🚨🚨**
-
-Before you submit, verify EVERY requirement:
-
-✅ **Word Count**: My content has AT LEAST {targets['min_words']:,} words
-   - Introduction: {int(targets['target_words'] * 0.10):,}+ words
-   - Each subsection: {int(targets['target_words'] * 0.70 / max(1, targets['target_subsections'])):,}+ words
-   - Summary: {int(targets['target_words'] * 0.20):,}+ words
-
-✅ **Code Examples**: I included {targets['target_code_examples']}+ code blocks
-   - Each 30-80 lines with detailed Korean comments
-   - Followed by 100-150 word explanation
-
-✅ **Practice Problems**: I included {targets['target_practice_problems']}+ detailed problems
-   - Each 100-150 words with hints and requirements
-
-✅ **Structure**: I have {targets['target_subsections']}+ subsections (### headers)
-
-✅ **Language**: ALL content in KOREAN (한국어)
-
-✅ **Depth**: I explained EVERY concept in extreme detail with examples
-
-🚨 **IF ANY CHECKBOX IS UNCHECKED, YOUR CONTENT WILL BE REJECTED!**
-
-🎯 **TARGET**: Write {targets['target_words']:,} words (MINIMUM {targets['min_words']:,} words)
-🎯 **STRATEGY**: Write LONG paragraphs, MANY examples, DETAILED explanations
-🎯 **QUALITY**: Better too much than too little - aim for {targets['max_words']:,} words!
-
-**NOW WRITE THE COMPREHENSIVE, DETAILED, LONG LECTURE CONTENT:**"""
+        # Load prompt from template
+        prompt = load_prompt("content_generation", **template_vars)
 
         try:
             response = self.invoke_llm(prompt, phase="content_writing")
@@ -596,135 +379,31 @@ Before you submit, verify EVERY requirement:
 
         word_gap = targets["target_words"] - previous_quality["word_count"]
 
-        prompt = f"""🚨🚨🚨 EMERGENCY: CONTENT TOO SHORT - IMMEDIATE ACTION REQUIRED 🚨🚨🚨
+        # Prepare template variables
+        template_vars = {
+            "shortfall_text": shortfall_text,
+            "current_word_count": previous_quality["word_count"],
+            "min_words": targets["min_words"],
+            "target_words": targets["target_words"],
+            "word_gap": word_gap,
+            "section_title": section.title,
+            "estimated_time": section.estimated_time,
+            "previous_content": previous_content,
+            "depth_words": int(word_gap * 0.4),
+            "code_words": int(word_gap * 0.3),
+            "pitfall_words": int(word_gap * 0.15),
+            "best_practice_words": int(word_gap * 0.15),
+            "context_text": context_text,
+        }
 
-**🔴 CRITICAL FAILURE - YOU WILL BE FIRED IF YOU DON'T FIX THIS! 🔴**
-
-The content you provided is REJECTED because it's FAR TOO SHORT!
-
-**Current Status (UNACCEPTABLE):**
-{shortfall_text}
-
-**YOUR MISSION (DO OR DIE):**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CURRENT LENGTH: {previous_quality['word_count']:,} words ❌ (TOO SHORT!)
-MINIMUM REQUIRED: {targets['min_words']:,} words ⚠️ (MUST REACH!)
-TARGET: {targets['target_words']:,} words ✅ (AIM FOR THIS!)
-YOU MUST ADD: {word_gap:,}+ WORDS RIGHT NOW!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ **THIS IS YOUR LAST CHANCE TO FIX THE CONTENT!**
-⚠️ **If you fail to add {word_gap:,}+ words, this content will be PERMANENTLY REJECTED!**
-
-**Section**: {section.title} ({section.estimated_time} minutes)
-
-**Previous content ({previous_quality['word_count']} words):**
-{previous_content}
-
----
-
-**YOU MUST ADD {word_gap}+ WORDS using these strategies:**
-
-1. **깊이 있는 설명 추가** (add ~{int(word_gap * 0.4)} words):
-   - 각 개념마다:
-     * 더 쉬운 용어로 재정의 (2-3 문단)
-     * 실생활 비유 추가 (1-2 문단)
-     * 시각적 설명 (어떻게 생겼는지, 어떻게 작동하는지)
-     * 역사적 배경 (누가, 언제, 왜 만들었는지)
-
-2. **추가 코드 예제 작성 (CRITICAL!)** (add ~{int(word_gap * 0.3)} words):
-   - ⚠️ MANDATORY: 코드 블록 필수 포함 (```python ... ```)
-   - 각 개념당 2-3개의 완전한 실행 가능한 예제
-   - 각 예제: 20-50 lines of code
-   - 단계별 설명 (step 1, 2, 3...)
-   - 한글 주석 포함
-   - 예상 출력 명시
-
-   **CODE EXAMPLE FORMAT (MANDATORY):**
-   ```python
-   # [설명]
-   # 코드 20-50 lines
-   # 한글 주석
-   ```
-
-3. **흔한 실수와 주의사항** (add ~{int(word_gap * 0.15)} words):
-   - 초보자가 자주 하는 실수 3-5가지
-   - 각 실수를 피하는 방법
-   - 문제의 징후 (어떻게 알아차리는가?)
-   - 해결 방법
-
-4. **모범 사례와 팁** (add ~{int(word_gap * 0.15)} words):
-   - 업계 표준
-   - 전문가 팁 5-7가지
-   - 최적화 기법
-   - 실무에서의 활용법
-
-**Additional context for deeper content:**
-{context_text}
-
-**EXPANSION STRATEGY:**
-
-For EACH concept in the previous content, you MUST write:
-1. ✍️ Definition (100-150 words):
-   "이 개념은 무엇인가?"를 3-4 문단으로 자세히 설명
-
-2. 🎯 Purpose/Importance (100-150 words):
-   "왜 중요한가? 어디에 쓰이는가?"를 예시와 함께
-
-3. 🔧 How it Works (150-200 words):
-   "어떻게 작동하는가?"를 단계별로 설명
-
-4. 📝 Examples (200-250 words):
-   - 간단한 예제 (코드 + 설명)
-   - 실무 예제 (실제 사용 사례)
-   - 비교 예제 (Before/After, Good/Bad)
-
-5. ⚠️ Common Mistakes (100-150 words):
-   초보자가 흔히 하는 실수 3-5개와 해결법
-
-6. 💡 Best Practices (100-150 words):
-   전문가 팁과 최적화 방법
-
-**EXAMPLE OF PROPER EXPANSION:**
-Before (짧음 ❌): "트랜스포머는 어텐션 메커니즘을 사용하는 신경망 구조입니다."
-
-After (충분함 ✅):
-"트랜스포머(Transformer)는 2017년 구글에서 발표한 혁신적인 신경망 아키텍처입니다. 기존의 RNN이나 LSTM과 달리 순차적 처리가 아닌 병렬 처리가 가능하여 학습 속도가 획기적으로 빨라졌습니다.
-
-트랜스포머의 핵심은 '어텐션 메커니즘(Attention Mechanism)'입니다. 이는 문장 내 모든 단어 간의 관계를 동시에 계산하는 방식입니다. 예를 들어 '그 남자가 길을 건넜다'라는 문장에서 '그'가 '남자'를 가리킨다는 것을 어텐션을 통해 학습합니다.
-
-구체적으로 트랜스포머는 다음과 같이 작동합니다:
-1. 입력 문장을 토큰으로 분리합니다
-2. 각 토큰을 벡터로 변환합니다 (임베딩)
-3. 셀프 어텐션을 통해 토큰 간 관계를 계산합니다
-4. 여러 레이어를 거쳐 최종 출력을 생성합니다
-
-실제 사용 예시를 보겠습니다..."
-
-(계속 500+ words 더 작성...)
-
-**YOUR TURN:**
-Write the FULLY EXPANDED version with {targets['target_words']:,}+ words.
-Use KOREAN (한국어) and be EXTREMELY detailed.
-
-CONTENT TO EXPAND:
-{previous_content}
-
-WRITE {word_gap:,}+ MORE WORDS NOW:"""
+        # Load prompt from template
+        prompt = load_prompt("content_expansion", **template_vars)
 
         try:
             logger.debug(f"     Sending expansion prompt ({len(prompt)} chars)")
 
             response = self.invoke_llm(prompt, phase="content_expansion")
             expanded = response.content.strip()
-
-            logger.debug(f"     Received response ({len(expanded)} chars)")
-
-            # Clean up
-            if expanded.startswith("```markdown"):
-                expanded = expanded.split("```markdown")[1].split("```")[0].strip()
-            elif expanded.startswith("```"):
-                expanded = expanded.split("```")[1].split("```")[0].strip()
 
             # Validate expansion actually happened
             if len(expanded) <= len(previous_content):
@@ -755,8 +434,7 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
             import traceback
 
             logger.debug(traceback.format_exc())
-            # Return original if expansion fails
-            return previous_content
+            return previous_content  # Return original on error
 
     def _count_images(self, markdown: str) -> int:
         """Count the number of images in markdown content."""
@@ -1038,9 +716,9 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
                     # Adjust weights based on content type
                     # Diagrams/charts get higher quality weight (more important than page location)
                     if content_type in ["diagram", "chart"]:
-                        quality_weight = 0.35  # Increase quality importance
-                        importance_weight = 0.55
-                        position_weight = 0.10
+                        quality_weight = Config.IMAGE_WEIGHT_QUALITY  # Increase quality importance
+                        importance_weight = Config.IMAGE_WEIGHT_IMPORTANCE
+                        position_weight = Config.IMAGE_WEIGHT_POSITION
                     elif content_type in ["screenshot", "technical"]:
                         quality_weight = 0.25
                         importance_weight = 0.65
@@ -1862,86 +1540,18 @@ WRITE {word_gap:,}+ MORE WORDS NOW:"""
 
         context_text = "\n\n---\n\n".join(contexts[:5]) if contexts else ""
 
-        prompt = f"""🚨 EMERGENCY: GENERATE CODE EXAMPLES IMMEDIATELY 🚨
+        # Prepare template variables
+        template_vars = {
+            "num_examples": num_examples,
+            "section_title": section.title,
+            "topic": curriculum.topic,
+            "audience_level": curriculum.audience_level,
+            "topics_list": ', '.join(section.topics),
+            "context_text": context_text,
+        }
 
-**CRITICAL FAILURE:** The content has NO code examples, which is UNACCEPTABLE.
-
-**YOUR MISSION:**
-Generate {num_examples} complete, runnable Python code examples for: {section.title}
-
-**Topic:** {curriculum.topic}
-**Audience:** {curriculum.audience_level}
-**Section Topics:** {', '.join(section.topics)}
-
-**REQUIREMENTS FOR EACH CODE EXAMPLE:**
-
-1. **Structure:**
-   ### 코드 예제 [번호]: [제목]
-
-   [예제 설명 1-2 문장]
-
-   ```python
-   # [예제가 보여주는 것]
-
-   # 코드 (20-50 lines)
-   # 각 라인에 한글 주석
-
-   # 예상 출력 또는 결과
-   ```
-
-   **설명:**
-   - [각 단계 상세 설명]
-
-2. **Content Requirements:**
-   - Each example: 20-50 lines of code MINIMUM
-   - Korean comments explaining EVERY important line
-   - Include expected output/results
-   - Show practical, real-world usage
-
-3. **Example Types:**
-   - Example 1: 기본 사용법 (basic usage)
-   - Example 2: 실전 응용 (practical application)
-   - Example 3 (if needed): 고급 활용 (advanced usage)
-
-**Context from knowledge base:**
-{context_text}
-
-**EXAMPLE FORMAT TO FOLLOW:**
-
-### 코드 예제 1: 기본 리스트 컴프리헨션
-
-다음은 리스트 컴프리헨션의 기본적인 사용 예제입니다.
-
-```python
-# 예제: 1부터 10까지 짝수만 필터링하여 제곱 계산
-
-# 1단계: 일반적인 for 루프 방식
-result = []
-for i in range(1, 11):
-    if i % 2 == 0:  # 짝수인 경우만
-        result.append(i ** 2)  # 제곱 계산
-
-print(f"for 루프 결과: {{result}}")
-# 출력: for 루프 결과: [4, 16, 36, 64, 100]
-
-# 2단계: 리스트 컴프리헨션으로 간결하게 표현
-result_compact = [i ** 2 for i in range(1, 11) if i % 2 == 0]
-
-print(f"컴프리헨션 결과: {{result_compact}}")
-# 출력: 컴프리헨션 결과: [4, 16, 36, 64, 100]
-
-# 결과는 동일하지만 코드가 훨씬 간결합니다
-```
-
-**설명:**
-- for 루프 방식은 4줄이 필요하지만, 컴프리헨션은 1줄로 표현 가능합니다.
-- 조건문(if i % 2 == 0)을 컴프리헨션 뒤에 추가하여 필터링합니다.
-- 가독성과 성능 모두에서 이점이 있습니다.
-
----
-
-**NOW GENERATE {num_examples} CODE EXAMPLES IN KOREAN FOLLOWING THE EXACT FORMAT ABOVE:**
-"""
+        # Load prompt from template
+        prompt = load_prompt("code_examples_generation", **template_vars)
 
         try:
             response = self.invoke_llm(prompt, phase="code_generation")

@@ -20,12 +20,16 @@
 8. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스
 9. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
 10. **안정성 강화**: API 자동 재시도 로직으로 네트워크 오류 대응 (v0.2.0 신규)
+11. **예외 처리 시스템**: 구조화된 예외 계층으로 오류 추적 및 디버깅 향상 (v0.2.7+ 신규)
+12. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿으로 일관성 및 품질 보장 (v0.2.7+ 신규)
 
 ### 기술 스택
 - **Framework**: LangChain
 - **LLM**: OpenAI GPT-4o-mini (기본), GPT-4o (Vision)
 - **Vector DB**: ChromaDB (로컬)
 - **CLI**: Click, Rich
+- **예외 처리**: 구조화된 예외 계층 (9개 카테고리)
+- **프롬프트**: 템플릿 기반 관리 시스템
 - **배포**: pip installable package
 
 ---
@@ -34,56 +38,37 @@
 
 ### 전체 워크플로우
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     CLI Interface                            │
-│  (입력 수집, 진행상황 표시, Q&A 인터랙션)                      │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                  Pipeline Orchestrator                       │
-│            (순차 실행 - 에이전트 조율 및 태스크 관리)          │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-        ┌────────────────┴────────────────┐
-        │                                 │
-┌───────▼──────────┐             ┌───────▼──────────┐
-│  Phase 1         │             │  Knowledge Base  │
-│  Collection      │────────────>│  (Vector DB)     │
-│  - Content       │             │  - Text Chunks   │
-│  - Images        │             │  - Image Desc    │
-└───────┬──────────┘             └───────┬──────────┘
-        │                                 │
-┌───────▼──────────┐                     │
-│  Phase 2         │                     │
-│  Analysis        │<────────────────────┘
-│  - Analyze       │        (RAG Query)
-│  - Design        │
-└───────┬──────────┘
-        │
-┌───────▼──────────┐
-│  Phase 3         │
-│  Generation      │<────────────────────┐
-│  - Write         │        (RAG Query)  │
-│  - Diagrams      │                     │
-│  - Images        │                     │
-│  - HTML          │                     │
-└───────┬──────────┘                     │
-        │                                │
-┌───────▼──────────┐                     │
-│  Phase 4         │                     │
-│  Quality QA      │                     │
-│  - Evaluate      │                     │
-│  - Revise        │─────────────────────┘
-│  - Iterate       │     (Revision Loop)
-└───────┬──────────┘
-        │
-┌───────▼──────────┐
-│  Output          │
-│  - HTML File     │
-│  - Knowledge DB  │
-│  - Q&A Mode      │
-└──────────────────┘
+```mermaid
+flowchart TD
+    CLI["🖥️ CLI Interface<br/>입력 수집, 진행상황 표시, Q&A 인터랙션"]
+    Orchestrator["⚙️ Pipeline Orchestrator<br/>순차 실행 - 에이전트 조율 및 태스크 관리"]
+
+    Phase1["📚 Phase 1: Collection<br/>- Content<br/>- Images"]
+    KB["🗄️ Knowledge Base<br/>Vector DB<br/>- Text Chunks<br/>- Image Desc"]
+    Phase2["🔍 Phase 2: Analysis<br/>- Analyze<br/>- Design"]
+    Phase3["✍️ Phase 3: Generation<br/>- Write<br/>- Diagrams<br/>- Images<br/>- HTML"]
+    Phase4["✅ Phase 4: Quality QA<br/>- Evaluate<br/>- Revise<br/>- Iterate"]
+    Output["📤 Output<br/>- HTML File<br/>- Knowledge DB<br/>- Q&A Mode"]
+
+    CLI --> Orchestrator
+    Orchestrator --> Phase1
+    Orchestrator --> KB
+    Phase1 -->|저장| KB
+    KB -->|RAG Query| Phase2
+    Phase2 --> Phase3
+    KB -->|RAG Query| Phase3
+    Phase3 --> Phase4
+    Phase4 -->|Revision Loop| Phase3
+    Phase4 --> Output
+
+    style CLI fill:#e1f5ff
+    style Orchestrator fill:#fff4e1
+    style Phase1 fill:#e8f5e9
+    style KB fill:#f3e5f5
+    style Phase2 fill:#e3f2fd
+    style Phase3 fill:#fff9c4
+    style Phase4 fill:#fce4ec
+    style Output fill:#ffebee
 ```
 
 ---
@@ -111,32 +96,147 @@
 
 ```
 lecture-forge/
-├── README.md                    ✅ 프로젝트 소개
-├── CLAUDE.md                    ✅ 이 파일 (프로젝트 가이드)
-├── .env                         ✅ 환경 변수 (gitignored)
-├── .env.example                 ✅ 환경 변수 템플릿
-├── setup.py                     ✅ pip 패키지 설정
-├── pyproject.toml               ✅ 빌드 설정
-├── requirements.txt             ✅ 의존성
+├── 📄 README.md                    ✅ 프로젝트 소개
+├── 📄 CLAUDE.md                    ✅ 이 파일 (프로젝트 가이드)
+├── 🔐 .env                         ✅ 환경 변수 (gitignored)
+├── 📄 .env.example                 ✅ 환경 변수 템플릿
+├── ⚙️ setup.py                     ✅ pip 패키지 설정
+├── ⚙️ pyproject.toml               ✅ 빌드 설정
+├── 📄 requirements.txt             ✅ 의존성
 │
-├── src/lecture_forge/
-│   ├── agents/                  ✅ 10개 에이전트 (496KB)
-│   ├── tools/                   ✅ 9개 도구 (image_editor 포함)
-│   ├── knowledge/               ✅ Vector DB & RAG (캐싱)
-│   ├── quality/                 ✅ 품질 평가 시스템
-│   ├── models/                  ✅ 데이터 모델
-│   ├── utils/                   ✅ 유틸리티
-│   ├── templates/               ✅ HTML 템플릿
-│   ├── cli.py                   ✅ CLI (3,288줄, 124KB)
-│   └── config.py                ✅ 설정 관리
+├── 📂 src/lecture_forge/
+│   ├── 🤖 agents/                  ✅ 10개 에이전트 (5,189줄)
+│   ├── 🛠️ tools/                   ✅ 9개 도구 (3,153줄, image_editor 포함)
+│   ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
+│   ├── ✅ quality/                 ✅ 품질 평가 시스템
+│   ├── 📊 models/                  ✅ 데이터 모델
+│   ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager 포함)
+│   ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
+│   ├── 💻 cli.py                   ✅ CLI (3,298줄)
+│   ├── ⚙️ config.py                ✅ 설정 관리
+│   └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (349줄)
 │
-├── data/                        📁 런타임 생성 (gitignored)
-│   ├── vector_db/               📁 ChromaDB
-│   ├── images/                  📁 수집 이미지
-│   └── cache/                   📁 캐시
+├── 📁 data/                        📁 런타임 생성 (gitignored)
+│   ├── 🗄️ vector_db/               📁 ChromaDB
+│   ├── 🖼️ images/                  📁 수집 이미지
+│   └── 💾 cache/                   📁 캐시
 │
-└── outputs/                     📁 생성된 강의자료
+└── 📤 outputs/                     📁 생성된 강의자료
 ```
+
+### 주요 모듈 설명
+
+#### 예외 처리 시스템 (exceptions.py)
+
+구조화된 예외 계층으로 오류 추적 및 디버깅 강화:
+
+```python
+from lecture_forge.exceptions import (
+    LectureForgeError,          # 기본 예외
+    ContentCollectionError,     # 컨텐츠 수집 오류
+    RAGError,                   # RAG/Vector DB 오류
+    ImageProcessingError,       # 이미지 처리 오류
+    ContentGenerationError,     # LLM 생성 오류
+    QualityEvaluationError,     # 품질 평가 오류
+    ConfigurationError,         # 설정 오류
+    MissingAPIKeyError,         # API 키 누락
+    ValidationError,            # 입력 검증 오류
+)
+```
+
+**예외 계층 구조**:
+
+```mermaid
+graph TD
+    Base[Exception]
+    LF["🎯 LectureForgeError<br/>(기본 예외)"]
+
+    CC["📚 ContentCollectionError<br/>컨텐츠 수집"]
+    RAG["🗄️ RAGError<br/>RAG/Vector DB"]
+    IMG["🖼️ ImageProcessingError<br/>이미지 처리"]
+    CG["✍️ ContentGenerationError<br/>LLM 생성"]
+    QE["✅ QualityEvaluationError<br/>품질 평가"]
+    CFG["⚙️ ConfigurationError<br/>설정"]
+    TMPL["🎨 TemplateError<br/>템플릿"]
+    AGT["🤖 AgentExecutionError<br/>에이전트 실행"]
+    VAL["🔍 ValidationError<br/>입력 검증"]
+
+    Base --> LF
+    LF --> CC
+    LF --> RAG
+    LF --> IMG
+    LF --> CG
+    LF --> QE
+    LF --> CFG
+    LF --> TMPL
+    LF --> AGT
+    LF --> VAL
+
+    CC -.->|하위| CC1["PDFParsingError<br/>WebScrapingError<br/>SearchAPIError"]
+    RAG -.->|하위| RAG1["VectorDBError<br/>EmbeddingError<br/>RetrievalError<br/>CacheError"]
+    IMG -.->|하위| IMG1["ImageExtractionError<br/>ImageQualityError<br/>ImageSearchError"]
+    CG -.->|하위| CG1["LLMAPIError<br/>DiagramGenerationError<br/>HTMLAssemblyError"]
+    QE -.->|하위| QE1["MetricsCalculationError<br/>RevisionError"]
+    CFG -.->|하위| CFG1["MissingAPIKeyError<br/>InvalidConfigurationError"]
+    TMPL -.->|하위| TMPL1["TemplateNotFoundError"]
+    VAL -.->|하위| VAL1["InvalidInputError<br/>FileValidationError"]
+
+    style LF fill:#ffebee
+    style CC fill:#e8f5e9
+    style RAG fill:#f3e5f5
+    style IMG fill:#fff9c4
+    style CG fill:#e3f2fd
+    style QE fill:#fce4ec
+    style CFG fill:#fff4e1
+    style TMPL fill:#f1f8e9
+    style AGT fill:#e0f2f1
+    style VAL fill:#fce4ec
+```
+
+**주요 특징**:
+- 9개 카테고리로 분류된 예외 계층
+- 상세한 오류 메시지와 컨텍스트 정보
+- 예외 체인 지원 (`original_error` 추적)
+- 사용자 친화적 오류 메시지
+
+#### 프롬프트 관리 시스템 (utils/prompt_manager.py)
+
+템플릿 기반 프롬프트 관리:
+
+```python
+from lecture_forge.utils.prompt_manager import load_prompt
+
+# 프롬프트 로딩 및 포맷팅
+prompt = load_prompt(
+    "content_generation",
+    topic="Python Basics",
+    min_words=1000,
+    target_words=1500,
+)
+```
+
+**주요 특징**:
+- 중앙 집중식 프롬프트 관리
+- 변수 치환 및 검증
+- 3개 템플릿: content_generation, content_expansion, code_examples_generation
+- 재사용 가능하고 일관성 있는 프롬프트
+
+#### 프롬프트 템플릿 (templates/prompts/)
+
+상세하고 엄격한 콘텐츠 생성 가이드라인:
+
+1. **content_generation.txt**: 기본 섹션 생성
+   - 단어 수 요구사항 (최소/목표/최대)
+   - 코드 예제 포맷 (30-80줄)
+   - 8가지 필수 작성 기법
+
+2. **content_expansion.txt**: 내용 확장
+   - 부족한 섹션 보강
+   - 품질 기준 충족
+
+3. **code_examples_generation.txt**: 코드 예제 생성
+   - 상세한 주석
+   - 실행 가능한 예제
 
 ---
 
@@ -289,20 +389,30 @@ OUTPUT_DIR=./outputs
 
 ### 180분 강의 기준 (GPT-4o-mini)
 
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'xyChart': {'backgroundColor': 'transparent'}}}}%%
+xychart-beta
+    title "LectureForge 작업별 비용 분포 (180분 강의)"
+    x-axis [Collection, Analysis, Design, Writing, Diagrams, Evaluation, Revision]
+    y-axis "비용 (USD)" 0 --> 0.07
+    bar [0.01, 0.02, 0.01, 0.06, 0.01, 0.03, 0.03]
+```
+
 | 작업 | 입력 토큰 | 출력 토큰 | 비용 |
 |-----|---------|---------|------|
-| Content Collection | 50K | 10K | $0.01 |
-| Content Analysis | 80K | 20K | $0.02 |
-| Curriculum Design | 30K | 5K | $0.01 |
-| Content Writing | 200K | 50K | $0.06 |
-| Diagram Generation | 40K | 10K | $0.01 |
-| Quality Evaluation | 100K | 30K | $0.03 |
-| Revision (1회) | 80K | 30K | $0.03 |
+| 📚 Content Collection | 50K | 10K | $0.01 |
+| 🔍 Content Analysis | 80K | 20K | $0.02 |
+| 📋 Curriculum Design | 30K | 5K | $0.01 |
+| ✍️ Content Writing | 200K | 50K | **$0.06** |
+| 📊 Diagram Generation | 40K | 10K | $0.01 |
+| ✅ Quality Evaluation | 100K | 30K | $0.03 |
+| 🔄 Revision (1회) | 80K | 30K | $0.03 |
 | **총계** | **580K** | **155K** | **$0.17** |
 
-**전체 예상 비용: ~$0.22 per 180분 강의** (보수적 추정)
-
-**실제 측정 비용 (v0.2.4 기준)**: ~$0.035 per 60분 강의 (~$0.105 per 180분, **52% 절감**)
+**전체 예상 비용**:
+- 💵 이론적 추정: ~$0.22 per 180분 강의 (보수적)
+- 💰 **실제 측정**: ~$0.105 per 180분 강의 (**52% 절감**)
+- 🎯 60분 강의: ~$0.035 (v0.2.4+ 기준)
 
 ---
 
@@ -310,16 +420,18 @@ OUTPUT_DIR=./outputs
 
 ### ✅ 완료된 작업 (Production Ready+!)
 
-- ✅ **전체 Agent 시스템** (10개 에이전트, 496KB)
-- ✅ **완전한 CLI** (3,288줄, 6개 명령어, 12개 옵션)
+- ✅ **전체 Agent 시스템** (10개 에이전트, 5,189줄)
+- ✅ **완전한 CLI** (3,298줄, 6개 명령어, 12개 옵션)
 - ✅ **Knowledge Base & RAG** (ChromaDB, 임베딩, 검색, 캐싱)
-- ✅ **Tools** (9개: PDF, 웹, 이미지, 검색, 이미지 편집)
+- ✅ **Tools** (9개: PDF, 웹, 이미지, 검색, 이미지 편집, 3,153줄)
 - ✅ **이미지 편집** (대화형 UI, Vector DB 기반 대안 검색)
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
-- ✅ **Templates** (HTML, CSS, JS)
+- ✅ **Templates** (HTML, CSS, JS + 프롬프트 템플릿)
 - ✅ **자동화 테스트** (45%+ 커버리지, 10/10 에이전트 테스트)
 - ✅ **Type Safety** (75% type hints, mypy 설정)
 - ✅ **성능 최적화** (RAG 캐싱, API 재시도)
+- ✅ **예외 처리 시스템** (구조화된 예외 계층, 9개 카테고리)
+- ✅ **프롬프트 관리** (템플릿 기반 시스템, 재사용 가능)
 
 ### 🔄 진행 중 (선택적 개선사항)
 
@@ -363,7 +475,23 @@ OUTPUT_DIR=./outputs
 
 ## 🌐 확장 가능성
 
-### ✅ 최근 추가된 기능 (v0.2.0)
+### ✅ 최근 추가된 기능
+
+#### v0.2.7+ (개발 중)
+- **예외 처리 시스템**: 구조화된 예외 계층으로 오류 추적 강화
+  - 9개 카테고리 (ContentCollectionError, RAGError, ImageProcessingError 등)
+  - 상세한 오류 메시지와 컨텍스트 정보
+  - 예외 체인 지원 (original_error 추적)
+- **프롬프트 관리 시스템**: 템플릿 기반 프롬프트 관리
+  - PromptManager 클래스로 중앙 집중식 관리
+  - 3개 템플릿: content_generation, content_expansion, code_examples_generation
+  - 변수 치환 및 검증 기능
+- **콘텐츠 생성 개선**: 더 상세하고 엄격한 프롬프트
+  - 단어 수 요구사항 명시 (최소/목표/최대)
+  - 코드 예제 포맷 템플릿 제공
+  - 8가지 필수 작성 기법 가이드라인
+
+#### v0.2.0-0.2.6
 - **대화형 이미지 편집**: edit-images 명령어로 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 - **Location-based 이미지 매칭**: PDF 이미지 사용률 10% → 85% (+750%)
 - **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
@@ -372,6 +500,7 @@ OUTPUT_DIR=./outputs
 - **Type Safety 개선**: 75% type hints 적용, mypy 지원
 - **전체 에이전트 테스트**: 10/10 에이전트 자동화 테스트 (35%+ 커버리지)
 - **Config 개선**: CLI entry point validation (--help가 .env 없이 작동)
+- **이미지 품질**: thumbnail 버그 수정으로 원본 크기 보존 (v0.2.6)
 
 ### 계획 중인 기능
 - 다국어 지원 (Translation Chain)
@@ -452,16 +581,18 @@ twine upload dist/*
 
 ## 📊 프로젝트 통계
 
-- 📊 **총 코드**: ~1.1MB (에이전트 496KB + CLI 124KB + 기타)
+- 📊 **총 코드**: ~541KB (에이전트 5,189줄 + CLI 3,298줄 + 도구 3,153줄 + 기타)
 - 🤖 **에이전트**: 10개 (모두 구현 및 테스트)
 - 🛠️ **Tools**: 9개 (모두 구현, image_editor 포함)
-- 💻 **CLI**: 3,288줄 (6개 명령어: init, create, chat, edit-images, improve, cleanup)
+- 💻 **CLI**: 3,298줄 (6개 명령어: init, create, chat, edit-images, improve, cleanup)
 - 📦 **패키지**: pip installable
-- 🎨 **Templates**: HTML, CSS, JS (13.7KB)
+- 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
 - 💰 **비용**: ~$0.035 per 60분 강의
 - 🧪 **테스트**: 53+ 테스트, 45-50% 커버리지 (v0.2.0+)
 - 📝 **Type Hints**: 75% 적용 (v0.2.0+)
 - 🐛 **이미지 원본 크기 보존**: thumbnail 버그 수정 (v0.2.6)
+- 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리, 349줄)
+- 📝 **프롬프트 관리**: 템플릿 기반 프롬프트 시스템 (176줄)
 
 ---
 

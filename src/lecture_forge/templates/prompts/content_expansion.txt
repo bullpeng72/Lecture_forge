@@ -1,0 +1,115 @@
+🚨🚨🚨 EMERGENCY: CONTENT TOO SHORT - IMMEDIATE ACTION REQUIRED 🚨🚨🚨
+
+**🔴 CRITICAL FAILURE - YOU WILL BE FIRED IF YOU DON'T FIX THIS! 🔴**
+
+The content you provided is REJECTED because it's FAR TOO SHORT!
+
+**Current Status (UNACCEPTABLE):**
+{shortfall_text}
+
+**YOUR MISSION (DO OR DIE):**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRENT LENGTH: {current_word_count:,} words ❌ (TOO SHORT!)
+MINIMUM REQUIRED: {min_words:,} words ⚠️ (MUST REACH!)
+TARGET: {target_words:,} words ✅ (AIM FOR THIS!)
+YOU MUST ADD: {word_gap:,}+ WORDS RIGHT NOW!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ **THIS IS YOUR LAST CHANCE TO FIX THE CONTENT!**
+⚠️ **If you fail to add {word_gap:,}+ words, this content will be PERMANENTLY REJECTED!**
+
+**Section**: {section_title} ({estimated_time} minutes)
+
+**Previous content ({current_word_count} words):**
+{previous_content}
+
+---
+
+**YOU MUST ADD {word_gap}+ WORDS using these strategies:**
+
+1. **깊이 있는 설명 추가** (add ~{depth_words} words):
+   - 각 개념마다:
+     * 더 쉬운 용어로 재정의 (2-3 문단)
+     * 실생활 비유 추가 (1-2 문단)
+     * 시각적 설명 (어떻게 생겼는지, 어떻게 작동하는지)
+     * 역사적 배경 (누가, 언제, 왜 만들었는지)
+
+2. **추가 코드 예제 작성 (CRITICAL!)** (add ~{code_words} words):
+   - ⚠️ MANDATORY: 코드 블록 필수 포함 (```python ... ```)
+   - 각 개념당 2-3개의 완전한 실행 가능한 예제
+   - 각 예제: 20-50 lines of code
+   - 단계별 설명 (step 1, 2, 3...)
+   - 한글 주석 포함
+   - 예상 출력 명시
+
+   **CODE EXAMPLE FORMAT (MANDATORY):**
+   ```python
+   # [설명]
+   # 코드 20-50 lines
+   # 한글 주석
+   ```
+
+3. **흔한 실수와 주의사항** (add ~{pitfall_words} words):
+   - 초보자가 자주 하는 실수 3-5가지
+   - 각 실수를 피하는 방법
+   - 문제의 징후 (어떻게 알아차리는가?)
+   - 해결 방법
+
+4. **모범 사례와 팁** (add ~{best_practice_words} words):
+   - 업계 표준
+   - 전문가 팁 5-7가지
+   - 최적화 기법
+   - 실무에서의 활용법
+
+**Additional context for deeper content:**
+{context_text}
+
+**EXPANSION STRATEGY:**
+
+For EACH concept in the previous content, you MUST write:
+1. ✍️ Definition (100-150 words):
+   "이 개념은 무엇인가?"를 3-4 문단으로 자세히 설명
+
+2. 🎯 Purpose/Importance (100-150 words):
+   "왜 중요한가? 어디에 쓰이는가?"를 예시와 함께
+
+3. 🔧 How it Works (150-200 words):
+   "어떻게 작동하는가?"를 단계별로 설명
+
+4. 📝 Examples (200-250 words):
+   - 간단한 예제 (코드 + 설명)
+   - 실무 예제 (실제 사용 사례)
+   - 비교 예제 (Before/After, Good/Bad)
+
+5. ⚠️ Common Mistakes (100-150 words):
+   초보자가 흔히 하는 실수 3-5개와 해결법
+
+6. 💡 Best Practices (100-150 words):
+   전문가 팁과 최적화 방법
+
+**EXAMPLE OF PROPER EXPANSION:**
+Before (짧음 ❌): "트랜스포머는 어텐션 메커니즘을 사용하는 신경망 구조입니다."
+
+After (충분함 ✅):
+"트랜스포머(Transformer)는 2017년 구글에서 발표한 혁신적인 신경망 아키텍처입니다. 기존의 RNN이나 LSTM과 달리 순차적 처리가 아닌 병렬 처리가 가능하여 학습 속도가 획기적으로 빨라졌습니다.
+
+트랜스포머의 핵심은 '어텐션 메커니즘(Attention Mechanism)'입니다. 이는 문장 내 모든 단어 간의 관계를 동시에 계산하는 방식입니다. 예를 들어 '그 남자가 길을 건넜다'라는 문장에서 '그'가 '남자'를 가리킨다는 것을 어텐션을 통해 학습합니다.
+
+구체적으로 트랜스포머는 다음과 같이 작동합니다:
+1. 입력 문장을 토큰으로 분리합니다
+2. 각 토큰을 벡터로 변환합니다 (임베딩)
+3. 셀프 어텐션을 통해 토큰 간 관계를 계산합니다
+4. 여러 레이어를 거쳐 최종 출력을 생성합니다
+
+실제 사용 예시를 보겠습니다..."
+
+(계속 500+ words 더 작성...)
+
+**YOUR TURN:**
+Write the FULLY EXPANDED version with {target_words:,}+ words.
+Use KOREAN (한국어) and be EXTREMELY detailed.
+
+CONTENT TO EXPAND:
+{previous_content}
+
+WRITE {word_gap:,}+ MORE WORDS NOW:

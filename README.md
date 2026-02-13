@@ -2,28 +2,28 @@
 
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-45--50%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.0 Beta Release** | Presentation Optimized - Professional Slide Design
+> 🚀 **v0.3.1 Beta Release** | User-Friendly Directories - Accessible & Easy to Find
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 3,298줄 CLI | 53+ 테스트 (45-50% 커버리지) | ~$0.035/60분 강의
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 53+ 테스트 (45-50% 커버리지) | ~$0.035/60분 강의 | Python 3.11-3.13
+
+**데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
 ---
 
 ## 📋 목차
 
 - [주요 기능](#-주요-기능)
-- [v0.2.0 개선사항](#-v020-개선사항)
 - [빠른 시작](#-빠른-시작)
 - [사용법](#-사용법)
-- [이미지 편집](#-이미지-편집)
-- [시스템 아키텍처](#-시스템-아키텍처)
+- [명령어 가이드](#-명령어-가이드)
 - [FAQ](#-faq)
 - [변경 이력](#-변경-이력)
 - [기여하기](#-기여하기)
@@ -60,6 +60,17 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ## 🚀 최근 개선사항
 
+### v0.3.1 (2026-02-13) - 사용자 친화적 디렉토리 📂
+- **일반 디렉토리로 전환**: 히든 디렉토리 → 접근 가능한 폴더
+  - `~/.lecture-forge/` → `~/Documents/LectureForge/`
+  - Finder/탐색기에서 바로 확인 가능
+  - 드래그앤드롭으로 파일 관리 간편
+- **home 커맨드 추가**: 빠른 폴더 접근
+  - `lecture-forge home` - 메인 폴더
+  - `lecture-forge home outputs` - 강의 결과물
+  - `lecture-forge home env` - 설정 편집
+- **자동 마이그레이션**: 기존 데이터 자동 이동 (하위 호환)
+
 ### v0.3.0 (2026-02-12) - 프레젠테이션 최적화 🎯
 - **슬라이드 구성 개선**: 프레젠테이션에 최적화
   - 슬라이드당 항목 수 감소 (4개 → 3개)
@@ -72,46 +83,9 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - **Mermaid 다이어그램**: 문서 시각화 개선
   - 시스템 아키텍처, 예외 계층, 품질 평가 등
 
-### v0.2.7 (통합)
-- **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
-- **프롬프트 관리**: 템플릿 기반 프롬프트 시스템
-- **콘텐츠 생성 개선**: 더 상세한 프롬프트와 품질 기준
-
-### v0.2.0-0.2.6
-
-#### 성능 향상 ⚡
-- **RAG 쿼리 캐싱**: MD5 기반 메모리 캐시로 반복 질문 60% 고속화
-- **캐시 통계**: 히트/미스 비율 추적 및 모니터링
-
-#### 안정성 개선 🔄
-- **자동 재시도 로직**: OpenAI, Serper, Pexels/Unsplash API 자동 재시도 (3회)
-- **지수 백오프**: 2초 → 4초 → 10초 대기로 일시적 오류 복구
-
-#### 품질 보증 🧪
-- **53+ 단위 테스트**: 전체 10개 에이전트 테스트 완료
-- **45%+ 커버리지**: pytest 기반 자동화 테스트
-- **타입 힌트 75%**: 40% → 75% 향상
-
-#### 설정 시스템 개선 🔧
-- **Config 리팩토링**: 모든 하드코딩 제거, .env 기반 중앙 집중식 설정
-- **15+ 환경변수**: 검색, 크롤링, 이미지, 타임아웃 등 모든 설정 조정 가능
-- **환경별 설정**: 개발/스테이징/프로덕션 환경 분리 지원
-- **런타임 Config 검증**: `--help` 정상 작동
-
-### 통계 비교
-| 메트릭 | v0.1.0 | v0.3.0 | 개선 |
-|--------|--------|--------|------|
-| 테스트 커버리지 | 15% | 45-50% | +200%+ |
-| 타입 힌트 | 40% | 75% | +87% |
-| 테스트된 에이전트 | 3/10 | 10/10 | +233% |
-| RAG 성능 | Baseline | +60% | 캐싱 |
-| API 안정성 | 수동 | 자동 3회 | 재시도 |
-| 설정 방식 | 하드코딩 | .env 기반 | 유연성 |
-| 이미지 해상도 | 200px 축소 | 원본 보존 | v0.2.6 |
-| 예외 처리 | 기본 | 구조화 (9개) | v0.2.7 |
-| 프롬프트 관리 | 하드코딩 | 템플릿 기반 | v0.2.7 |
-| 슬라이드 품질 | 기본 | 전문적 | v0.3.0 |
-| 다이어그램 | 텍스트 | Mermaid | v0.3.0 |
+### 이전 버전 하이라이트
+- **v0.2.7**: 예외 처리 시스템, 템플릿 기반 프롬프트
+- **v0.2.0-0.2.6**: RAG 캐싱, 자동 재시도, 53+ 테스트 (45% 커버리지), Config 리팩토링
 
 ---
 
@@ -120,7 +94,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 1️⃣ 설치
 
 ```bash
-# Python 3.11 환경 생성
+# Python 3.11-3.13 환경 생성 (3.11 권장)
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
 
@@ -130,6 +104,11 @@ pip install -e .
 # 웹 스크래핑용 브라우저 설치
 playwright install
 ```
+
+> **Python 버전 호환성**:
+> - ✅ **Python 3.11-3.12**: 완전 지원 (프로덕션 사용 권장)
+> - ⚠️ **Python 3.13**: 실험적 지원 (대부분의 기능 작동, 일부 의존성 테스트 필요)
+> - 최신 기능과 안정성을 위해 Python 3.11 사용을 권장합니다.
 
 ### 2️⃣ 환경 설정
 
@@ -142,8 +121,8 @@ lecture-forge init
 
 이 명령어는 다음을 수행합니다:
 - ✅ 플랫폼별 최적 위치에 `.env` 파일 자동 생성
-  - **Windows**: `%LOCALAPPDATA%\lecture-forge\.env`
-  - **Mac/Linux**: `~/.lecture-forge/.env`
+  - **Windows**: `%USERPROFILE%\Documents\LectureForge\.env`
+  - **Mac/Linux**: `~/Documents/LectureForge/.env`
 - ✅ 필수 API 키 입력 안내 (OpenAI, Serper)
 - ✅ 선택적 이미지 검색 API 설정 (Pexels, Unsplash)
 - ✅ 파일 권한 자동 설정 (Unix/Mac: 600)
@@ -222,6 +201,7 @@ lecture-forge create
 | **edit-images** | 이미지 편집 | `--output` |
 | **improve** | 강의 향상 | `--to-slides` |
 | **cleanup** | 지식베이스 관리 | `--all` |
+| **home** | 폴더 열기 (v0.3.1+) | `outputs`, `data`, `kb`, `env` |
 
 ### 빠른 실행 예제
 
@@ -246,6 +226,9 @@ lecture-forge edit-images outputs/lecture.html
 
 # 🧹 지식베이스 정리 (대화형 선택)
 lecture-forge cleanup
+
+# 📂 폴더 열기 (강의 결과물 확인)
+lecture-forge home outputs
 ```
 
 ### 명령어 상세 가이드
@@ -265,8 +248,8 @@ lecture-forge init
 | `--path PATH` | 커스텀 디렉토리 지정 | `--path /custom/path` |
 
 **기본 저장 위치:**
-- **Windows**: `C:\Users\<username>\AppData\Local\lecture-forge\.env`
-- **Mac/Linux**: `~/.lecture-forge/.env`
+- **Windows**: `C:\Users\<username>\Documents\LectureForge\.env`
+- **Mac/Linux**: `~/Documents/LectureForge/.env`
 
 **예제:**
 ```bash
@@ -799,6 +782,26 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.3.1 (2026-02-13) - 📂 User-Friendly Directories
+
+**사용자 친화적 디렉토리 구조**:
+- 📂 **히든 → 일반 디렉토리**: `~/.lecture-forge/` → `~/Documents/LectureForge/`
+  - Finder/탐색기에서 바로 확인 가능
+  - 드래그앤드롭으로 파일 관리
+  - iCloud/OneDrive 동기화 가능
+- 🏠 **home 커맨드 추가**: 빠른 폴더 접근
+  - `lecture-forge home` - 메인 폴더 열기
+  - `lecture-forge home outputs` - 강의 결과물
+  - `lecture-forge home data` - 데이터 폴더
+  - `lecture-forge home kb` - 최신 지식베이스
+  - `lecture-forge home env` - .env 편집
+- 🔄 **자동 마이그레이션**: 기존 데이터 자동 이동 (하위 호환)
+
+**영향**:
+- ✅ 일반 사용자 접근성 대폭 향상
+- ✅ 기존 사용자 투명한 마이그레이션
+- ✅ 크로스 플랫폼 지원 (macOS/Windows/Linux)
 
 ### v0.3.0 (2026-02-12) - 🎯 Presentation Optimization
 

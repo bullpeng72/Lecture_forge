@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.3.0",
+    version="0.3.1",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator using LangChain",
@@ -24,6 +24,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
     python_requires=">=3.11",
     install_requires=requirements,

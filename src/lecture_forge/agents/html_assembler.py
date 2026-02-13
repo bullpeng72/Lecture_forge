@@ -5,6 +5,7 @@ HTML Assembler Agent - Generates final HTML output.
 from datetime import datetime
 from pathlib import Path
 from typing import List
+import os
 import markdown
 from bs4 import BeautifulSoup
 
@@ -413,8 +414,32 @@ class HTMLAssemblerAgent(BaseAgent):
         # Add images with corrected relative paths
         images_html = []
         for img in section.images:
-            # Fix path: outputs/file.html -> ../data/images/...
-            corrected_path = f"../{img.path}" if not img.path.startswith(("http://", "https://", "../")) else img.path
+            # Fix path: Calculate proper relative path from OUTPUT_DIR to image
+            img_path = Path(img.path)
+
+            # Handle absolute paths (convert to relative from outputs/)
+            if img_path.is_absolute():
+                try:
+                    # Get relative path from DATA_DIR
+                    rel_to_data = img_path.relative_to(Config.DATA_DIR)
+
+                    # Calculate relative path from OUTPUT_DIR to DATA_DIR
+                    # This works for any .env configuration!
+                    rel_data_dir = os.path.relpath(Config.DATA_DIR, Config.OUTPUT_DIR)
+                    corrected_path = str(Path(rel_data_dir) / rel_to_data)
+
+                    # Normalize path separators for web (use forward slashes)
+                    corrected_path = corrected_path.replace('\\', '/')
+                except ValueError:
+                    # Not under DATA_DIR, might be URL or other path
+                    corrected_path = str(img.path)
+            # Handle relative paths and URLs
+            elif img.path.startswith(("http://", "https://")):
+                corrected_path = img.path
+            elif img.path.startswith("../"):
+                corrected_path = img.path
+            else:
+                corrected_path = f"../{img.path}"
 
             images_html.append(
                 f"""

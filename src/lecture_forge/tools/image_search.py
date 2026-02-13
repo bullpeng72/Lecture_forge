@@ -23,15 +23,17 @@ class UnsplashSearchTool:
     name: str = "Unsplash Search"
     description: str = "Searches for high-quality, free-to-use images on Unsplash"
 
-    def __init__(self, output_dir: str = "./data/images"):
+    def __init__(self, output_dir: str = None):
         """
         Initialize the Unsplash search tool.
 
         Args:
-            output_dir: Directory to save downloaded images
+            output_dir: Directory to save downloaded images (defaults to Config.DATA_DIR/images)
         """
         self.access_key = Config.UNSPLASH_ACCESS_KEY
         self.api_url = "https://api.unsplash.com/search/photos"
+        if output_dir is None:
+            output_dir = str(Config.DATA_DIR / "images")
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -238,15 +240,17 @@ class PexelsSearchTool:
     name: str = "Pexels Search"
     description: str = "Searches for high-quality, free-to-use images on Pexels"
 
-    def __init__(self, output_dir: str = "./data/images"):
+    def __init__(self, output_dir: str = None):
         """
         Initialize the Pexels search tool.
 
         Args:
-            output_dir: Directory to save downloaded images
+            output_dir: Directory to save downloaded images (defaults to Config.DATA_DIR/images)
         """
         self.api_key = Config.PEXELS_API_KEY
         self.api_url = "https://api.pexels.com/v1/search"
+        if output_dir is None:
+            output_dir = str(Config.DATA_DIR / "images")
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 

@@ -318,11 +318,11 @@ class ImageEditor:
         logger.info("Searching filesystem for alternative images...")
 
         # Try multiple locations for image directories
-        # Prioritize current working directory (development mode)
+        # Prioritize Config.DATA_DIR (centralized storage)
         possible_bases = [
-            Path.cwd() / "data" / "images",  # Current working directory (dev mode)
-            self.html_path.parent.parent / "data" / "images",  # Relative to HTML
-            Config.DATA_DIR / "images",  # User config directory (installed mode)
+            Config.DATA_DIR / "images",  # User config directory (primary location)
+            self.html_path.parent.parent / "data" / "images",  # Relative to HTML (fallback)
+            Path.cwd() / "data" / "images",  # Current working directory (dev mode fallback)
         ]
 
         images_base = None

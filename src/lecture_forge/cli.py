@@ -238,7 +238,8 @@ def print_basic_help() -> None:
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
     console.print("  [bold cyan]1.[/bold cyan] [cyan]lecture-forge init[/cyan]                        [dim]# First-time setup (required)[/dim]")
     console.print("  [bold cyan]2.[/bold cyan] [cyan]lecture-forge create[/cyan]                      [dim]# Generate your first lecture[/dim]")
-    console.print("  [bold cyan]3.[/bold cyan] [cyan]lecture-forge chat[/cyan]                        [dim]# Q&A with knowledge base[/dim]")
+    console.print("  [bold cyan]3.[/bold cyan] [cyan]lecture-forge home outputs[/cyan]                [dim]# Open results folder[/dim]")
+    console.print("  [bold cyan]4.[/bold cyan] [cyan]lecture-forge chat[/cyan]                        [dim]# Q&A with knowledge base[/dim]")
 
     # Commands Table
     console.print("\n[bold yellow]📖 Commands:[/bold yellow]")
@@ -257,6 +258,7 @@ def print_basic_help() -> None:
     table.add_row("edit-images", "Edit lecture images", "-o FILE")
     table.add_row("improve", "Enhance or convert lecture", "--to-slides")
     table.add_row("cleanup", "Manage knowledge bases", "--all")
+    table.add_row("[bold green]home[/bold green]", "[bold]Open folders[/bold] in file manager [cyan](NEW!)[/cyan]", "outputs/data/env")
     console.print(table)
 
     # Common Options
@@ -289,8 +291,14 @@ def print_basic_help() -> None:
     console.print("  [dim]# Basic usage (interactive)[/dim]")
     console.print("  $ [cyan]lecture-forge create[/cyan]")
     console.print()
+    console.print("  [dim]# Open results in file manager[/dim]")
+    console.print("  $ [bold green]lecture-forge home outputs[/bold green]")
+    console.print()
     console.print("  [dim]# High-quality with images[/dim]")
     console.print("  $ [cyan]lecture-forge create --image-search --quality-level strict[/cyan]")
+    console.print()
+    console.print("  [dim]# Edit .env configuration[/dim]")
+    console.print("  $ [bold green]lecture-forge home env[/bold green]")
     console.print()
     console.print("  [dim]# Edit generated lecture images[/dim]")
     console.print("  $ [cyan]lecture-forge edit-images outputs/lecture.html[/cyan]")
@@ -317,18 +325,20 @@ def print_basic_help() -> None:
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    📚 LectureForge Pro v0.2.2 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.3.1 - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
     Multi-agent pipeline system with RAG-based knowledge management.
 
     \b
-    📊 Stats: 10 Agents | 9 Tools | 77+ Tests | ~$0.22 per 180min lecture
+    📊 Stats: 10 Agents | 9 Tools | 53+ Tests | ~$0.035 per 60min lecture
+    📂 Data: ~/Documents/LectureForge/ (easily accessible folder)
 
     \b
     🎉 FIRST TIME HERE?
        Run: lecture-forge init
        → Set up your API keys (OpenAI, Serper)
+       → Creates config in ~/Documents/LectureForge/.env
 
     \b
     📚 Commands Overview:
@@ -341,13 +351,15 @@ def cli(ctx):
        │ edit-images │ Edit/replace lecture images            │ -o FILE     │
        │ improve     │ Convert to slides or enhance           │ --to-slides │
        │ cleanup     │ Delete knowledge bases (free space)    │ --all       │
+       │ home        │ Open folders in file manager (NEW!)    │ outputs/env │
        └─────────────┴────────────────────────────────────────┴─────────────┘
 
     \b
     🚀 Quick Start:
        1. lecture-forge init              # Configure API keys (one-time)
        2. lecture-forge create            # Generate your first lecture
-       3. lecture-forge chat              # Ask questions about it
+       3. lecture-forge home outputs      # View results in file manager
+       4. lecture-forge chat              # Ask questions about it
 
     \b
     ⚙️  Key Options:
@@ -363,14 +375,14 @@ def cli(ctx):
        # Interactive mode (easiest)
        lecture-forge create
     \b
+       # Open results folder
+       lecture-forge home outputs
+    \b
        # High-quality with web images
        lecture-forge create --image-search --quality-level strict
     \b
-       # Use config file
-       lecture-forge create -c lecture.yaml
-    \b
-       # Edit lecture images
-       lecture-forge edit-images outputs/lecture.html -o final.html
+       # Edit configuration
+       lecture-forge home env
     \b
        # Q&A mode
        lecture-forge chat
@@ -380,8 +392,9 @@ def cli(ctx):
 
     \b
     🔧 Environment Config (.env):
+       Location: ~/Documents/LectureForge/.env
+       Edit: lecture-forge home env
        Customize: SEARCH_NUM_RESULTS, QUALITY_THRESHOLD, etc.
-       See .env.example for 15+ configurable settings
 
     \b
     📖 More Help:
@@ -1030,15 +1043,17 @@ def init(path: Optional[str]) -> None:
     """
     Initialize LectureForge configuration.
 
-    Creates a .env file with your API keys in the appropriate location.
+    Creates a .env file with your API keys in an easily accessible location.
     This command guides you through setting up required and optional API keys.
 
     \b
-    Default .env Location (Platform-specific):
-      • Windows: %LOCALAPPDATA%\\lecture-forge\\.env
-                 (e.g., C:\\Users\\username\\AppData\\Local\\lecture-forge\\.env)
-      • Mac/Linux: ~/.lecture-forge/.env
-                   (e.g., /Users/username/.lecture-forge/.env)
+    Default .env Location (v0.3.1+):
+      • Windows: %USERPROFILE%\\Documents\\LectureForge\\.env
+                 (e.g., C:\\Users\\username\\Documents\\LectureForge\\.env)
+      • Mac/Linux: ~/Documents/LectureForge/.env
+                   (e.g., /Users/username/Documents/LectureForge/.env)
+
+      ✨ NEW: Visible folder! Accessible from Finder/Explorer.
 
     \b
     What This Command Does:
@@ -1085,13 +1100,16 @@ def init(path: Optional[str]) -> None:
     After Setup:
       Once configured, you can start generating lectures:
         $ lecture-forge create
+        $ lecture-forge home outputs      # View results in file manager
+        $ lecture-forge home env          # Edit .env file
 
     \b
     Notes:
       • Existing .env files will prompt for overwrite confirmation
       • API keys are stored locally and never uploaded
-      • You can edit .env file manually later
+      • Edit anytime: lecture-forge home env
       • File permissions are set to owner-only (Unix/Mac)
+      • Auto-migration from old ~/.lecture-forge/ (if exists)
     """
     import shutil
     from datetime import datetime
@@ -1773,6 +1791,167 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         console.print("[yellow]No improvement options specified[/yellow]")
         console.print("Use --enhance-pdf-images to generate PDF image descriptions")
         console.print("Use --to-slides to convert to presentation format")
+
+
+@cli.command()
+@click.argument(
+    "target",
+    required=False,
+    default="",
+    type=click.Choice(["", "data", "outputs", "kb", "env"]),
+)
+def home(target: str):
+    """
+    Open LectureForge directory in file manager or editor.
+
+    Navigate to various LectureForge directories quickly using system file manager.
+    This command provides easy access to configuration, data, and outputs.
+
+    \b
+    Targets:
+      (none)    Open main directory (~/Documents/LectureForge/)
+      data      Open data directory (vector_db, images, cache)
+      outputs   Open outputs directory (generated lectures)
+      kb        Open latest knowledge base directory
+      env       Open .env configuration file in text editor
+
+    \b
+    Directory Structure:
+      ~/Documents/LectureForge/
+      ├── .env                    (configuration)
+      ├── data/
+      │   ├── vector_db/         (knowledge bases)
+      │   ├── images/            (collected images)
+      │   └── cache/             (RAG query cache)
+      └── outputs/               (generated lectures)
+
+    \b
+    Examples:
+      # Open main LectureForge folder
+      $ lecture-forge home
+
+      # Open outputs folder (to view generated lectures)
+      $ lecture-forge home outputs
+
+      # Open latest knowledge base folder
+      $ lecture-forge home kb
+
+      # Edit .env configuration file
+      $ lecture-forge home env
+
+      # Open data folder (vector_db, images, cache)
+      $ lecture-forge home data
+
+    \b
+    Platform Support:
+      • macOS:   Uses 'open' command (Finder)
+      • Windows: Uses 'explorer' command (File Explorer)
+      • Linux:   Uses 'xdg-open' command (default file manager)
+
+    \b
+    Notes:
+      • Creates directory if it doesn't exist
+      • 'env' target opens .env in default text editor
+      • 'kb' selects the most recently modified knowledge base
+      • All paths are displayed before opening for confirmation
+    """
+    import platform
+    import subprocess
+
+    from lecture_forge.config import Config
+
+    console.print()
+
+    # Determine target path
+    if not target or target == "":
+        path = Config.USER_CONFIG_DIR
+        desc = "main directory"
+    elif target == "data":
+        path = Config.DATA_DIR
+        desc = "data directory"
+    elif target == "outputs":
+        path = Config.OUTPUT_DIR
+        desc = "outputs directory"
+    elif target == "kb":
+        # Find latest knowledge base
+        kb_dir = Config.VECTOR_DB_PATH
+        if not kb_dir.exists():
+            console.print("[yellow]⚠️  No knowledge bases found[/yellow]")
+            console.print("[dim]Generate a lecture first to create a knowledge base[/dim]")
+            console.print(f"[dim]Expected location: {kb_dir}[/dim]\n")
+            return
+
+        kb_dirs = [d for d in kb_dir.iterdir() if d.is_dir()]
+        if not kb_dirs:
+            console.print("[yellow]⚠️  No knowledge bases found[/yellow]")
+            console.print(f"[dim]Directory exists but is empty: {kb_dir}[/dim]\n")
+            return
+
+        # Get latest
+        kb_dirs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        path = kb_dirs[0]
+        desc = f"knowledge base: {path.name}"
+    elif target == "env":
+        # Open .env in editor
+        env_path = Config.get_recommended_env_path()
+        if not env_path.exists():
+            console.print("[yellow]⚠️  .env file not found at:[/yellow]")
+            console.print(f"[yellow]   {env_path}[/yellow]")
+            console.print("\n[cyan]💡 Run: lecture-forge init[/cyan]\n")
+            return
+
+        console.print("[cyan]📝 Opening .env file in editor...[/cyan]")
+        console.print(f"[dim]   {env_path}[/dim]\n")
+
+        # Open in default editor
+        try:
+            if platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", "-t", str(env_path)], check=True)
+            elif platform.system() == "Windows":
+                subprocess.run(["notepad", str(env_path)], check=True)
+            else:  # Linux
+                subprocess.run(["xdg-open", str(env_path)], check=True)
+            console.print("[green]✓ Opened in default editor[/green]\n")
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]❌ Failed to open editor: {e}[/red]\n")
+        except FileNotFoundError:
+            console.print("[red]❌ No default editor found[/red]")
+            console.print(f"[dim]   Please manually edit: {env_path}[/dim]\n")
+        return
+    else:
+        # Should not reach here due to click.Choice validation
+        console.print(f"[red]❌ Unknown target: {target}[/red]\n")
+        return
+
+    # Ensure directory exists
+    if not path.exists():
+        console.print(f"[yellow]⚠️  Directory not found:[/yellow]")
+        console.print(f"[yellow]   {path}[/yellow]")
+        console.print("\n[cyan]Creating directory...[/cyan]\n")
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            console.print("[green]✓ Directory created[/green]\n")
+        except Exception as e:
+            console.print(f"[red]❌ Failed to create directory: {e}[/red]\n")
+            return
+
+    # Open in file manager
+    console.print(f"[cyan]📂 Opening {desc}...[/cyan]")
+    console.print(f"[dim]   {path}[/dim]\n")
+
+    try:
+        if platform.system() == "Darwin":  # macOS
+            subprocess.run(["open", str(path)], check=True)
+        elif platform.system() == "Windows":
+            subprocess.run(["explorer", str(path)], check=True)
+        else:  # Linux
+            subprocess.run(["xdg-open", str(path)], check=True)
+        console.print("[green]✓ Opened in file manager[/green]\n")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]❌ Failed to open file manager: {e}[/red]\n")
+    except FileNotFoundError:
+        console.print("[red]❌ File manager command not found[/red]")
+        console.print(f"[dim]   Please manually navigate to: {path}[/dim]\n")
 
 
 def _find_image_dir_from_html(html_path: Path) -> Path:

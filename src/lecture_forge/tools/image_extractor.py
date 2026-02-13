@@ -21,13 +21,15 @@ class PDFImageExtractorTool:
     name: str = "PDF Image Extractor"
     description: str = "Extracts images from PDF files"
 
-    def __init__(self, output_dir: str = "./data/images"):
+    def __init__(self, output_dir: str = None):
         """
         Initialize the image extractor.
 
         Args:
-            output_dir: Directory to save extracted images
+            output_dir: Directory to save extracted images (default: Config.DATA_DIR/images)
         """
+        if output_dir is None:
+            output_dir = str(Config.DATA_DIR / "images")
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -679,13 +681,15 @@ class WebImageScraperTool:
     name: str = "Web Image Scraper"
     description: str = "Scrapes images from web pages"
 
-    def __init__(self, output_dir: str = "./data/images"):
+    def __init__(self, output_dir: str = None):
         """
         Initialize the web image scraper.
 
         Args:
-            output_dir: Directory to save scraped images
+            output_dir: Directory to save scraped images (defaults to Config.DATA_DIR/images)
         """
+        if output_dir is None:
+            output_dir = str(Config.DATA_DIR / "images")
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 

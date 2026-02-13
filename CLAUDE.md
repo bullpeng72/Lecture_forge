@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Presentation) (2026-02-12)
-> **버전**: 0.3.0 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 프레젠테이션 최적화 🎯 | 슬라이드 품질 향상 📊
+> **프로젝트 상태**: 🌟 **Production Ready+** (User-Friendly Directories) (2026-02-13)
+> **버전**: 0.3.1 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 사용자 친화적 디렉토리 🎯 | home 커맨드 추가 📂
 
 ## 📚 프로젝트 개요
 
@@ -19,8 +19,10 @@
 7. **자동 품질 보증**: 반복적 평가 및 개선을 통한 고품질 출력 보장
 8. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스
 9. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (v0.3.0 대폭 개선)
-10. **예외 처리 시스템**: 구조화된 예외 계층으로 오류 추적 및 디버깅 향상
-11. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿으로 일관성 및 품질 보장
+10. **사용자 친화적 디렉토리**: 접근 가능한 폴더로 데이터 관리 (v0.3.1)
+11. **빠른 폴더 접근**: home 커맨드로 Finder/탐색기에서 바로 열기 (v0.3.1)
+12. **예외 처리 시스템**: 구조화된 예외 계층으로 오류 추적 및 디버깅 향상
+13. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿으로 일관성 및 품질 보장
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -93,34 +95,53 @@ flowchart TD
 
 ## 📦 프로젝트 구조
 
+### 소스 코드 (개발용)
+
 ```
-lecture-forge/
+lecture-forge/  (Git 저장소)
 ├── 📄 README.md                    ✅ 프로젝트 소개
 ├── 📄 CLAUDE.md                    ✅ 이 파일 (프로젝트 가이드)
-├── 🔐 .env                         ✅ 환경 변수 (gitignored)
 ├── 📄 .env.example                 ✅ 환경 변수 템플릿
 ├── ⚙️ setup.py                     ✅ pip 패키지 설정
 ├── ⚙️ pyproject.toml               ✅ 빌드 설정
 ├── 📄 requirements.txt             ✅ 의존성
 │
-├── 📂 src/lecture_forge/
-│   ├── 🤖 agents/                  ✅ 10개 에이전트 (5,189줄)
-│   ├── 🛠️ tools/                   ✅ 9개 도구 (3,153줄, image_editor 포함)
-│   ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
-│   ├── ✅ quality/                 ✅ 품질 평가 시스템
-│   ├── 📊 models/                  ✅ 데이터 모델
-│   ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager 포함)
-│   ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
-│   ├── 💻 cli.py                   ✅ CLI (3,298줄)
-│   ├── ⚙️ config.py                ✅ 설정 관리
-│   └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (349줄)
+└── 📂 src/lecture_forge/
+    ├── 🤖 agents/                  ✅ 10개 에이전트 (5,189줄)
+    ├── 🛠️ tools/                   ✅ 9개 도구 (3,153줄, image_editor 포함)
+    ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
+    ├── ✅ quality/                 ✅ 품질 평가 시스템
+    ├── 📊 models/                  ✅ 데이터 모델
+    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager 포함)
+    ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
+    ├── 💻 cli.py                   ✅ CLI (3,565줄, home 커맨드 포함)
+    ├── ⚙️ config.py                ✅ 설정 관리 (자동 마이그레이션)
+    └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (349줄)
+```
+
+### 사용자 데이터 (런타임 생성, v0.3.1+)
+
+```
+~/Documents/LectureForge/  (Mac/Linux)
+%USERPROFILE%\Documents\LectureForge  (Windows)
 │
-├── 📁 data/                        📁 런타임 생성 (gitignored)
-│   ├── 🗄️ vector_db/               📁 ChromaDB
+├── 🔐 .env                         ✅ 환경 변수 (API 키)
+│
+├── 📁 data/                        📁 런타임 생성
+│   ├── 🗄️ vector_db/               📁 ChromaDB (지식베이스)
 │   ├── 🖼️ images/                  📁 수집 이미지
-│   └── 💾 cache/                   📁 캐시
+│   └── 💾 cache/                   📁 RAG 쿼리 캐시
 │
-└── 📤 outputs/                     📁 생성된 강의자료
+└── 📤 outputs/                     📁 생성된 강의자료 (HTML)
+```
+
+**빠른 접근** (v0.3.1+):
+```bash
+lecture-forge home          # 메인 폴더 열기
+lecture-forge home outputs  # 강의 결과물 확인
+lecture-forge home data     # 데이터 폴더
+lecture-forge home kb       # 최신 지식베이스
+lecture-forge home env      # .env 편집
 ```
 
 ### 주요 모듈 설명
@@ -244,7 +265,7 @@ prompt = load_prompt(
 ### 1. 설치
 
 ```bash
-# Python 3.11 환경 생성
+# Python 3.11-3.13 환경 생성 (3.11 권장)
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
 
@@ -254,6 +275,10 @@ pip install -e .
 # Playwright 브라우저 설치 (웹 스크래핑용)
 playwright install
 ```
+
+**Python 버전 지원**:
+- ✅ Python 3.11-3.12: 완전 지원 (권장)
+- ⚠️ Python 3.13: 실험적 지원 (대부분 작동)
 
 ### 2. 환경 변수 설정
 
@@ -325,6 +350,13 @@ lecture-forge improve <html_path> --to-slides     # 슬라이드 변환
 # ===== CLEANUP: 지식베이스 정리 =====
 lecture-forge cleanup                             # 대화형 선택
 lecture-forge cleanup --all                       # 전체 삭제 (주의!)
+
+# ===== HOME: 폴더 열기 (v0.3.1+) =====
+lecture-forge home                                # 메인 폴더 열기
+lecture-forge home outputs                        # 강의 결과물 폴더
+lecture-forge home data                           # 데이터 폴더
+lecture-forge home kb                             # 최신 knowledge base
+lecture-forge home env                            # .env 파일 편집
 
 # ===== 기타 =====
 lecture-forge --version                           # 버전 확인
@@ -540,37 +572,26 @@ A: `/exit`, `/quit`, `exit`, `quit` 또는 `Ctrl+C`로 종료 가능합니다.
 **Q: 테스트 코드는?**
 A: **네, 있습니다!** 53+ 단위 테스트, 45-50% 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
 
+**Q: 생성된 강의 자료는 어디에 저장되나요? (v0.3.1+)**
+A: `~/Documents/LectureForge/outputs/`에 저장됩니다. `lecture-forge home outputs` 명령으로 폴더를 바로 열 수 있습니다. Finder/탐색기에서도 직접 접근 가능합니다.
+
+**Q: 기존 사용자입니다. 디렉토리 위치가 변경되었나요? (v0.3.1+)**
+A: **네, 자동으로 마이그레이션됩니다.** `~/.lecture-forge/` (히든) → `~/Documents/LectureForge/` (일반)로 변경되었습니다. 첫 실행 시 자동으로 데이터가 이동되며, 사용자 조치는 필요 없습니다.
+
+**Q: .env 파일을 어떻게 수정하나요? (v0.3.1+)**
+A: `lecture-forge home env` 명령을 사용하면 기본 텍스트 편집기로 자동으로 열립니다. 또는 `~/Documents/LectureForge/.env`를 직접 편집할 수 있습니다.
+
 ---
 
-## 📝 다음 단계 (선택적 개선사항)
+## 📝 향후 개선사항 (선택적)
 
-### 우선순위 1: 테스트 확장 ✅ (기본 완료, 확장 가능)
-```bash
-# 현재 상태: 45-50% 커버리지
-pytest tests/ -v --cov=lecture_forge
+프로젝트는 현재 Production Ready 상태입니다. 아래는 선택적 개선사항입니다:
 
-# 목표: 80%+ 커버리지
-# - Tools 테스트 추가 (0/9 tools)
-# - Quality 모듈 테스트 추가
-# - Edge case 테스트 추가
-```
-
-### 우선순위 2: CLI 리팩토링 (계획 완료)
-- 📋 **계획 문서**: `CLI_REFACTORING_PLAN.md` 참조
-- 🏗️ **구조**: `cli/commands/`, `cli/ui/` 모듈화
-- ⏱️ **예상 시간**: 10시간
-
-### 우선순위 3: 문서화
-- `docs/TUTORIAL.md` - 상세 사용 가이드
-- `docs/API.md` - API 레퍼런스
-- `docs/EXAMPLES.md` - 실전 예제
-- `CONTRIBUTING.md` - 기여 가이드
-
-### 우선순위 4: 배포
-```bash
-python -m build
-twine upload dist/*
-```
+- 📊 **테스트 확장**: 현재 45-50% → 목표 80% 커버리지
+- 🌐 **다국어 지원**: Translation Chain 추가
+- 📱 **웹 UI**: Streamlit/Gradio 인터페이스
+- 🤝 **협업 기능**: 지식창고 공유, 템플릿 마켓플레이스
+- 📦 **PyPI 배포**: 공식 패키지 배포 (현재는 git install)
 
 ---
 
@@ -590,18 +611,18 @@ twine upload dist/*
 
 ## 📊 프로젝트 통계
 
-- 📊 **총 코드**: ~541KB (에이전트 5,189줄 + CLI 3,298줄 + 도구 3,153줄 + 기타)
+- 📊 **총 코드**: ~570KB (에이전트 5,189줄 + CLI 3,600+줄 + 도구 3,153줄 + 기타)
 - 🤖 **에이전트**: 10개 (모두 구현 및 테스트)
 - 🛠️ **Tools**: 9개 (모두 구현, image_editor 포함)
-- 💻 **CLI**: 3,298줄 (6개 명령어: init, create, chat, edit-images, improve, cleanup)
-- 📦 **패키지**: pip installable
+- 💻 **CLI**: 3,600+줄 (7개 명령어: init, create, chat, edit-images, improve, cleanup, home)
+- 📂 **데이터 저장**: ~/Documents/LectureForge/ (일반 폴더, 접근 용이)
+- 📦 **패키지**: pip installable, Python 3.11-3.13 지원
 - 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
-- 💰 **비용**: ~$0.035 per 60분 강의
-- 🧪 **테스트**: 53+ 테스트, 45-50% 커버리지 (v0.2.0+)
-- 📝 **Type Hints**: 75% 적용 (v0.2.0+)
-- 🐛 **이미지 원본 크기 보존**: thumbnail 버그 수정 (v0.2.6)
-- 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리, 349줄)
-- 📝 **프롬프트 관리**: 템플릿 기반 프롬프트 시스템 (176줄)
+- 💰 **비용**: ~$0.035 per 60분 강의 (실측)
+- 🧪 **테스트**: 53+ 테스트, 45-50% 커버리지
+- 📝 **Type Hints**: 75% 적용
+- 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
+- 📝 **프롬프트 관리**: 템플릿 기반 시스템
 
 ---
 
@@ -624,6 +645,28 @@ lecture-forge --help
 **현재 상태**: 🌟 **Production Ready+ (Enhanced Quality)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.1 (2026-02-13) - 📂 User-Friendly Directories
+
+**사용자 친화적 디렉토리 구조**:
+- 📂 **히든 디렉토리 → 일반 디렉토리**: 접근성 대폭 개선
+  - 변경 전: `~/.lecture-forge/` (숨김, Finder에서 안 보임)
+  - 변경 후: `~/Documents/LectureForge/` (일반 폴더, 바로 보임)
+  - Windows: `%USERPROFILE%\Documents\LectureForge\`
+  - 자동 마이그레이션: 기존 데이터 자동 이동
+- 🏠 **home 커맨드 추가**: 빠른 폴더 접근
+  - `lecture-forge home` - 메인 폴더 열기
+  - `lecture-forge home outputs` - 강의 결과물 폴더
+  - `lecture-forge home data` - 데이터 폴더
+  - `lecture-forge home kb` - 최신 knowledge base
+  - `lecture-forge home env` - .env 파일 편집
+  - 크로스 플랫폼 지원 (macOS/Windows/Linux)
+
+**영향**:
+- ✅ Finder/탐색기에서 강의 자료 바로 확인 가능
+- ✅ 드래그앤드롭으로 파일 관리 간편
+- ✅ iCloud/OneDrive 동기화 폴더 활용 가능
+- ✅ 기존 사용자 데이터 자동 마이그레이션 (하위 호환)
 
 ### v0.3.0 (2026-02-12) - 🎯 Presentation Optimization
 

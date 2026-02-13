@@ -7,8 +7,14 @@ The .env file is searched in the following order:
   1. LECTURE_FORGE_ENV_FILE environment variable (if set)
   2. ./.env (current working directory)
   3. Platform-specific user directory:
-     - Windows: %LOCALAPPDATA%\\lecture-forge\\.env
-     - Mac/Linux: ~/.lecture-forge/.env
+     - Windows: %USERPROFILE%\\Documents\\LectureForge\\.env
+     - Mac/Linux: ~/Documents/LectureForge/.env
+     - Fallback: ~/LectureForge/.env
+
+Migration (v0.3.1+):
+  - Automatically migrates from old ~/.lecture-forge/ to new visible location
+  - Preserves all data (.env, vector_db, images, outputs, cache)
+  - One-time operation on first run after upgrade
 """
 
 import logging
@@ -44,20 +50,92 @@ def get_default_config_dir() -> Path:
     """
     Get the default configuration directory based on platform.
 
+    New behavior (v0.3.1+):
+      - Uses visible directory in Documents folder for better accessibility
+      - Auto-migrates from old ~/.lecture-forge/ on first run
+
+    Directory locations:
+      - Windows: %USERPROFILE%\\Documents\\LectureForge
+      - Mac/Linux: ~/Documents/LectureForge
+      - Fallback: ~/LectureForge (if Documents doesn't exist)
+
     Returns:
         Path to the platform-specific config directory
     """
     if sys.platform == "win32":
-        # Windows: Use LOCALAPPDATA
-        local_appdata = os.getenv("LOCALAPPDATA")
-        if local_appdata:
-            return Path(local_appdata) / "lecture-forge"
-        else:
-            # Fallback to home directory
-            return Path.home() / "lecture-forge"
+        # Windows: Documents\LectureForge
+        user_profile = os.getenv("USERPROFILE")
+        if user_profile:
+            docs = Path(user_profile) / "Documents"
+            if docs.exists():
+                return docs / "LectureForge"
+        # Fallback to home directory
+        return Path.home() / "LectureForge"
     else:
-        # Unix-like systems (Mac, Linux)
-        return Path.home() / ".lecture-forge"
+        # Mac/Linux: ~/Documents/LectureForge
+        docs = Path.home() / "Documents"
+        if docs.exists():
+            return docs / "LectureForge"
+        else:
+            # Fallback: ~/LectureForge (if Documents doesn't exist)
+            return Path.home() / "LectureForge"
+
+
+def migrate_from_hidden_dir() -> bool:
+    """
+    Migrate data from old ~/.lecture-forge/ to new visible location.
+
+    This function automatically runs on module import to migrate existing
+    installations from the hidden directory to the new visible directory.
+
+    Migration process:
+      1. Check if old ~/.lecture-forge/ exists
+      2. Check if new location already exists (skip if yes)
+      3. Move entire directory to new location
+      4. Preserve all data (.env, vector_db, images, outputs, cache)
+
+    Returns:
+        True if migration was performed, False otherwise
+    """
+    old_dir = Path.home() / ".lecture-forge"
+    new_dir = get_default_config_dir()
+
+    # Skip if old dir doesn't exist
+    if not old_dir.exists():
+        return False
+
+    # Skip if already migrated (new dir exists)
+    if new_dir.exists():
+        # If both exist, warn user (manual intervention needed)
+        if old_dir.exists():
+            logger.warning(
+                f"Both old ({old_dir}) and new ({new_dir}) directories exist. "
+                "Please manually merge or remove the old directory."
+            )
+        return False
+
+    # Perform migration
+    logger.info(f"Migrating from {old_dir} to {new_dir}...")
+
+    try:
+        import shutil
+
+        # Create parent directory if needed
+        new_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # Move entire directory
+        shutil.move(str(old_dir), str(new_dir))
+
+        logger.info(f"✓ Migration completed successfully!")
+        logger.info(f"  Old location: {old_dir} (removed)")
+        logger.info(f"  New location: {new_dir}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+        logger.error(f"Please manually move files from:")
+        logger.error(f"  {old_dir} → {new_dir}")
+        return False
 
 
 def find_and_load_env() -> Optional[Path]:
@@ -105,8 +183,36 @@ def find_and_load_env() -> Optional[Path]:
     return None
 
 
+# Auto-migrate from old hidden directory (v0.3.1+)
+migrate_from_hidden_dir()
+
 # Load .env file at module import
 ENV_FILE_PATH = find_and_load_env()
+
+
+def resolve_config_path(env_var: str, default_subdir: str, base_dir: Path) -> Path:
+    """
+    Resolve a path from environment variable, handling relative paths correctly.
+
+    If the path is relative (e.g., "./data"), it's resolved relative to base_dir.
+    If the path is absolute, it's used as-is.
+
+    Args:
+        env_var: Environment variable name
+        default_subdir: Default subdirectory name if env var not set
+        base_dir: Base directory for resolving relative paths
+
+    Returns:
+        Absolute Path object
+    """
+    path_str = os.getenv(env_var, str(base_dir / default_subdir))
+    path = Path(path_str)
+
+    # If path is relative, resolve it relative to base_dir
+    if not path.is_absolute():
+        path = base_dir / path
+
+    return path.resolve()
 
 
 class Config:
@@ -115,8 +221,8 @@ class Config:
     # ===== Project Paths =====
     # For installed packages, use user's directories
     USER_CONFIG_DIR = get_default_config_dir()
-    DATA_DIR = Path(os.getenv("DATA_DIR", str(USER_CONFIG_DIR / "data")))
-    OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", str(USER_CONFIG_DIR / "outputs")))
+    DATA_DIR = resolve_config_path("DATA_DIR", "data", USER_CONFIG_DIR)
+    OUTPUT_DIR = resolve_config_path("OUTPUT_DIR", "outputs", USER_CONFIG_DIR)
 
     # Templates are always in the package directory
     TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -197,12 +303,12 @@ class Config:
     IMAGE_ASPECT_RATIO_MAX: float = float(os.getenv("IMAGE_ASPECT_RATIO_MAX", "3.0"))  # Very wide
 
     # ===== Vector DB =====
-    VECTOR_DB_PATH: Path = Path(os.getenv("VECTOR_DB_PATH", str(DATA_DIR / "vector_db")))
+    VECTOR_DB_PATH: Path = resolve_config_path("VECTOR_DB_PATH", "vector_db", DATA_DIR)
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "200"))
 
     # ===== RAG Cache =====
-    RAG_CACHE_PATH: Path = Path(os.getenv("RAG_CACHE_PATH", str(DATA_DIR / "rag_cache")))
+    RAG_CACHE_PATH: Path = resolve_config_path("RAG_CACHE_PATH", "rag_cache", DATA_DIR)
     RAG_CACHE_TTL: int = int(os.getenv("RAG_CACHE_TTL", "86400"))  # 24 hours in seconds
     RAG_CACHE_MAX_SIZE: int = int(os.getenv("RAG_CACHE_MAX_SIZE", "1000"))  # Max number of cached queries
 

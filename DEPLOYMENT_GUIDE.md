@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **버전**: 0.2.0 ✅ **배포 완료**
-> **최종 수정**: 2026-02-09
+> **최신 버전**: 0.3.1 ✅ **배포 완료**
+> **최종 수정**: 2026-02-13
 > **대상**: PyPI (Python Package Index)
-> **배포 URL**: https://pypi.org/project/lecture-forge/0.2.0/
+> **배포 URL**: https://pypi.org/project/lecture-forge/0.3.1/
 
 ---
 
@@ -916,6 +916,27 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
+### v0.3.1 (2026-02-13) ✅ **최신**
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.1/
+- **파일 크기**:
+  - wheel: 182 KB
+  - tarball: 206 KB
+- **주요 변경사항**:
+  - ✅ 중앙집중식 디렉토리 (`~/Documents/LectureForge/`)
+  - ✅ 자동 마이그레이션 (`~/.lecture-forge/` → 새 위치)
+  - ✅ home 명령어 추가 (빠른 폴더 접근)
+  - ✅ Vector DB 경로 수정 (`data/vector_db` 정상화)
+  - ✅ 이미지 경로 완전 해결 (동적 상대 경로)
+  - ✅ .env 설정 유연성 (모든 경로 조합 지원)
+
+### v0.3.0 (2026-02-12) ✅
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.0/
+- **주요 변경사항**: 프레젠테이션 최적화
+
 ### v0.2.0 (2026-02-09) ✅
 
 - **상태**: 배포 완료
@@ -923,14 +944,12 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 - **파일 크기**:
   - wheel: 188.2 KB
   - tarball: 197.9 KB
-- **체크섬**:
-  - wheel: `d58bf816bb5feac07814d499c06bd49be245e3f367890a2742b6002f13a3e3d7`
-  - tarball: `e1d5b65355b6f90da149f411b29c4cd66e66b858b3778bccc157b624a1dfee6e`
+- **주요 변경사항**: 첫 공식 PyPI 릴리스
 
 ### 다음 릴리스 계획
 
-- v0.2.1: 버그 수정 및 문서 개선
-- v0.3.0: 새로운 기능 추가
+- v0.3.2: 버그 수정 및 문서 개선
+- v0.4.0: 새로운 기능 추가
 - v1.0.0: 안정 버전 릴리스
 
 ---
@@ -1011,7 +1030,7 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-09 (v0.2.0 배포 완료)
-**버전**: 2.0.0
+**최종 업데이트**: 2026-02-13 (v0.3.1 배포 완료)
+**버전**: 2.1.0
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: ✅ 실전 검증 완료
+**상태**: ✅ 실전 검증 완료 (v0.3.1)

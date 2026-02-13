@@ -1,16 +1,19 @@
 # ===== LectureForge Requirements =====
+# Python 3.11-3.13 compatible (tested on Python 3.13.5)
 # Fast installation (~3-5 minutes)
 # Heavy optional packages are commented out - uncomment if needed
+# Last updated: 2026-02-13
 
 # ===== Core Framework =====
-langchain>=0.1.0,<0.3.0
-langchain-openai>=0.0.5,<0.3.0
-langchain-core>=0.1.0,<0.3.0
+# Updated to 0.3.x for Python 3.13 compatibility and latest features
+langchain>=0.3.27,<0.4.0
+langchain-openai>=0.2.0,<0.4.0
+langchain-core>=0.3.76,<0.4.0
 openai>=1.12.0,<2.0.0
 
 # ===== Vector Database =====
-# Fixed to 0.4.24 to avoid telemetry issues in 0.5.x
-chromadb==0.4.24
+# Updated to 1.1.x+ for Python 3.13 compatibility and improved performance
+chromadb>=1.1.0,<2.0.0
 
 # ===== PDF Processing =====
 pymupdf>=1.23.0,<2.0.0
@@ -22,7 +25,9 @@ requests>=2.31.0,<3.0.0
 # ===== Image Processing (Basic) =====
 pillow>=10.2.0,<11.0.0
 imagehash>=4.3.0,<5.0.0
-numpy>=1.24.0,<2.0.0
+# Conditional numpy versions for Python compatibility
+numpy>=1.24.0,<2.0.0; python_version < "3.13"  # Python 3.11-3.12
+numpy>=2.1.0,<3.0.0; python_version >= "3.13"  # Python 3.13+ (required)
 scipy>=1.11.0,<2.0.0  # For advanced image quality analysis (entropy)
 
 # ===== HTML Generation =====
@@ -55,9 +60,8 @@ tenacity>=8.0.0,<9.0.0
 # sentence-transformers>=2.3.0,<3.0.0
 
 # Additional Tools
-# langchain-community>=0.0.20,<0.3.0
+# langchain-community>=0.3.27,<0.4.0
 # pdfplumber>=0.10.0,<1.0.0
 # rapidfuzz>=3.0.0,<4.0.0
 # tiktoken>=0.5.0,<1.0.0
 # httpx>=0.24.0,<1.0.0
-# tenacity>=8.0.0,<9.0.0

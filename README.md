@@ -12,7 +12,7 @@
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 89개 테스트 (50%+ 커버리지) | ~$0.035/60분 강의 | Python 3.11-3.13
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 89개 테스트 (50%+ 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -143,22 +143,71 @@ AI: 파이썬 데코레이터는 함수나 메서드를 수정하는 강력한 �
 
 ### 1️⃣ 설치
 
+#### 방법 1: pipx로 설치 (가장 간편 ⭐⭐)
+
 ```bash
-# Python 3.11-3.13 환경 생성 (3.11 권장)
+# pipx 설치 (아직 없는 경우)
+pip install pipx
+pipx ensurepath
+
+# lecture-forge 설치 (격리된 환경에서 자동 설치)
+pipx install lecture-forge
+
+# playwright 설치 (pipx 환경에 추가)
+pipx inject lecture-forge playwright
+pipx runpip lecture-forge install playwright
+playwright install chromium
+
+# 사용
+lecture-forge create
+```
+
+**pipx의 장점**:
+- ✅ 격리된 환경에서 자동 설치
+- ✅ 시스템 전역에서 `lecture-forge` 명령 사용 가능
+- ✅ 다른 Python 프로젝트와 의존성 충돌 없음
+- ✅ conda/venv 환경 관리 불필요
+
+#### 방법 2: PyPI + conda 환경 (권장 ⭐)
+
+```bash
+# Python 3.11 환경 생성 (강력 권장)
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
 
-# 패키지 설치
+# PyPI에서 설치
+pip install lecture-forge
+
+# 웹 스크래핑용 브라우저 설치
+playwright install chromium
+```
+
+#### 방법 3: 개발 설치 (소스 코드 수정 시)
+
+```bash
+# Git 클론
+git clone https://github.com/bullpeng72/Lecture_forge.git
+cd Lecture_forge
+
+# Python 3.11 환경 생성
+conda create -n lecture-forge python=3.11
+conda activate lecture-forge
+
+# 로컬 소스에서 설치
 pip install -e .
 
 # 웹 스크래핑용 브라우저 설치
-playwright install
+playwright install chromium
 ```
 
-> **Python 버전 호환성**:
-> - ✅ **Python 3.11-3.12**: 완전 지원 (프로덕션 사용 권장)
-> - ⚠️ **Python 3.13**: 실험적 지원 (대부분의 기능 작동, 일부 의존성 테스트 필요)
-> - 최신 기능과 안정성을 위해 Python 3.11 사용을 권장합니다.
+> **Python 버전 호환성** (중요 ⚠️):
+> - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원 (Production Ready)
+> - ✅ **Python 3.12**: 지원됨 - 정상 작동
+> - ❌ **Python 3.13**: **비권장** - ChromaDB/hnswlib 호환성 문제 발생
+>   - 증상: `GLIBCXX_3.4.32 not found` 오류
+>   - 해결: Python 3.11 또는 3.12로 다운그레이드 필수
+>
+> **최신 기능과 안정성을 위해 Python 3.11 사용을 강력히 권장합니다.**
 
 ### 2️⃣ 환경 설정
 
@@ -684,10 +733,39 @@ pie title 품질 평가 가중치 분포
 <details>
 <summary><b>Q: 어떤 Python 버전이 필요한가요?</b></summary>
 
-A: Python 3.11 이상이 필요합니다.
+A: **Python 3.11을 강력히 권장합니다.**
+
+- ✅ Python 3.11: 완벽 지원 (권장)
+- ✅ Python 3.12: 지원됨
+- ❌ Python 3.13: 호환성 문제 (비권장)
+
 ```bash
-python --version  # Python 3.11+ 확인
+# 버전 확인
+python --version
+
+# Python 3.11 환경 생성
+conda create -n lecture-forge python=3.11
+conda activate lecture-forge
 ```
+</details>
+
+<details>
+<summary><b>Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.</b></summary>
+
+A: Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다.
+
+**해결 방법**: Python 3.11로 다운그레이드
+```bash
+# 새 환경 생성
+conda create -n lecture-forge python=3.11
+conda activate lecture-forge
+
+# 재설치
+pip install lecture-forge
+playwright install chromium
+```
+
+모든 기능이 정상 작동합니다!
 </details>
 
 <details>

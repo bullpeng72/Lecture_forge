@@ -7,20 +7,19 @@ name = "lecture-forge"
 version = "0.3.2"
 description = "AI-powered lecture material generator with multilingual support using LangChain"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}
 authors = [
     {name = "Sungwoo Kim", email = "sungwoo.kim@gmail.com"}
 ]
 urls = {Homepage = "https://github.com/bullpeng72/Lecture_forge"}
-keywords = ["ai", "education", "lecture", "langchain", "multiagent"]
+keywords = ["ai", "education", "lecture", "langchain", "multiagent", "multilingual", "rag"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Education",
     "Topic :: Education",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
 ]
 dynamic = ["dependencies"]
 

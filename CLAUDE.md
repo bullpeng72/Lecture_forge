@@ -267,21 +267,65 @@ prompt = load_prompt(
 
 ### 1. 설치
 
+#### 방법 1: pipx로 설치 (가장 간편 ⭐⭐)
+
 ```bash
-# Python 3.11-3.13 환경 생성 (3.11 권장)
+# pipx 설치 (아직 없는 경우)
+pip install pipx
+pipx ensurepath
+
+# lecture-forge 설치 (격리된 환경에서 자동 설치)
+pipx install lecture-forge
+
+# playwright 설치 (pipx 환경에 추가)
+pipx inject lecture-forge playwright
+pipx runpip lecture-forge install playwright
+playwright install chromium
+
+# 사용
+lecture-forge create
+```
+
+**pipx의 장점**:
+- ✅ 격리된 환경에서 자동 설치
+- ✅ 시스템 전역에서 `lecture-forge` 명령 사용 가능
+- ✅ 다른 Python 프로젝트와 의존성 충돌 없음
+- ✅ conda/venv 환경 관리 불필요
+
+#### 방법 2: PyPI + conda 환경 (권장 ⭐)
+
+```bash
+# Python 3.11 환경 생성 (강력 권장)
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
 
-# 패키지 설치
-pip install -e .
+# PyPI에서 설치
+pip install lecture-forge
 
 # Playwright 브라우저 설치 (웹 스크래핑용)
-playwright install
+playwright install chromium
 ```
 
-**Python 버전 지원**:
-- ✅ Python 3.11-3.12: 완전 지원 (권장)
-- ⚠️ Python 3.13: 실험적 지원 (대부분 작동)
+#### 방법 3: 개발 설치 (소스 코드 수정 시)
+
+```bash
+# Python 3.11 환경 생성
+conda create -n lecture-forge python=3.11
+conda activate lecture-forge
+
+# 로컬 소스에서 설치
+pip install -e .
+
+# Playwright 브라우저 설치
+playwright install chromium
+```
+
+**Python 버전 지원** (중요 ⚠️):
+- ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원
+- ✅ Python 3.12: 지원됨 - 정상 작동
+- ❌ **Python 3.13**: **비권장** - ChromaDB/hnswlib 호환성 문제 (`GLIBCXX_3.4.32` 오류)
+
+**Python 3.13 사용자는 3.11로 다운그레이드 필수!**
 
 ### 2. 환경 변수 설정
 
@@ -472,7 +516,7 @@ xychart-beta
 - [ ] **테스트 확장** (80%+ 커버리지 목표)
 - [ ] **CLI 리팩토링** (모듈화, 계획 문서화 완료)
 - [ ] **문서화** (API 레퍼런스, 튜토리얼)
-- [ ] **배포 준비** (PyPI 업로드)
+- ✅ **PyPI 배포** (v0.3.2 배포 완료: https://pypi.org/project/lecture-forge/)
 
 ---
 
@@ -573,7 +617,15 @@ A: 네, PDF/URL 이미지만으로도 작동합니다. Pexels/Unsplash는 선택
 A: `/exit`, `/quit`, `exit`, `quit` 또는 `Ctrl+C`로 종료 가능합니다.
 
 **Q: 테스트 코드는?**
-A: **네, 있습니다!** 53+ 단위 테스트, 45-50% 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
+A: **네, 있습니다!** 89개 테스트 함수, 50%+ 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
+
+**Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.**
+A: **Python 3.11로 다운그레이드하세요.** Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다. Python 3.11 환경을 생성하면 모든 기능이 정상 작동합니다:
+```bash
+conda create -n lecture-forge python=3.11
+conda activate lecture-forge
+pip install lecture-forge
+```
 
 **Q: 생성된 강의 자료는 어디에 저장되나요? (v0.3.1+)**
 A: `~/Documents/LectureForge/outputs/`에 저장됩니다. `lecture-forge home outputs` 명령으로 폴더를 바로 열 수 있습니다. Finder/탐색기에서도 직접 접근 가능합니다.
@@ -619,7 +671,7 @@ A: `lecture-forge home env` 명령을 사용하면 기본 텍스트 편집기로
 - 🛠️ **Tools**: 9개 (PDF, 웹, 이미지, 검색, 이미지 편집 등)
 - 💻 **CLI**: 7개 명령어 (init, create, chat, edit-images, improve, cleanup, home)
 - 📂 **데이터 저장**: ~/Documents/LectureForge/ (일반 폴더, 접근 용이)
-- 📦 **패키지**: pip installable, Python 3.11-3.13 지원
+- 📦 **패키지**: PyPI 배포 완료, Python 3.11-3.12 지원 (3.13 비권장)
 - 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
 - 💰 **비용**: ~$0.035 per 60분 강의 (실측, GPT-4o-mini 기준)
 - 🧪 **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지

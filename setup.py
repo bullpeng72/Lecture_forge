@@ -8,10 +8,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.3.1",
+    version="0.3.2",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
-    description="AI-powered lecture material generator using LangChain",
+    description="AI-powered lecture material generator with multilingual support using LangChain",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bullpeng72/Lecture_forge",

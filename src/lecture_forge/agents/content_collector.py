@@ -11,7 +11,7 @@ from lecture_forge.tools.deep_web_crawler import DeepWebCrawler
 from lecture_forge.tools.pdf_parser import PDFParserTool
 from lecture_forge.tools.search_tool import SerperSearchTool
 from lecture_forge.tools.web_scraper import WebScraperTool
-from lecture_forge.utils import logger
+from lecture_forge.utils import detect_language, logger
 
 
 class ContentCollectorAgent(BaseAgent):
@@ -179,6 +179,9 @@ class ContentCollectorAgent(BaseAgent):
                 chunks = self.chunker.chunk_text(doc["text"])
 
                 for chunk_idx, chunk in enumerate(chunks):
+                    # Detect chunk language
+                    chunk_language = detect_language(chunk, default="unknown")
+
                     all_chunks.append(chunk)
                     chunk_metadatas.append(
                         {
@@ -186,6 +189,7 @@ class ContentCollectorAgent(BaseAgent):
                             "source_type": doc["source_type"],
                             "chunk_index": chunk_idx,
                             "document_index": doc_idx,
+                            "language": chunk_language,  # ← Language detection
                             **doc["metadata"],
                         }
                     )
@@ -246,12 +250,16 @@ class ContentCollectorAgent(BaseAgent):
             # Fallback to regular chunking if no page info
             doc_chunks = self.chunker.chunk_text(doc["text"])
             for chunk_idx, chunk in enumerate(doc_chunks):
+                # Detect chunk language
+                chunk_language = detect_language(chunk, default="unknown")
+
                 chunks.append(chunk)
                 metadatas.append(
                     {
                         "source": doc["source"],
                         "source_type": "pdf",
                         "chunk_index": chunk_idx,
+                        "language": chunk_language,  # ← Language detection
                         **doc["metadata"],
                     }
                 )
@@ -269,6 +277,9 @@ class ContentCollectorAgent(BaseAgent):
             page_chunks = self.chunker.chunk_text(page_text)
 
             for chunk_idx, chunk in enumerate(page_chunks):
+                # Detect chunk language
+                chunk_language = detect_language(chunk, default="unknown")
+
                 chunks.append(chunk)
                 metadatas.append(
                     {
@@ -277,6 +288,7 @@ class ContentCollectorAgent(BaseAgent):
                         "page_number": page_num,  # ✅ Page number preserved
                         "chunk_index": chunk_idx,
                         "total_pages": doc["metadata"].get("total_pages", 0),
+                        "language": chunk_language,  # ← Language detection
                     }
                 )
 

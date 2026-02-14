@@ -123,3 +123,33 @@ def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
 
 
 logger = setup_logging()
+
+# Import language utilities for multilingual support
+from lecture_forge.utils.language_utils import (
+    detect_language,
+    get_language_name,
+    is_english,
+    is_korean,
+    translate_text,
+    translate_to_english,
+    translate_to_korean,
+)
+
+__all__ = [
+    "setup_logging",
+    "timestamp",
+    "sanitize_filename",
+    "format_duration",
+    "count_words",
+    "format_file_size",
+    "merge_dicts",
+    "logger",
+    # Language utilities
+    "detect_language",
+    "get_language_name",
+    "is_english",
+    "is_korean",
+    "translate_text",
+    "translate_to_english",
+    "translate_to_korean",
+]

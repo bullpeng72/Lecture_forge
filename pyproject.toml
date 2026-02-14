@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lecture-forge"
-version = "0.3.1"
-description = "AI-powered lecture material generator using LangChain"
+version = "0.3.2"
+description = "AI-powered lecture material generator with multilingual support using LangChain"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}

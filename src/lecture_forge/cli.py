@@ -325,14 +325,15 @@ def print_basic_help() -> None:
 @click.version_option(version=__version__)
 def cli(ctx):
     """
-    📚 LectureForge Pro v0.3.1 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.3.2 - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
-    Multi-agent pipeline system with RAG-based knowledge management.
+    Multi-agent pipeline system with RAG-based knowledge management and multilingual support.
 
     \b
-    📊 Stats: 10 Agents | 9 Tools | 53+ Tests | ~$0.035 per 60min lecture
+    📊 Stats: 10 Agents | 9 Tools | 89 Tests | ~$0.035 per 60min lecture
     📂 Data: ~/Documents/LectureForge/ (easily accessible folder)
+    🌐 Multilingual: Auto language detection, Cross-lingual search (v0.3.2+)
 
     \b
     🎉 FIRST TIME HERE?

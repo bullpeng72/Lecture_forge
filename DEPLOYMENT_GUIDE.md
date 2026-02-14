@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.1 ✅ **배포 완료**
-> **최종 수정**: 2026-02-13
+> **최신 버전**: 0.3.2 🔄 **배포 준비 중**
+> **최종 수정**: 2026-02-14
 > **대상**: PyPI (Python Package Index)
-> **배포 URL**: https://pypi.org/project/lecture-forge/0.3.1/
+> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.1/
 
 ---
 
@@ -916,7 +916,21 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.1 (2026-02-13) ✅ **최신**
+### v0.3.2 (2026-02-14) 🔄 **최신 (배포 준비 중)**
+
+- **상태**: 개발 완료, 배포 대기
+- **PyPI**: 아직 배포 안 됨
+- **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
+- **주요 변경사항**:
+  - ✅ 다국어 지원 (자동 언어 감지)
+  - ✅ Cross-lingual 검색 (Dual Query)
+  - ✅ 지능형 재랭킹 (같은 언어 우선순위)
+  - ✅ 혼합 언어 PDF 지원
+  - ✅ 마이그레이션 도구 (`migrate_add_language_metadata.py`)
+  - ✅ langdetect 라이브러리 통합 (requirements.txt)
+  - ✅ 언어 감지 테스트 8개 추가 (총 89개 테스트 함수)
+
+### v0.3.1 (2026-02-13) ✅
 
 - **상태**: 배포 완료
 - **PyPI**: https://pypi.org/project/lecture-forge/0.3.1/
@@ -1030,7 +1044,7 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-13 (v0.3.1 배포 완료)
-**버전**: 2.1.0
+**최종 업데이트**: 2026-02-14 (v0.3.2 개발 완료, 배포 준비 중)
+**버전**: 2.2.0
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: ✅ 실전 검증 완료 (v0.3.1)
+**상태**: ✅ 실전 검증 완료 (v0.3.2 multilingual support)

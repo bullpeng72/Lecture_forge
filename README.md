@@ -2,13 +2,13 @@
 
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-50%25%2B-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.2 Beta Release** | Multilingual + Enhanced RAG Quality 🌐🎯
+> 🚀 **v0.3.3 Beta Release** | Enhanced Input System + Python 3.12 Support ⌨️✨
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -65,6 +65,29 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ---
 
 ## 🚀 최근 개선사항
+
+### v0.3.3 (2026-02-15) - 입력 시스템 개선 + Python 3.12 완벽 지원 ⌨️
+
+**Chat 모드 입력 개선**:
+- **prompt-toolkit 도입**: 한국어 입력 완벽 지원
+  - ✅ 멀티바이트 문자 완벽 처리 (한글, 일본어 등)
+  - ✅ 백스페이스, 삭제, 방향키 정상 작동
+  - ✅ 모든 터미널 환경에서 일관된 경험
+- **입력 히스토리**: ↑/↓로 이전 질문 탐색, Ctrl+R 검색
+- **자동 제안**: 타이핑 중 이전 질문 기반 제안 (→로 수락)
+- **편집 단축키**: Ctrl+A/E (줄 처음/끝), Alt+←/→ (단어 이동)
+
+**Python 3.12 완벽 호환**:
+- **NumPy 1.26.0+**: Python 3.12 공식 지원 (1.24 → 1.26)
+- **의존성 검증**: chromadb, langchain 등 모든 패키지 호환 확인
+
+**사용 예시**:
+```
+You: 딥러닝이란 무엇인가요?  ← 한글 입력 완벽!
+     ↑ 자동 제안 (이전 질문 기반)
+🔍 Searching...
+AI: 딥러닝은 인공신경망을 기반으로...
+```
 
 ### v0.3.2 (2026-02-14) - 다국어 지원 + RAG 품질 강화 🌐🎯
 
@@ -202,12 +225,12 @@ playwright install chromium
 
 > **Python 버전 호환성** (중요 ⚠️):
 > - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원 (Production Ready)
-> - ✅ **Python 3.12**: 지원됨 - 정상 작동
+> - ✅ **Python 3.12**: **완벽 지원** - v0.3.3부터 공식 지원 (numpy 1.26.0+)
 > - ❌ **Python 3.13**: **비권장** - ChromaDB/hnswlib 호환성 문제 발생
 >   - 증상: `GLIBCXX_3.4.32 not found` 오류
 >   - 해결: Python 3.11 또는 3.12로 다운그레이드 필수
 >
-> **최신 기능과 안정성을 위해 Python 3.11 사용을 강력히 권장합니다.**
+> **v0.3.3부터 Python 3.11과 3.12 모두 완벽하게 지원합니다.**
 
 ### 2️⃣ 환경 설정
 
@@ -424,9 +447,8 @@ lecture-forge chat
 
 **대화형 명령어:**
 - `/help`: 도움말 표시
-- `/exit` 또는 `/quit`: 종료
-- `/clear`: 채팅 기록 지우기
-- `/sources`: 마지막 답변의 출처 표시
+- `/exit`, `/quit`: 종료
+- `Ctrl+C`: 강제 종료
 
 **예제:**
 ```bash
@@ -460,7 +482,7 @@ lecture-forge edit-images outputs/lecture.html
 | `u <번호>` | 삭제 취소 | `u 3` |
 | `r <번호>` | 이미지 교체 (Vector DB 검색) | `r 5` |
 | `s` | 변경사항 저장 | `s` |
-| `q` | 종료 (저장 안 함) | `q` |
+| `/exit`, `/quit` (또는 `q`) | 종료 (저장 안 함) | `/exit` |
 | `h` | 도움말 | `h` |
 
 **예제:**
@@ -603,7 +625,7 @@ lecture-forge edit-images outputs/lecture.html -o outputs/lecture_v2.html
 | `u <번호>` | 삭제 취소 | `u 3` |
 | `r <번호>` | 이미지 교체 (대안 검색) | `r 5` |
 | `s` | 변경사항 저장 | `s` |
-| `q` | 종료 | `q` |
+| `/exit`, `/quit` (또는 `q`) | 종료 | `/exit` |
 | `h` | 도움말 | `h` |
 
 ### 작동 방식
@@ -733,10 +755,10 @@ pie title 품질 평가 가중치 분포
 <details>
 <summary><b>Q: 어떤 Python 버전이 필요한가요?</b></summary>
 
-A: **Python 3.11을 강력히 권장합니다.**
+A: **Python 3.11 또는 3.12를 권장합니다.**
 
 - ✅ Python 3.11: 완벽 지원 (권장)
-- ✅ Python 3.12: 지원됨
+- ✅ Python 3.12: 완벽 지원 (v0.3.3+)
 - ❌ Python 3.13: 호환성 문제 (비권장)
 
 ```bash
@@ -746,6 +768,10 @@ python --version
 # Python 3.11 환경 생성
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
+
+# 또는 Python 3.12
+conda create -n lecture-forge python=3.12
+conda activate lecture-forge
 ```
 </details>
 
@@ -754,10 +780,10 @@ conda activate lecture-forge
 
 A: Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다.
 
-**해결 방법**: Python 3.11로 다운그레이드
+**해결 방법**: Python 3.11 또는 3.12로 다운그레이드
 ```bash
-# 새 환경 생성
-conda create -n lecture-forge python=3.11
+# 새 환경 생성 (3.11 또는 3.12)
+conda create -n lecture-forge python=3.11  # 또는 python=3.12
 conda activate lecture-forge
 
 # 재설치
@@ -765,7 +791,7 @@ pip install lecture-forge
 playwright install chromium
 ```
 
-모든 기능이 정상 작동합니다!
+Python 3.11과 3.12 모두 완벽하게 지원됩니다! (v0.3.3+)
 </details>
 
 <details>
@@ -836,9 +862,8 @@ A:
 <summary><b>Q: Chat 모드 종료 방법은?</b></summary>
 
 A: 다음 중 하나 사용:
-- `/exit` 또는 `/quit`
-- `exit` 또는 `quit`
-- `Ctrl+C`
+- `/exit` 또는 `/quit` (권장)
+- `Ctrl+C` (강제 종료)
 </details>
 
 <details>
@@ -910,6 +935,26 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.3.3 (2026-02-15) - ⌨️ Enhanced Input System
+
+**입력 시스템 개선**:
+- ⌨️ **prompt-toolkit 도입**: 한국어 완벽 지원
+  - 멀티바이트 문자 처리, 백스페이스/삭제 정상 작동
+  - 터미널 독립적 - 모든 OS에서 일관된 경험
+- 📜 **입력 히스토리**: `~/Documents/LectureForge/chat_history.txt`
+  - ↑/↓: 이전/다음 질문, Ctrl+R: 검색
+- 💡 **자동 제안**: 이전 질문 기반 실시간 제안
+- ⚡ **편집 단축키**: Ctrl+A/E, Alt+←/→, Ctrl+U
+
+**Python 3.12 호환**:
+- 🔧 **NumPy 1.26.0+**: Python 3.12 공식 지원
+- ✅ 전체 의존성 Python 3.11-3.12 검증
+
+**영향**:
+- ✅ Chat 모드 UX 대폭 향상
+- ✅ 한국어 사용자 불편 해소
+- ✅ Python 3.12 안정적 실행
 
 ### v0.3.1 (2026-02-13) - 📂 User-Friendly Directories
 
@@ -1061,6 +1106,6 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 참조
 ---
 
 <p align="center">
-  <b>Made with ❤️ by LectureForge Team</b><br>
+  <b>Made with ❤️ by Sungwoo Kim</b><br>
   ⭐ 이 프로젝트가 도움이 되었다면 GitHub Star를 눌러주세요!
 </p>

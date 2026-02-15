@@ -4,11 +4,22 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+    requirements = []
+    for line in fh:
+        line = line.strip()
+        # Skip empty lines and comments
+        if not line or line.startswith("#"):
+            continue
+        # Handle conditional requirements (e.g., numpy with python_version conditions)
+        if ";" in line:
+            # Keep the full conditional requirement
+            requirements.append(line)
+        else:
+            requirements.append(line)
 
 setup(
     name="lecture-forge",
-    version="0.3.2",
+    version="0.3.3",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator with multilingual support using LangChain",

@@ -5,6 +5,10 @@ Q&A Agent - Answers questions using knowledge base.
 from pathlib import Path
 from typing import Dict
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
@@ -27,6 +31,26 @@ class QAAgent(BaseAgent):
         self.vector_store = VectorStore(collection_name=collection_name)
 
         logger.info(f"Initializing Q&A Agent with KB: {knowledge_base_path}")
+
+        # Setup prompt session with history and auto-suggest
+        # History file is stored in user-friendly location (v0.3.1+)
+        history_path = Path.home() / "Documents" / "LectureForge" / "chat_history.txt"
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self.prompt_session = PromptSession(
+            history=FileHistory(str(history_path)),
+            auto_suggest=AutoSuggestFromHistory(),  # Suggest previous questions
+            enable_history_search=True,  # Ctrl+R to search history
+            multiline=False,  # Single-line input
+            vi_mode=False,  # Emacs-style editing (Ctrl+A, Ctrl+E, etc.)
+        )
+
+        # Prompt style for colored prompt
+        self.prompt_style = PromptStyle.from_dict(
+            {
+                "prompt": "cyan bold",
+            }
+        )
 
     def answer(self, question: str, enable_translation: bool = True) -> Dict:
         """
@@ -513,11 +537,13 @@ However, the context does not directly address: [missing aspects]
             f"[cyan]Knowledge Base:[/cyan] {self.knowledge_base_path.name}\n\n"
             "[dim]Features:[/dim]\n"
             "  • [bold]🌐 Multilingual Search:[/bold] Ask in Korean or English\n"
-            "  • [bold]🔍 Cross-lingual Retrieval:[/bold] Find relevant info in any language\n\n"
+            "  • [bold]🔍 Cross-lingual Retrieval:[/bold] Find relevant info in any language\n"
+            "  • [bold]⌨️  Enhanced Input:[/bold] History (↑/↓), auto-suggest, full Korean support\n\n"
             "[dim]Available commands:[/dim]\n"
             "  • [bold]/help[/bold] - Show help\n"
             "  • [bold]/exit[/bold] or [bold]/quit[/bold] - Exit chat mode\n"
-            "  • [bold]Ctrl+C[/bold] - Quick exit\n\n"
+            "  • [bold]Ctrl+C[/bold] - Quick exit\n"
+            "  • [bold]Ctrl+R[/bold] - Search history\n\n"
             "[dim]Just type your question to start![/dim]",
             title="🤖 LectureForge Q&A",
             border_style="blue",
@@ -528,11 +554,16 @@ However, the context does not directly address: [missing aspects]
 
         while True:
             try:
-                # Get user question
-                question = Prompt.ask("\n[bold cyan]You[/bold cyan]")
+                # Get user question with enhanced input support
+                # Uses prompt_toolkit for better Korean input and editing
+                console.print()  # Add blank line before prompt
+                question = self.prompt_session.prompt(
+                    [("class:prompt", "You: ")],
+                    style=self.prompt_style,
+                )
 
                 # Check for commands
-                if question.lower() in ["exit", "quit", "/exit", "/quit"]:
+                if question.lower() in ["/exit", "/quit"]:
                     self._show_goodbye(console, question_count)
                     break
 
@@ -605,12 +636,17 @@ However, the context does not directly address: [missing aspects]
 
         help_table.add_row("/help, help, ?", "Show this help message")
         help_table.add_row("/exit, /quit", "Exit Q&A mode")
-        help_table.add_row("exit, quit", "Exit Q&A mode (alternative)")
-        help_table.add_row("Ctrl+C", "Quick exit")
+        help_table.add_row("Ctrl+C", "Quick exit (force quit)")
         help_table.add_row("<question>", "Ask any question about the lecture content")
 
         console.print("\n")
         console.print(help_table)
+        console.print("\n[dim]⌨️  Input Features:[/dim]")
+        console.print("  • [bold]Korean/English input:[/bold] Full support for multilingual typing")
+        console.print("  • [bold]History:[/bold] Use ↑/↓ arrows to navigate previous questions")
+        console.print("  • [bold]Auto-suggest:[/bold] Type to see suggestions from history (→ to accept)")
+        console.print("  • [bold]Search history:[/bold] Press Ctrl+R to search previous questions")
+        console.print("  • [bold]Editing:[/bold] Full support for backspace, delete, left/right arrows")
         console.print("\n[dim]💡 Tips for Better Answers:[/dim]")
         console.print("  • [bold]Be specific[/bold] in your questions for better answers")
         console.print("  • [bold]Ask follow-up questions[/bold] to get more details")

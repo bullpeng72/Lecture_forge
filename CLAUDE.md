@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced RAG Quality) (2026-02-14)
-> **버전**: 0.3.2 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯
+> **프로젝트 상태**: 🌟 **Production Ready+** (Enhanced Input System) (2026-02-15)
+> **버전**: 0.3.3 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️
 
 ## 📚 프로젝트 개요
 
@@ -30,11 +30,12 @@
 - **Framework**: LangChain
 - **LLM**: OpenAI GPT-4o-mini (기본), GPT-4o (Vision)
 - **Vector DB**: ChromaDB (로컬)
-- **CLI**: Click, Rich
+- **CLI**: Click, Rich, prompt-toolkit (Enhanced Input)
 - **다국어**: langdetect (언어 감지), GPT-4o-mini (번역)
 - **예외 처리**: 구조화된 예외 계층 (9개 카테고리)
 - **프롬프트**: 템플릿 기반 관리 시스템
 - **배포**: pip installable package
+- **Python**: 3.11-3.12 (3.13 비권장)
 
 ---
 
@@ -506,7 +507,7 @@ xychart-beta
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
 - ✅ **Templates** (HTML, CSS, JS + 프롬프트 템플릿)
 - ✅ **자동화 테스트** (89개 테스트, 20개 테스트 파일, 50%+ 커버리지)
-- ✅ **Type Safety** (75% type hints, mypy 설정)
+- ✅ **Type Safety** (71% type hints, mypy 설정)
 - ✅ **성능 최적화** (RAG 캐싱, API 재시도)
 - ✅ **예외 처리 시스템** (구조화된 예외 계층, 9개 카테고리)
 - ✅ **프롬프트 관리** (템플릿 기반 시스템, 재사용 가능)
@@ -585,7 +586,7 @@ xychart-beta
 - **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환
 - **RAG 쿼리 캐싱**: 60% 성능 향상, 캐시 히트율 추적
 - **API 재시도 로직**: 네트워크 오류 자동 복구 (최대 3회, exponential backoff)
-- **Type Safety 개선**: 75% type hints 적용, mypy 지원
+- **Type Safety 개선**: 71% type hints 적용, mypy 지원
 - **전체 에이전트 테스트**: 10/10 에이전트 자동화 테스트 (35%+ 커버리지)
 - **Config 개선**: CLI entry point validation (--help가 .env 없이 작동)
 - **이미지 품질**: thumbnail 버그 수정으로 원본 크기 보존 (v0.2.6)
@@ -614,18 +615,20 @@ A: 아니요. LLM API와 검색 API가 필요합니다. 단, 생성된 강의와
 A: 네, PDF/URL 이미지만으로도 작동합니다. Pexels/Unsplash는 선택사항입니다.
 
 **Q: Chat 모드 종료 방법은?**
-A: `/exit`, `/quit`, `exit`, `quit` 또는 `Ctrl+C`로 종료 가능합니다.
+A: `/exit` 또는 `/quit`를 입력하거나 `Ctrl+C`로 종료 가능합니다.
 
 **Q: 테스트 코드는?**
 A: **네, 있습니다!** 89개 테스트 함수, 50%+ 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
 
 **Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.**
-A: **Python 3.11로 다운그레이드하세요.** Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다. Python 3.11 환경을 생성하면 모든 기능이 정상 작동합니다:
+A: **Python 3.11 또는 3.12로 다운그레이드하세요.** Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다. Python 3.11-3.12 환경을 생성하면 모든 기능이 정상 작동합니다:
 ```bash
-conda create -n lecture-forge python=3.11
+conda create -n lecture-forge python=3.11  # 또는 python=3.12
 conda activate lecture-forge
 pip install lecture-forge
 ```
+
+**v0.3.3부터 Python 3.11과 3.12 모두 완벽하게 지원합니다.**
 
 **Q: 생성된 강의 자료는 어디에 저장되나요? (v0.3.1+)**
 A: `~/Documents/LectureForge/outputs/`에 저장됩니다. `lecture-forge home outputs` 명령으로 폴더를 바로 열 수 있습니다. Finder/탐색기에서도 직접 접근 가능합니다.
@@ -635,6 +638,9 @@ A: **네, 자동으로 마이그레이션됩니다.** `~/.lecture-forge/` (히�
 
 **Q: .env 파일을 어떻게 수정하나요? (v0.3.1+)**
 A: `lecture-forge home env` 명령을 사용하면 기본 텍스트 편집기로 자동으로 열립니다. 또는 `~/Documents/LectureForge/.env`를 직접 편집할 수 있습니다.
+
+**Q: chat 모드에서 한국어 입력이 잘 안 되는데요? (v0.3.3+)**
+A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용하여 한국어 입력, 백스페이스, 방향키 등 모든 편집 기능이 정상 작동합니다. 추가로 히스토리 탐색(↑/↓), 자동 제안, 검색(Ctrl+R) 기능도 지원합니다.
 
 ---
 
@@ -675,10 +681,11 @@ A: `lecture-forge home env` 명령을 사용하면 기본 텍스트 편집기로
 - 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
 - 💰 **비용**: ~$0.035 per 60분 강의 (실측, GPT-4o-mini 기준)
 - 🧪 **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
-- 📝 **Type Hints**: 75% 적용
+- 📝 **Type Hints**: 71% 적용 (207/292 함수)
 - 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
 - 📝 **프롬프트 관리**: 템플릿 기반 시스템
 - 🌐 **다국어**: langdetect 기반 언어 감지, Cross-lingual 검색 (v0.3.2+)
+- ⌨️ **입력 시스템**: prompt-toolkit 기반 고급 입력 (v0.3.3+)
 
 ---
 
@@ -698,9 +705,43 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: 🌟 **Production Ready+ (Enhanced Quality)** 🌟
+**현재 상태**: 🌟 **Production Ready+ (Enhanced Input System)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.3 (2026-02-15) - ⌨️ Enhanced Input System + Python 3.12 Full Support
+
+**입력 시스템 대폭 개선**:
+- ⌨️ **prompt-toolkit 도입**: 한국어 입력 완벽 지원
+  - 멀티바이트 문자 완벽 처리 (한글, 일본어, 중국어 등)
+  - 백스페이스, 삭제, 방향키 등 모든 편집 기능 정상 작동
+  - 터미널 환경 독립적 - 모든 OS에서 일관된 경험
+- 📜 **입력 히스토리**: 세션 간 질문 기록 유지
+  - 파일 기반 히스토리: `~/Documents/LectureForge/chat_history.txt`
+  - ↑/↓ 화살표로 이전 질문 탐색
+  - Ctrl+R로 히스토리 검색
+- 💡 **자동 제안**: 이전 질문 기반 실시간 제안
+  - 타이핑하면 자동으로 유사 질문 제안
+  - → 키로 제안 수락
+- ⚡ **편집 단축키**: Emacs 스타일 편집 지원
+  - Ctrl+A/E: 줄 처음/끝 이동
+  - Alt+←/→: 단어 단위 이동
+  - Ctrl+U: 줄 전체 삭제
+
+**Python 3.12 완벽 호환**:
+- 🔧 **NumPy 1.26.0+**: Python 3.12 공식 지원
+  - 변경 전: numpy>=1.24.0 (Python 3.12 미지원)
+  - 변경 후: numpy>=1.26.0 (Python 3.11-3.12 모두 지원)
+- ✅ **의존성 검증**: 모든 주요 패키지 Python 3.11-3.12 호환 확인
+  - chromadb 1.1.0+: Python 3.12 지원
+  - prompt-toolkit 3.0+: Python 3.12 지원
+  - langchain 0.3.x: Python 3.12 지원
+
+**영향**:
+- ✅ chat 모드 사용자 경험 대폭 향상
+- ✅ 한국어 사용자 불편 완전 해소
+- ✅ Python 3.12 환경에서 안정적 실행
+- ✅ 히스토리 기능으로 반복 질문 편리
 
 ### v0.3.2 (2026-02-14) - 🌐 Multilingual Support + 🎯 RAG Quality Enhancement
 

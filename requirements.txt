@@ -25,9 +25,8 @@ requests>=2.31.0,<3.0.0
 # ===== Image Processing (Basic) =====
 pillow>=10.2.0,<11.0.0
 imagehash>=4.3.0,<5.0.0
-# Conditional numpy versions for Python compatibility
-numpy>=1.24.0,<2.0.0; python_version < "3.13"  # Python 3.11-3.12
-numpy>=2.1.0,<3.0.0; python_version >= "3.13"  # Python 3.13+ (required)
+# Numpy version (Python 3.11-3.12 compatible - requires 1.26+ for Python 3.12)
+numpy>=1.26.0,<2.0.0
 scipy>=1.11.0,<2.0.0  # For advanced image quality analysis (entropy)
 
 # ===== HTML Generation =====
@@ -39,6 +38,7 @@ pygments>=2.17.0,<3.0.0
 click>=8.1.7,<9.0.0
 rich>=13.7.0,<14.0.0
 rich-click>=1.7.0,<2.0.0
+prompt-toolkit>=3.0.0,<4.0.0  # Enhanced input with history and multilingual support
 
 # ===== Utilities =====
 python-dotenv>=1.0.0,<2.0.0

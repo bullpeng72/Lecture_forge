@@ -357,6 +357,16 @@ class Config:
     MIN_WORDS_RATIO: float = float(os.getenv("MIN_WORDS_RATIO", "0.75"))  # Allow 25% under
     MAX_WORDS_RATIO: float = float(os.getenv("MAX_WORDS_RATIO", "1.3"))  # Allow 30% over
 
+    # ===== Content Generation - Section Structure =====
+    # Content distribution ratios for section parts (should sum to 1.0)
+    CONTENT_INTRO_RATIO: float = float(os.getenv("CONTENT_INTRO_RATIO", "0.10"))  # 10% intro
+    CONTENT_MAIN_RATIO: float = float(os.getenv("CONTENT_MAIN_RATIO", "0.70"))  # 70% main content
+    CONTENT_SUMMARY_RATIO: float = float(os.getenv("CONTENT_SUMMARY_RATIO", "0.20"))  # 20% summary
+
+    # Content quality improvement thresholds
+    CONTENT_MIN_QUALITY_IMPROVEMENT: int = int(os.getenv("CONTENT_MIN_QUALITY_IMPROVEMENT", "3"))  # Minimum score improvement
+    CONTENT_MAX_EXPANSION_ITERATIONS: int = int(os.getenv("CONTENT_MAX_EXPANSION_ITERATIONS", "2"))  # Max expansion attempts
+
     # ===== Slide Generation =====
     MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "4"))  # Maximum content blocks per slide
 

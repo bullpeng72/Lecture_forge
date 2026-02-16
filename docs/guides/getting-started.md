@@ -27,7 +27,7 @@ Complete guide to installing and using LectureForge for the first time.
 You'll need API keys from:
 1. **OpenAI** (required)
    - Get from: [platform.openai.com](https://platform.openai.com)
-   - Cost: Pay-per-use (~$0.05-0.10 per 60-min lecture)
+   - Cost: Pay-per-use (~$0.035 per 60-min lecture, actual measured)
 
 2. **Serper** (required)
    - Get from: [serper.dev](https://serper.dev)
@@ -153,7 +153,7 @@ This will:
 1. OpenAI API Key
    • Get from: https://platform.openai.com
    • Used for: LLM generation, embeddings
-   • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)
+   • Cost: ~$0.035 per 60-min lecture (GPT-4o-mini, actual measured)
 
    Enter your OpenAI API Key (starts with sk-): sk-proj-xxxxx
    ✓ OpenAI key saved (51 characters)
@@ -235,7 +235,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.3.2 - Lecture Material Generator
+📚 LectureForge Pro v0.3.4 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -380,6 +380,9 @@ lecture-forge create --output "ML_Introduction"
 
 # Web images only (faster)
 lecture-forge create --no-include-pdf-images
+
+# Async mode (70% faster content collection, v0.3.4+)
+lecture-forge create --async-mode
 ```
 
 ---
@@ -633,8 +636,8 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-02-15
-**Version**: 0.3.2
+**Last Updated**: 2026-02-16
+**Version**: 0.3.4
 
 **Ready to create amazing lectures? Start with:**
 ```bash

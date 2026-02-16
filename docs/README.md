@@ -58,11 +58,12 @@ Looking for something specific?
 
 ## 📊 Project Status
 
-**Version**: 0.3.3 (Beta Release)
-**Status**: Production Ready+ (Enhanced Input System)
-**Test Coverage**: 50%+ with 26 test files
+**Version**: 0.3.4 (Beta Release)
+**Status**: Production Ready+ (Async I/O Support)
+**Test Coverage**: 50%+ with 89 test functions
 
 **Recent Updates:**
+- ✅ **Async I/O support (v0.3.4)** - 70% faster content collection
 - ✅ Enhanced input system with prompt-toolkit (v0.3.3)
 - ✅ Python 3.12 full support (v0.3.3)
 - ✅ CLI refactored into modular structure
@@ -86,5 +87,5 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 ---
 
-**Last Updated**: 2026-02-15 (v0.3.3)
+**Last Updated**: 2026-02-16 (v0.3.4)
 **Maintained by**: Sungwoo Kim

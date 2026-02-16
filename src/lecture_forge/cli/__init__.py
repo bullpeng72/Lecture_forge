@@ -52,7 +52,7 @@ from lecture_forge.cli.utils import print_basic_help
 @click.pass_context
 def cli(ctx, version: bool) -> None:
     """
-    📚 LectureForge Pro v0.3.2 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.3.4 - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
     Multi-agent pipeline system with RAG-based knowledge management and multilingual support.
@@ -61,6 +61,7 @@ def cli(ctx, version: bool) -> None:
     📊 Stats: 10 Agents | 9 Tools | 89 Tests | ~$0.035 per 60min lecture
     📂 Data: ~/Documents/LectureForge/ (easily accessible folder)
     🌐 Multilingual: Auto language detection, Cross-lingual search (v0.3.2+)
+    ⚡ Async I/O: 70% faster content collection with --async-mode (v0.3.4+)
 
     \b
     🎉 FIRST TIME HERE?

@@ -248,6 +248,7 @@ lecture-forge create [OPTIONS]
 - `--image-search/--no-image-search`: Enable image search (default: enabled)
 - `--quality-level [lenient|balanced|strict]`: Quality threshold (default: balanced)
 - `-o, --output TEXT`: Output filename
+- `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
 - `--include-pdf-images/--no-include-pdf-images`: Extract PDF images (default: enabled)
 - `--auto-describe-images/--no-auto-describe-images`: Auto-generate descriptions (default: enabled)
 
@@ -603,5 +604,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-15
-**Version**: 0.3.2
+**Last Updated**: 2026-02-16
+**Version**: 0.3.4

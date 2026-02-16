@@ -17,15 +17,17 @@ from lecture_forge.utils import logger
 class ImageSelector:
     """Handles image selection with location-based matching and quality scoring."""
 
-    def __init__(self, keyword_expander=None):
+    def __init__(self, keyword_expander=None, keyword_translator=None):
         """
         Initialize ImageSelector.
-        
+
         Args:
             keyword_expander: Function to expand keywords (from parent agent)
+            keyword_translator: Function to get Korean-English keyword translations (from parent agent)
         """
         self.image_page_map = None
         self._expand_keywords = keyword_expander or (lambda topic, keyword_map: [topic])
+        self._get_keyword_translations = keyword_translator or (lambda: {})
 
     def select_images(
         self, section: Section, available_images: List[dict], context_metadatas: List[dict] = None

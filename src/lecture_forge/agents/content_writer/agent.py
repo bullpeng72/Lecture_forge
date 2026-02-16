@@ -19,6 +19,12 @@ from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.models.lecture import SectionContent
 from lecture_forge.utils import logger
+from lecture_forge.utils.content_metrics import (
+    calculate_target_metrics,
+    evaluate_content_quality,
+    format_quality_report,
+)
+from lecture_forge.utils.prompt_manager import load_prompt
 
 
 class ContentWriterAgent(BaseAgent):
@@ -40,7 +46,10 @@ class ContentWriterAgent(BaseAgent):
         self.image_usage_count = {}
 
         # Initialize helper components
-        self.image_selector = ImageSelector(keyword_expander=self._expand_keywords)
+        self.image_selector = ImageSelector(
+            keyword_expander=self._expand_keywords,
+            keyword_translator=self._get_keyword_translations
+        )
         self.code_generator = CodeGenerator(llm_client=self.llm, vector_store=vector_store)
         self.content_expander = ContentExpander(llm_client=self.llm, vector_store=vector_store)
 

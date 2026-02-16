@@ -46,12 +46,40 @@ class HTMLAssemblerAgent(BaseAgent):
         html_content = self._generate_html(lecture)
 
         # Determine output path
+        output_dir = Config.OUTPUT_DIR  # Always use configured output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         if not output_path:
+            # Generate filename if not provided
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{lecture.topic.replace(' ', '_')}_{timestamp}.html"
-            output_dir = Config.OUTPUT_DIR  # Use configured output directory
-            output_dir.mkdir(parents=True, exist_ok=True)
-            output_path = str(output_dir / filename)
+        else:
+            # Process provided output_path
+            output_path_obj = Path(output_path)
+
+            # If it's just a filename (no directory), use output_dir
+            if output_path_obj.parent == Path("."):
+                filename = output_path_obj.name
+                # Add .html extension if missing
+                if not filename.endswith(".html"):
+                    filename = f"{filename}.html"
+            else:
+                # Absolute or relative path with directory - use as-is
+                # but ensure .html extension
+                if not str(output_path_obj).endswith(".html"):
+                    output_path = f"{output_path}.html"
+                # Write directly and return early
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                logger.info(f"✅ HTML generated: {output_path}")
+                logger.info(f"   - Sections: {len(lecture.sections)}")
+                logger.info(f"   - Words: {lecture.total_word_count}")
+                logger.info(f"   - Images: {lecture.total_images}")
+                logger.info(f"   - Diagrams: {lecture.total_diagrams}")
+                return output_path
+
+        # Construct full path in output directory
+        output_path = str(output_dir / filename)
 
         # Write HTML file
         with open(output_path, "w", encoding="utf-8") as f:

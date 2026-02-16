@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.2 🔄 **배포 준비 중**
-> **최종 수정**: 2026-02-14
+> **최신 버전**: 0.3.4 🔄 **배포 준비 중**
+> **최종 수정**: 2026-02-17
 > **대상**: PyPI (Python Package Index)
-> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.1/
+> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.2/
 
 ---
 
@@ -916,10 +916,49 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.2 (2026-02-14) 🔄 **최신 (배포 준비 중)**
+### v0.3.4 (2026-02-17) 🔄 **최신 (배포 준비 중)**
 
 - **상태**: 개발 완료, 배포 대기
 - **PyPI**: 아직 배포 안 됨
+- **테스트**: 89개 테스트 함수, 29개 테스트 파일, 50%+ 커버리지
+- **주요 변경사항**:
+  - ✅ **Async I/O 지원** - 70% 빠른 컨텐츠 수집
+    - `AsyncBaseAgent` - ThreadPoolExecutor, 동시성 제어, Rate limiting
+    - `AsyncContentCollectorAgent` - 병렬 PDF/URL/검색 처리
+    - `AsyncWebScraperTool` - httpx 기반 비동기 웹 스크래핑
+    - `AsyncSerperSearchTool` - 비동기 검색 API
+    - `--async-mode` CLI 플래그 (실험적 기능)
+  - ✅ **의존성 추가**: httpx>=0.24.0, aiofiles>=23.0.0
+  - ✅ **성능 개선**: 3 PDFs + 5 URLs 처리 시간 80s → 24s (70% 감소)
+  - ✅ **CLI 통합**: `lecture-forge create --async-mode`
+  - ✅ **문서화**: ASYNC_INTEGRATION_GUIDE.md, TEST_ASYNC_CLI.md
+  - ✅ **에러 수정**: 6개 async 관련 버그 수정
+    - ImageSelector keyword_translator 전달
+    - ContentExpander 파라미터 불일치
+    - HTMLAssembler 경로 처리 개선
+    - 이미지 형식 감지 (PNG/WebP/JPG)
+
+### v0.3.3 (2026-02-15) ✅
+
+- **상태**: 개발 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.3/
+- **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
+- **주요 변경사항**:
+  - ✅ **Enhanced Input System** - prompt-toolkit 기반
+    - 한국어/멀티바이트 문자 완벽 지원
+    - 입력 히스토리 (↑/↓ 화살표)
+    - 자동 제안 (이전 질문 기반)
+    - Emacs 스타일 편집 단축키 (Ctrl+A/E, Alt+←/→)
+  - ✅ **Python 3.12 완벽 호환**
+    - NumPy 1.26.0+ (Python 3.12 공식 지원)
+    - 모든 의존성 Python 3.11-3.12 호환 확인
+  - ✅ **의존성 추가**: prompt-toolkit>=3.0.0
+  - ✅ **UX 개선**: chat 모드 백스페이스, 방향키 정상 작동
+
+### v0.3.2 (2026-02-14) ✅
+
+- **상태**: 개발 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.2/
 - **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
 - **주요 변경사항**:
   - ✅ 다국어 지원 (자동 언어 감지)

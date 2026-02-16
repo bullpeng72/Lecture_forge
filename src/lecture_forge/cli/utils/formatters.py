@@ -126,17 +126,17 @@ def print_basic_help() -> None:
     table.add_row("[bold green]home[/bold green]", "[bold]Open folders[/bold] in file manager [cyan](NEW!)[/cyan]", "outputs/data/env")
     console.print(table)
 
-    # Common Options
-    console.print("\n[bold yellow]⚙️  Common Options:[/bold yellow]")
+    # Common Options (for create command)
+    console.print("\n[bold yellow]⚙️  Common Options (create command):[/bold yellow]")
     opt_table = Table(show_header=False, box=None, padding=(0, 1))
-    opt_table.add_column("Option", style="green", width=22)
+    opt_table.add_column("Option", style="green", width=24)
     opt_table.add_column("Description", width=50)
 
     opt_table.add_row("--image-search", "Enable Pexels/Unsplash image search")
     opt_table.add_row("--quality-level LEVEL", "lenient(70) | balanced(80) | strict(90)")
     opt_table.add_row("--config, -c FILE", "Use YAML configuration file")
     opt_table.add_row("--output, -o FILE", "Specify output filename")
-    opt_table.add_row("--to-slides", "Convert HTML to Reveal.js presentation")
+    opt_table.add_row("--async-mode", "🚀 70% faster content collection (v0.3.4+)")
     console.print(opt_table)
 
     # Configuration
@@ -161,6 +161,12 @@ def print_basic_help() -> None:
     console.print()
     console.print("  [dim]# High-quality with images[/dim]")
     console.print("  $ [cyan]lecture-forge create --image-search --quality-level strict[/cyan]")
+    console.print()
+    console.print("  [dim]# Fast mode with async I/O (70% faster, v0.3.4+)[/dim]")
+    console.print("  $ [cyan]lecture-forge create --async-mode[/cyan]")
+    console.print()
+    console.print("  [dim]# Convert lecture to presentation slides[/dim]")
+    console.print("  $ [cyan]lecture-forge improve outputs/lecture.html --to-slides[/cyan]")
     console.print()
     console.print("  [dim]# Chat with knowledge base[/dim]")
     console.print("  $ [cyan]lecture-forge chat -kb ./data/vector_db/AI_Engineering_...[/cyan]")

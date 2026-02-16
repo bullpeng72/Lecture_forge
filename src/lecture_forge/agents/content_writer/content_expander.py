@@ -32,10 +32,16 @@ class ContentExpander:
         self.vector_store = vector_store
 
     def expand_content(
-        self, section: Section, curriculum: Curriculum, raw_content: str, contexts: List[str]
+        self,
+        section: Section,
+        curriculum: Curriculum,
+        contexts: List[str],
+        targets: dict,
+        previous_content: str,
+        previous_quality: dict,
     ) -> str:
         """Expand content (wrapper for compatibility)."""
-        return self._expand_content(section, curriculum, raw_content, contexts)
+        return self._expand_content(section, curriculum, contexts, targets, previous_content, previous_quality)
 
     def count_images(self, markdown: str) -> int:
         """Count images (wrapper for compatibility)."""

@@ -130,21 +130,23 @@ class PDFImageDescriber:
         """Group image files by page number."""
         images_by_page = {}
 
-        for img_file in image_dir.glob("*.png"):
-            # Parse filename: page{N}_img{M}_{hash}.png
-            try:
-                filename = img_file.name
-                if filename.startswith("page"):
-                    page_part = filename.split("_")[0]  # "page123"
-                    page_num = int(page_part.replace("page", ""))
+        # Support all common image formats (PNG, WebP, JPG)
+        for pattern in ["*.png", "*.webp", "*.jpg", "*.jpeg"]:
+            for img_file in image_dir.glob(pattern):
+                # Parse filename: page{N}_img{M}_{hash}.{ext}
+                try:
+                    filename = img_file.name
+                    if filename.startswith("page"):
+                        page_part = filename.split("_")[0]  # "page123"
+                        page_num = int(page_part.replace("page", ""))
 
-                    if page_num not in images_by_page:
-                        images_by_page[page_num] = []
+                        if page_num not in images_by_page:
+                            images_by_page[page_num] = []
 
-                    images_by_page[page_num].append(img_file)
-            except Exception as e:
-                logger.warning(f"   Failed to parse filename {img_file.name}: {e}")
-                continue
+                        images_by_page[page_num].append(img_file)
+                except Exception as e:
+                    logger.warning(f"   Failed to parse filename {img_file.name}: {e}")
+                    continue
 
         return images_by_page
 

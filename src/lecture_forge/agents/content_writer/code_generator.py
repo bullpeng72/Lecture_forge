@@ -93,7 +93,8 @@ class CodeGenerator:
         prompt = load_prompt("code_examples_generation", **template_vars)
 
         try:
-            response = self.invoke_llm(prompt, phase="code_generation")
+            # Call LLM directly (CodeGenerator doesn't inherit from BaseAgent)
+            response = self.llm.invoke(prompt)
             code_examples_content = response.content.strip()
 
             # Clean up markdown fences

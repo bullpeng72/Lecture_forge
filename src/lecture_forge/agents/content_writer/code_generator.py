@@ -2,9 +2,9 @@
 Code Generator - Handles code extraction and generation for lectures.
 """
 
-import re
 from typing import List
 
+from lecture_forge.agents.base import BaseAgent
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.models.lecture import CodeBlock
@@ -12,18 +12,19 @@ from lecture_forge.utils import logger
 from lecture_forge.utils.prompt_manager import load_prompt
 
 
-class CodeGenerator:
+class CodeGenerator(BaseAgent):
     """Handles code block extraction and generation."""
 
-    def __init__(self, llm_client=None, vector_store: VectorStore = None):
+    def __init__(self, vector_store: VectorStore = None, model: str = None, temperature: float = None):
         """
         Initialize CodeGenerator.
 
         Args:
-            llm_client: LLM client for code generation
             vector_store: Vector store for RAG queries
+            model: LLM model name (default: Config.DEFAULT_MODEL)
+            temperature: Temperature for LLM (default: Config.TEMPERATURE)
         """
-        self.llm = llm_client
+        super().__init__(model=model, temperature=temperature)
         self.vector_store = vector_store
 
     def extract_code_blocks(self, markdown: str) -> List[CodeBlock]:
@@ -93,8 +94,7 @@ class CodeGenerator:
         prompt = load_prompt("code_examples_generation", **template_vars)
 
         try:
-            # Call LLM directly (CodeGenerator doesn't inherit from BaseAgent)
-            response = self.llm.invoke(prompt)
+            response = self.invoke_llm(prompt, phase="code_generation")
             code_examples_content = response.content.strip()
 
             # Clean up markdown fences

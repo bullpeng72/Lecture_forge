@@ -172,10 +172,16 @@ More text.
 console.log("Hello");
 ```
 """
-    code_blocks = content_writer._extract_code_blocks(markdown_with_code)
+    code_blocks = content_writer.extract_code_blocks(markdown_with_code)
 
     # Assertions
     assert len(code_blocks) == 2
     assert code_blocks[0].language == "python"
     assert "hello" in code_blocks[0].code.lower()
     assert code_blocks[1].language == "javascript"
+
+
+def test_backward_compat_import(test_env_vars, mock_llm):
+    """Lines 15, 17 of agents/content_writer.py: backward compat wrapper imports ContentWriterAgent."""
+    from lecture_forge.agents.content_writer import ContentWriterAgent
+    assert ContentWriterAgent is not None

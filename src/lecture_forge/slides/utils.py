@@ -11,6 +11,134 @@ from langchain_openai import ChatOpenAI
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
 
+_BATCH_SIZE = 15
+
+
+def _parse_batch_response(response: str, expected_count: int) -> List[List[str]]:
+    """Parse a batch LLM response (===PARA_N=== delimited) into per-text bullet lists.
+
+    Args:
+        response: Raw LLM response string
+        expected_count: Number of texts that were submitted in the batch
+
+    Returns:
+        List of bullet-point lists, one per input text (fallback to empty list if missing)
+    """
+    results: List[List[str]] = [[] for _ in range(expected_count)]
+
+    # Split on ===PARA_N=== markers; re.split with a capturing group gives
+    # [pre, idx0, content0, idx1, content1, ...]
+    parts = re.split(r"===PARA_(\d+)===", response)
+
+    # parts[0] is text before the first marker (ignored)
+    for i in range(1, len(parts), 2):
+        if i + 1 >= len(parts):
+            break
+        try:
+            para_idx = int(parts[i])
+        except ValueError:
+            continue
+        content = parts[i + 1].strip()
+        if not (0 <= para_idx < expected_count):
+            continue
+
+        bullets = []
+        for line in content.split("\n"):
+            line = line.strip().lstrip("•-*").strip()
+            line = re.sub(r"^\d+[\.)]\s*", "", line)
+            if line and len(line) > 5:
+                bullets.append(line)
+
+        if bullets:
+            results[para_idx] = bullets
+
+    return results
+
+
+def _process_batch(texts: List[str]) -> List[List[str]]:
+    """Convert a batch of texts to bullet-point lists in a single LLM call.
+
+    Falls back to returning each text as a one-element list on error.
+    """
+    try:
+        llm = ChatOpenAI(model=Config.DEFAULT_MODEL, temperature=0.3, api_key=Config.OPENAI_API_KEY)
+
+        sections = "\n\n".join(f"===PARA_{i}===\n{text}" for i, text in enumerate(texts))
+
+        prompt = f"""다음 {len(texts)}개의 서술식 텍스트를 각각 프레젠테이션 슬라이드에 적합한 개조식 표현으로 변환해주세요.
+
+요구사항:
+- 핵심 내용만 간결하게 추출
+- 각 포인트는 한 줄로 요약
+- 불필요한 접속사나 서술어 제거
+- 명사형 종결 또는 간결한 동사형 사용
+- 3-5개의 bullet points로 정리
+- 각 bullet point는 한글 50자 이내
+
+각 텍스트의 변환 결과를 ===PARA_N=== 구분자로 구분하여 출력하세요.
+
+{sections}
+
+변환 결과 (===PARA_0===, ===PARA_1=== 등으로 구분):"""
+
+        response = llm.invoke([HumanMessage(content=prompt)])
+        return _parse_batch_response(response.content.strip(), len(texts))
+
+    except Exception as e:
+        logger.warning(f"Batch bullet-point conversion failed: {e}")
+        return [[text] for text in texts]
+
+
+def batch_convert_to_bullet_points(texts: List[str]) -> List[List[str]]:
+    """Convert multiple narrative texts to bullet-point lists using batched LLM calls.
+
+    Texts shorter than 100 characters or already in bullet format are returned
+    immediately without an LLM call.  The remaining texts are grouped into
+    batches of up to 15 and processed in a single LLM call each.
+
+    Args:
+        texts: List of narrative texts to convert
+
+    Returns:
+        List of bullet-point lists, one per input text
+    """
+    if not texts:
+        return []
+
+    # Partition into instant-return vs needs-LLM
+    # Each entry: (needs_llm: bool, result or None)
+    partitioned: List = []
+    llm_indices: List[int] = []  # original indices of texts needing LLM
+    llm_texts: List[str] = []
+
+    for idx, text in enumerate(texts):
+        if len(text) < 100 or text.strip().startswith(("•", "-", "*")):
+            partitioned.append((False, [text]))
+        else:
+            partitioned.append((True, None))
+            llm_indices.append(idx)
+            llm_texts.append(text)
+
+    if not llm_texts:
+        return [r for _, r in partitioned]
+
+    # Process in batches
+    llm_results: List[List[str]] = []
+    for i in range(0, len(llm_texts), _BATCH_SIZE):
+        batch = llm_texts[i : i + _BATCH_SIZE]
+        llm_results.extend(_process_batch(batch))
+
+    # Merge results back
+    llm_iter = iter(llm_results)
+    final: List[List[str]] = []
+    for needs_llm, cached in partitioned:
+        if needs_llm:
+            final.append(next(llm_iter))
+        else:
+            final.append(cached)
+
+    return final
+
 
 def convert_to_bullet_points(text: str) -> List[str]:
     """Convert narrative text to concise bullet points for presentation.

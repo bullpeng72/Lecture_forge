@@ -53,6 +53,7 @@ outputs/
 # Test
 .pytest_cache/
 .coverage
+coverage.json
 htmlcov/
 test_config.yaml
 test_run*.log

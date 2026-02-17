@@ -453,5 +453,5 @@ Formatted Answer + Sources + Confidence
 
 ---
 
-**Last Updated**: 2026-02-16
-**Version**: 0.3.4
+**Last Updated**: 2026-02-18
+**Version**: 0.3.5

@@ -2,9 +2,9 @@
 Content Expander - Handles content expansion and quality improvement.
 """
 
-import re
 from typing import List
 
+from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
@@ -17,18 +17,19 @@ from lecture_forge.utils.content_metrics import (
 from lecture_forge.utils.prompt_manager import load_prompt
 
 
-class ContentExpander:
+class ContentExpander(BaseAgent):
     """Handles content expansion to meet quality targets."""
 
-    def __init__(self, llm_client=None, vector_store: VectorStore = None):
+    def __init__(self, vector_store: VectorStore = None, model: str = None, temperature: float = None):
         """
         Initialize ContentExpander.
 
         Args:
-            llm_client: LLM client for expansion
             vector_store: Vector store for RAG queries
+            model: LLM model name (default: Config.DEFAULT_MODEL)
+            temperature: Temperature for LLM (default: Config.TEMPERATURE)
         """
-        self.llm = llm_client
+        super().__init__(model=model, temperature=temperature)
         self.vector_store = vector_store
 
     def expand_content(
@@ -134,6 +135,11 @@ class ContentExpander:
             logger.debug(traceback.format_exc())
             return previous_content  # Return original on error
 
+
+    def _extract_code_blocks(self, markdown: str) -> list:
+        """Extract fenced code blocks from markdown (used for quality re-evaluation)."""
+        import re
+        return re.findall(r"```[\w]*\n.*?```", markdown, re.DOTALL)
 
     def _count_images(self, markdown: str) -> int:
         """Count the number of images in markdown content."""

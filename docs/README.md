@@ -58,11 +58,12 @@ Looking for something specific?
 
 ## 📊 Project Status
 
-**Version**: 0.3.4 (Beta Release)
-**Status**: Production Ready+ (Async I/O Support)
+**Version**: 0.3.5 (Beta Release)
+**Status**: Production Ready+ (RAG Quality Boost)
 **Test Coverage**: 50%+ with 89 test functions
 
 **Recent Updates:**
+- ✅ **RAG quality boost (v0.3.5)** - 400-word answers, 15+15 retrieval, confidence fix, Markdown rendering
 - ✅ **Async I/O support (v0.3.4)** - 70% faster content collection
 - ✅ Enhanced input system with prompt-toolkit (v0.3.3)
 - ✅ Python 3.12 full support (v0.3.3)
@@ -87,5 +88,5 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 ---
 
-**Last Updated**: 2026-02-16 (v0.3.4)
+**Last Updated**: 2026-02-18 (v0.3.5)
 **Maintained by**: Sungwoo Kim

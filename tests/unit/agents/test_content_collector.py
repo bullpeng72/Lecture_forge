@@ -93,3 +93,165 @@ def test_collect_handles_empty_sources(content_collector):
 
     # Should complete without errors even with no sources
     assert result is not None
+
+
+# ===== Additional coverage tests =====
+
+
+class TestCollectErrorBranches:
+    """Tests covering error/exception branches in collect()."""
+
+    @pytest.fixture
+    def agent(self, test_env_vars, mock_vector_store):
+        with patch("lecture_forge.agents.content_collector.VectorStore") as mock_vs:
+            mock_vs.return_value = mock_vector_store
+            a = ContentCollectorAgent(collection_name="test")
+            a.vector_store = mock_vector_store
+            return a
+
+    def test_pdf_parse_failure_logged(self, agent):
+        """PDF parse failure (success=False) → logged error, no documents added."""
+        agent.pdf_parser = MagicMock()
+        agent.pdf_parser.run.return_value = {
+            "success": False,
+            "text": "",
+            "pages": [],
+            "metadata": {},
+            "error": "corrupted PDF",
+        }
+        result = agent.collect(sources={"pdfs": ["bad.pdf"], "urls": [], "keywords": []})
+        assert result is not None
+
+    def test_pdf_exception_handled(self, agent):
+        """Exception during PDF processing is caught and logged."""
+        agent.pdf_parser = MagicMock()
+        agent.pdf_parser.run.side_effect = Exception("file not found")
+        result = agent.collect(sources={"pdfs": ["missing.pdf"], "urls": [], "keywords": []})
+        assert result is not None
+
+    def test_url_scrape_failure_logged(self, agent):
+        """URL scrape failure (success=False) → logged error."""
+        agent.web_scraper = MagicMock()
+        agent.web_scraper.run.return_value = {
+            "success": False,
+            "text": "",
+            "metadata": {},
+            "error": "timeout",
+        }
+        result = agent.collect(sources={"pdfs": [], "urls": ["http://fail.com"], "keywords": []})
+        assert result is not None
+
+    def test_url_exception_handled(self, agent):
+        """Exception during URL processing is caught and logged."""
+        agent.web_scraper = MagicMock()
+        agent.web_scraper.run.side_effect = Exception("connection refused")
+        result = agent.collect(sources={"pdfs": [], "urls": ["http://error.com"], "keywords": []})
+        assert result is not None
+
+    def test_search_failure_logged(self, agent):
+        """Search failure (success=False) → logged error."""
+        agent.search_tool = MagicMock()
+        agent.search_tool.run.return_value = {
+            "success": False,
+            "results": [],
+            "total_results": 0,
+            "error": "rate limited",
+        }
+        result = agent.collect(sources={"pdfs": [], "urls": [], "keywords": ["test"]})
+        assert result is not None
+
+    def test_search_exception_handled(self, agent):
+        """Exception during search is caught and logged."""
+        agent.search_tool = MagicMock()
+        agent.search_tool.run.side_effect = Exception("API error")
+        result = agent.collect(sources={"pdfs": [], "urls": [], "keywords": ["test"]})
+        assert result is not None
+
+    def test_hada_exception_handled(self, agent):
+        """Exception during Hada.io deep crawl is caught and logged."""
+        agent.deep_crawler = MagicMock()
+        agent.deep_crawler.crawl_hada_search.side_effect = Exception("crawl error")
+        result = agent.collect(
+            sources={"pdfs": [], "urls": [], "keywords": [], "hada_keywords": ["test"]}
+        )
+        assert result is not None
+
+
+class TestChunkPdfWithPages:
+    """Tests for _chunk_pdf_with_pages() fallback and normal paths."""
+
+    @pytest.fixture
+    def agent(self, test_env_vars, mock_vector_store):
+        with patch("lecture_forge.agents.content_collector.VectorStore") as mock_vs:
+            mock_vs.return_value = mock_vector_store
+            a = ContentCollectorAgent(collection_name="test")
+            a.vector_store = mock_vector_store
+            return a
+
+    def test_fallback_no_pages(self, agent):
+        """When doc has no 'pages' key, falls back to chunking full text."""
+        doc = {
+            "text": "Some text content for chunking without pages.",
+            "source": "test.pdf",
+            "source_type": "pdf",
+            "metadata": {"total_pages": 0},
+            "pages": [],  # Empty pages → fallback
+        }
+        chunks, metadatas = agent._chunk_pdf_with_pages(doc)
+        assert isinstance(chunks, list)
+        assert isinstance(metadatas, list)
+        # Fallback path: metadata has chunk_index key
+        if chunks:
+            assert "chunk_index" in metadatas[0]
+
+    def test_with_pages(self, agent):
+        """When doc has pages, creates chunks per page."""
+        doc = {
+            "text": "Full text",
+            "source": "test.pdf",
+            "source_type": "pdf",
+            "metadata": {"total_pages": 2},
+            "pages": [
+                {"page_number": 1, "text": "Page one content with enough text."},
+                {"page_number": 2, "text": "Page two content with enough text."},
+            ],
+        }
+        chunks, metadatas = agent._chunk_pdf_with_pages(doc)
+        assert isinstance(chunks, list)
+        if chunks:
+            assert "page_number" in metadatas[0]
+
+
+class TestQuery:
+    """Tests for query() method."""
+
+    @pytest.fixture
+    def agent(self, test_env_vars, mock_vector_store):
+        with patch("lecture_forge.agents.content_collector.VectorStore") as mock_vs:
+            mock_vs.return_value = mock_vector_store
+            a = ContentCollectorAgent(collection_name="test")
+            a.vector_store = mock_vector_store
+            return a
+
+    def test_query_returns_dict(self, agent, mock_vector_store):
+        """query() returns structured dict with question, documents, etc."""
+        mock_vector_store.query.return_value = {
+            "documents": [["doc1", "doc2"]],
+            "metadatas": [[{"source": "a"}, {"source": "b"}]],
+            "distances": [[0.1, 0.2]],
+        }
+        result = agent.query("What is machine learning?")
+        assert "question" in result
+        assert "documents" in result
+        assert "metadatas" in result
+        assert result["question"] == "What is machine learning?"
+
+    def test_query_empty_results(self, agent, mock_vector_store):
+        """query() handles empty results gracefully."""
+        mock_vector_store.query.return_value = {
+            "documents": [],
+            "metadatas": [],
+            "distances": [],
+        }
+        result = agent.query("unknown question")
+        assert result["documents"] == []

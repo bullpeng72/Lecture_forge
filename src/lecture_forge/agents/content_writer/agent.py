@@ -24,6 +24,7 @@ from lecture_forge.utils.content_metrics import (
     evaluate_content_quality,
     format_quality_report,
 )
+from lecture_forge.utils.language_utils import detect_language
 from lecture_forge.utils.prompt_manager import load_prompt
 
 
@@ -50,8 +51,12 @@ class ContentWriterAgent(BaseAgent):
             keyword_expander=self._expand_keywords,
             keyword_translator=self._get_keyword_translations
         )
-        self.code_generator = CodeGenerator(llm_client=self.llm, vector_store=vector_store)
-        self.content_expander = ContentExpander(llm_client=self.llm, vector_store=vector_store)
+        self.code_generator = CodeGenerator(vector_store=vector_store)
+        self.content_expander = ContentExpander(vector_store=vector_store)
+
+    def extract_code_blocks(self, markdown: str) -> List:
+        """Delegate to CodeGenerator.extract_code_blocks()."""
+        return self.code_generator.extract_code_blocks(markdown)
 
     def write_all_sections(
         self,
@@ -221,6 +226,11 @@ class ContentWriterAgent(BaseAgent):
         # Use more contexts (increase from 8 to 10 for better content)
         context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
 
+        # Determine language-aware labels for section headings
+        is_korean = detect_language(curriculum.topic) == "ko"
+        intro_label = "도입부" if is_korean else "Introduction"
+        summary_label = "요약 및 실습" if is_korean else "Summary & Practice"
+
         # Prepare template variables
         template_vars = {
             # Basic information
@@ -244,6 +254,9 @@ class ContentWriterAgent(BaseAgent):
             "main_content_words": int(targets['target_words'] * Config.CONTENT_MAIN_RATIO),
             "summary_words": int(targets['target_words'] * Config.CONTENT_SUMMARY_RATIO),
             "words_per_subsection": int(targets['target_words'] * Config.CONTENT_MAIN_RATIO / max(1, targets['target_subsections'])),
+            # Language-aware labels
+            "intro_label": intro_label,
+            "summary_label": summary_label,
             # Context
             "context_text": context_text,
         }

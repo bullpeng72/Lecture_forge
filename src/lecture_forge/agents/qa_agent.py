@@ -10,6 +10,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
@@ -23,7 +24,8 @@ class QAAgent(BaseAgent):
     """Agent for answering questions using RAG."""
 
     def __init__(self, knowledge_base_path: str):
-        super().__init__()
+        # Lower temperature for RAG: prioritise factual accuracy over creativity
+        super().__init__(temperature=0.3)
         self.knowledge_base_path = Path(knowledge_base_path)
 
         # Load vector store
@@ -72,7 +74,7 @@ class QAAgent(BaseAgent):
         # 2. Dual Query: Original + Translated
         try:
             # Query 1: Original language
-            results_original = self.vector_store.query(question, n_results=10)
+            results_original = self.vector_store.query(question, n_results=15)
 
             # Query 2: Translated (if enabled and language is known)
             results_translated = None
@@ -88,7 +90,7 @@ class QAAgent(BaseAgent):
                     logger.info(f"[Translation] Korean query: {translated_query}")
 
                 if translated_query and translated_query != question:
-                    results_translated = self.vector_store.query(translated_query, n_results=10)
+                    results_translated = self.vector_store.query(translated_query, n_results=15)
 
             # 3. Merge and re-rank results
             merged_results = self._merge_and_rerank(
@@ -96,7 +98,7 @@ class QAAgent(BaseAgent):
                 query_language=query_language,
                 results_original=results_original,
                 results_translated=results_translated,
-                top_k=8,  # Increased from 5 to 8 for better coverage
+                top_k=12,  # Increased to 12 for richer answer context
             )
 
             if not merged_results:
@@ -110,15 +112,21 @@ class QAAgent(BaseAgent):
             # 4. Build context from merged results
             contexts = [r["document"] for r in merged_results]
             metadatas = [r["metadata"] for r in merged_results]
+            scores = [r["score"] for r in merged_results]
 
-            # Format context with source information for better LLM understanding
+            # Format context with source, page, relevance info
             formatted_contexts = []
-            for i, (ctx, meta) in enumerate(zip(contexts, metadatas), 1):
+            for i, (ctx, meta, score) in enumerate(zip(contexts, metadatas, scores), 1):
                 source = meta.get("source", "Unknown")
                 page = meta.get("page_number")
+                lang = get_language_name(meta.get("language", "unknown"))
+                relevance_pct = int(min(score, 1.0) * 100)
                 source_info = f"{source} (page {page})" if page else source
 
-                formatted_ctx = f"[Context {i} - Source: {source_info}]\n{ctx}"
+                formatted_ctx = (
+                    f"[Context {i} | Source: {source_info} | Lang: {lang} | Relevance: {relevance_pct}%]\n"
+                    f"{ctx}"
+                )
                 formatted_contexts.append(formatted_ctx)
 
             context_text = "\n\n---\n\n".join(formatted_contexts)
@@ -126,33 +134,37 @@ class QAAgent(BaseAgent):
             # 5. Generate answer (in query language)
             answer_language = "한국어" if query_language == "ko" else "English"
 
-            # Enhanced prompt with Chain of Thought and structured answering
-            prompt = f"""You are an expert educational assistant. Answer the question using ONLY the provided context.
+            num_contexts = len(merged_results)
+            min_refs = min(num_contexts, 4)
 
-**Question:** {question}
+            # Comprehensive, structured answer prompt with explicit length / format requirements
+            prompt = f"""You are an expert educational assistant. Produce a **comprehensive, well-structured answer** in {answer_language} using the provided context.
 
-**Context:**
+## Question
+{question}
+
+## Context ({num_contexts} chunks, ordered by relevance)
 {context_text}
 
-**Instructions:**
-1. **Analyze the question carefully** - Identify what information is being requested
-2. **Extract relevant information** - Find all related content from the context
-3. **Synthesize the answer** - Combine information in a coherent way
-4. **Structure your response:**
-   - Start with a clear, direct answer
-   - Provide supporting details and explanations
-   - Include relevant examples from the context if available
-   - Use bullet points or numbered lists for clarity when appropriate
-5. **Answer in {answer_language}** - Use clear, professional language
-6. **Be accurate** - Use ONLY information from the provided context
-7. **Be honest** - If the context doesn't contain sufficient information, clearly state what is missing
+## Mandatory Answer Requirements
 
-**Important:**
-- Do NOT make up information not present in the context
-- Do NOT speculate or add external knowledge
-- If uncertain, acknowledge the limitations
+**Length:** Write at least **400 words**. Depth and completeness are more important than brevity.
 
-**Answer:**"""
+**Structure — use Markdown headings and lists:**
+1. `## 개요` (or `## Overview`) — 2–3 sentence summary of the direct answer
+2. `## 상세 설명` (or `## Detailed Explanation`) — thorough explanation of mechanisms, background, reasoning
+3. `## 핵심 포인트` (or `## Key Points`) — bulleted or numbered list of the most important facts
+4. `## 예시 및 근거` (or `## Examples & Evidence`) — concrete examples, data, or cases from the context
+5. `## 추가 고려사항` (or `## Additional Notes`) — related concepts, caveats, or implications (omit if context has nothing relevant)
+
+**Coverage:** Reference information from at least {min_refs} different context chunks. Synthesise across chunks — do not rely on just the first one.
+
+**Rules:**
+- Use ONLY information from the provided context
+- Do NOT add external knowledge or speculation
+- If a section cannot be filled from context, write one sentence explaining what is missing
+
+## Answer"""
 
             # 6. Generate answer
             response = self.invoke_llm(prompt, phase="qa")
@@ -238,8 +250,9 @@ class QAAgent(BaseAgent):
                 if chunk_id in seen_chunks:
                     continue
 
-                # Calculate similarity score (distance → similarity)
-                similarity = 1 - distance
+                # Calculate similarity score (L2 distance → [0,1] similarity)
+                # ChromaDB L2 distances are typically in [0, 2] for normalised embeddings
+                similarity = max(0.0, 1 - distance / 2)
 
                 # Language matching bonus
                 chunk_language = metadata.get("language", "unknown")
@@ -273,8 +286,8 @@ class QAAgent(BaseAgent):
                 if chunk_id in seen_chunks:
                     continue  # Skip duplicates
 
-                # Calculate similarity score
-                similarity = 1 - distance
+                # Calculate similarity score (L2 distance → [0,1] similarity)
+                similarity = max(0.0, 1 - distance / 2)
 
                 # Small penalty for translated query (-5%)
                 similarity -= 0.05
@@ -351,8 +364,8 @@ class QAAgent(BaseAgent):
             # Diversity penalty: prefer different source-pages
             current_count = source_page_count.get(source_page_key, 0)
 
-            # Allow up to 2 chunks from the same source-page
-            if current_count < 2:
+            # Allow up to 3 chunks from the same source-page (dense topics need more coverage)
+            if current_count < 3:
                 selected.append(result)
                 source_page_count[source_page_key] = current_count + 1
 
@@ -383,15 +396,15 @@ class QAAgent(BaseAgent):
 
         # Adjust based on number of results
         num_results = len(merged_results)
-        result_factor = min(num_results / 8.0, 1.0)  # More results = higher confidence (up to 8)
+        result_factor = min(num_results / 12.0, 1.0)  # More results = higher confidence (up to 12)
 
-        # Adjust based on answer length (very short answers are less confident)
+        # Adjust based on answer length (short answers indicate incomplete response)
         answer_length = len(answer)
-        if answer_length < 50:
+        if answer_length < 100:
             length_factor = 0.5
-        elif answer_length < 100:
-            length_factor = 0.7
         elif answer_length < 200:
+            length_factor = 0.7
+        elif answer_length < 400:
             length_factor = 0.85
         else:
             length_factor = 1.0
@@ -432,7 +445,7 @@ class QAAgent(BaseAgent):
             Improved answer
         """
         # Check if answer is too short (likely incomplete)
-        if len(answer.strip()) < 50:
+        if len(answer.strip()) < 200:
             logger.warning(f"Answer too short ({len(answer)} chars), attempting to expand")
             return self._expand_short_answer(answer, question, contexts, query_language)
 
@@ -456,25 +469,25 @@ class QAAgent(BaseAgent):
         answer_language = "한국어" if query_language == "ko" else "English"
         context_text = "\n\n---\n\n".join(contexts[:5])  # Use top 5 contexts
 
-        expansion_prompt = f"""The following answer is too brief. Please expand it with more details from the context.
+        expansion_prompt = f"""The following answer is too short. Rewrite it as a detailed, structured response of **at least 400 words** using all relevant information from the context.
 
-**Question:** {question}
+## Question
+{question}
 
-**Current Answer (too short):**
+## Incomplete Answer (to expand)
 {short_answer}
 
-**Available Context:**
+## Available Context
 {context_text}
 
-**Task:**
-Expand the answer by:
-1. Adding relevant details from the context
-2. Including examples if available
-3. Providing step-by-step explanations when appropriate
-4. Keeping the answer in {answer_language}
-5. Staying factual - only use information from the context
+## Rewrite Instructions
+- Language: {answer_language}
+- Minimum 400 words
+- Use Markdown headings (##) to organise into sections: Overview, Detailed Explanation, Key Points, Examples
+- Extract and synthesise information from ALL context chunks above
+- Do NOT add information not present in the context
 
-**Expanded Answer:**"""
+## Expanded Answer"""
 
         try:
             response = self.invoke_llm(expansion_prompt, phase="qa")
@@ -587,8 +600,16 @@ However, the context does not directly address: [missing aspects]
                     console.print(f"\n[dim]🌐 Detected language: {query_lang}[/dim]")
                     console.print(f"[dim]🔄 Cross-lingual search enabled[/dim]")
 
-                # Display answer
-                console.print(f"\n[bold yellow]Assistant[/bold yellow]: {result['answer']}\n")
+                # Display answer with Markdown rendering inside a panel
+                answer_md = Markdown(result["answer"])
+                console.print(
+                    Panel(
+                        answer_md,
+                        title="[bold yellow]Assistant[/bold yellow]",
+                        border_style="yellow",
+                        padding=(1, 2),
+                    )
+                )
 
                 # Display confidence score
                 confidence = result.get("confidence", 0.0)

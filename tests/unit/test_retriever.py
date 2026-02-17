@@ -50,9 +50,10 @@ def test_retriever_handles_empty_results(mock_vector_store):
     assert len(results) == 0
 
 
-def test_retriever_custom_k_value(mock_vector_store):
+def test_retriever_custom_k_value(mock_vector_store, tmp_path):
     """Test retriever respects custom k value."""
-    retriever = RAGRetriever(vector_store=mock_vector_store)
+    # Use tmp_path to avoid cache hits from previous test runs
+    retriever = RAGRetriever(vector_store=mock_vector_store, cache_path=tmp_path / "rag_cache")
 
     retriever.retrieve("test query", k=10)
 

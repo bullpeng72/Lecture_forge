@@ -40,7 +40,7 @@ class RevealJsTemplate:
             slides_content.append(self._create_section_title_slide(section_title))
 
             # Content slides
-            content_slides = self._create_content_slides(blocks)
+            content_slides = self._create_content_slides(blocks, section_title=section_title)
             slides_content.extend(content_slides)
 
         # End slide
@@ -78,11 +78,12 @@ class RevealJsTemplate:
     </section>
     """
 
-    def _create_content_slides(self, blocks: List[Dict]) -> List[str]:
+    def _create_content_slides(self, blocks: List[Dict], section_title: str = "") -> List[str]:
         """Create content slides from blocks.
 
         Args:
             blocks: List of content block dictionaries
+            section_title: Title of the enclosing section (used as fallback heading)
 
         Returns:
             List of slide HTML strings
@@ -90,6 +91,7 @@ class RevealJsTemplate:
         slides = []
         current_slide_content = []
         slide_item_count = 0
+        current_title = section_title  # tracks the most recent section/subsection title
 
         for idx, block in enumerate(blocks):
             block_type = block["type"]
@@ -100,6 +102,8 @@ class RevealJsTemplate:
                     slides.append(self._create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
+
+                current_title = block["content"]
 
                 # Create dedicated title slide for subsection
                 slides.append(
@@ -117,15 +121,25 @@ class RevealJsTemplate:
                     current_slide_content = []
                     slide_item_count = 0
 
+                current_title = block["content"]
+
                 # Add h4 as slide title
                 current_slide_content.append(f"<h3>{block['content']}</h3>")
                 slide_item_count += 1
 
             elif block_type == "paragraph":
+                # Inject title if slide would otherwise have no heading
+                if not current_slide_content and current_title:
+                    current_slide_content.append(f"<h3>{current_title}</h3>")
+                    slide_item_count += 1
                 current_slide_content.append(f"<p>{block['content']}</p>")
                 slide_item_count += 1
 
             elif block_type == "list":
+                # Inject title if slide would otherwise have no heading
+                if not current_slide_content and current_title:
+                    current_slide_content.append(f"<h3>{current_title}</h3>")
+                    slide_item_count += 1
                 list_slides = self._process_list_block(block, current_slide_content, slide_item_count)
                 if list_slides:
                     slides.extend(list_slides)

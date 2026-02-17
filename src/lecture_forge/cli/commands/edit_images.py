@@ -13,6 +13,7 @@ from rich.table import Table
 
 from lecture_forge.cli.utils import console
 from lecture_forge.tools.image_editor import ImageEditor
+from lecture_forge.utils import logger
 
 
 @click.command()

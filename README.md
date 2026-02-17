@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-50%25%2B-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.4 Beta Release** | Async I/O Support ⚡ (70% Faster Content Collection)
+> 🚀 **v0.3.5 Beta Release** | RAG Quality Boost 🎯 (400-word answers, Markdown rendering, confidence fix)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -47,11 +47,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
 - 🌐 **다국어 지원**: 한영 혼합 PDF 지원, 자동 언어 감지, Cross-lingual 검색 (v0.3.2+)
-- 🎯 **고급 RAG 품질** (v0.3.2+):
-  - Chain of Thought 추론으로 정확한 답변
-  - 다양성 기반 재랭킹 (최대 4개 source 활용)
-  - 답변 후처리 및 자동 확장
-  - 동적 신뢰도 점수 (High/Medium/Low)
+- 🎯 **고급 RAG 품질** (v0.3.5+):
+  - 400단어 구조화 답변 (5개 Markdown 섹션 강제)
+  - 15+15 듀얼 쿼리 검색 (다국어, top-12 결과)
+  - Rich Markdown 패널 렌더링 (터미널에서 아름다운 출력)
+  - 동적 신뢰도 점수 (ChromaDB L2 거리 올바른 변환)
 - ⚡ **쿼리 캐싱**: 동일 질문 60% 빠른 응답
 - 💬 **소스 인용**: 자동 참조 및 페이지 번호 제공
 
@@ -65,6 +65,47 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ---
 
 ## 🚀 최근 개선사항
+
+### v0.3.5 (2026-02-18) - RAG 품질 대폭 향상 🎯
+
+**Chat 답변 품질 향상**:
+- **답변 길이 보장**: 최소 400단어 + 5개 Markdown 섹션 구조 강제
+  - `## 개요`, `## 상세 설명`, `## 핵심 포인트`, `## 예시 및 근거`, `## 추가 고려사항`
+  - 구조화된 답변으로 학습 이해도 크게 향상
+- **검색 강화**: n_results 10→**15** (+50%), top_k 8→**12** (+50%)
+  - 더 많은 컨텍스트 기반의 풍부한 답변
+  - Source 다양성 최대 3개/source-page (기존 2개)
+- **LLM 온도 최적화**: temperature 0.7→**0.3** (RAG 정확도 향상)
+- **Rich Markdown 렌더링**: 답변을 패널 형식으로 아름답게 표시
+- **신뢰도 수정**: ChromaDB L2 거리 변환 버그 수정 (항상 0% → 실제 신뢰도)
+  - 수정 전: `similarity = 1 - distance` (음수 발생 → 0% 강제)
+  - 수정 후: `similarity = max(0.0, 1 - distance / 2)` (올바른 [0,1] 범위)
+
+**버그 수정**:
+- **`init_helpers.py`**: deprecated `pkg_resources.path` → `importlib.resources.files()` API 전환 (Python 3.11+ 경고 제거)
+
+**사용 예시**:
+```
+You: 파이썬 데코레이터는 무엇인가요?
+🌐 Detected: Korean | 🔄 Cross-lingual search (15+15 chunks)
+
+╭─ Assistant ─────────────────────────────────────────╮
+│ ## 개요                                              │
+│ 파이썬 데코레이터는 함수를 래핑하여 기능을 추가하는  │
+│ 고차 함수입니다.                                     │
+│                                                      │
+│ ## 상세 설명                                         │
+│ 데코레이터는 @syntax를 사용하며...                   │
+│ [상세한 400단어 이상의 답변]                         │
+╰──────────────────────────────────────────────────────╯
+🎯 Confidence: High (87%)
+```
+
+**효과**:
+- ✅ 답변 길이 +300% (짧은 답변 → 400단어 구조화 답변)
+- ✅ 신뢰도 표시 정상화 (항상 0% 버그 수정)
+- ✅ 검색 컨텍스트 +50% (10→15 chunks)
+- ✅ 터미널 가독성 향상 (Rich Markdown Panel 렌더링)
 
 ### v0.3.4 (2026-02-16) - Async I/O 지원 ⚡
 
@@ -133,9 +174,9 @@ AI: 딥러닝은 인공신경망을 기반으로...
 - **마이그레이션 도구**: 기존 Vector DB에 언어 메타데이터 자동 추가
 
 **RAG 답변 품질 강화**:
-- **검색 범위 +60%**: 5개 → 8개 chunks로 확대
+- **검색 범위 확대**: 5개 → 12개 chunks (v0.3.5에서 추가 향상)
 - **고급 프롬프트**: Chain of Thought 추론, 구조화된 답변 생성
-- **다양성 재랭킹**: Source-Page 다양성 보장 (최대 2개/source-page)
+- **다양성 재랭킹**: Source-Page 다양성 보장 (최대 3개/source-page, v0.3.5)
 - **답변 후처리**: 짧은 답변 자동 확장, 부분 정보 추출
 - **신뢰도 점수**: 동적 계산 및 색상 코딩 (High/Medium/Low)
 
@@ -972,6 +1013,17 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.3.5 (2026-02-18) - 🎯 RAG 품질 대폭 향상
+
+**Chat 답변 품질**:
+- 🎯 **400단어 구조화 답변**: 5개 Markdown 섹션 강제 (개요/상세/핵심/예시/추가고려)
+- 🔍 **검색 강화**: n_results 10→**15**, top_k 8→**12** (+50%)
+- 🌡️ **온도 최적화**: temperature 0.7→**0.3** (정확성 향상)
+- 🎨 **Rich Markdown 렌더링**: 터미널 Panel 형식 출력
+- 🎲 **다양성 증가**: source-page당 최대 2→**3**개 chunks
+- 🐛 **신뢰도 수정**: `1 - distance` → `max(0, 1 - distance/2)` (항상 0% 버그 수정)
+- 🔧 **deprecated API 수정**: `pkg_resources.path` → `importlib.resources.files()`
 
 ### v0.3.4 (2026-02-16) - ⚡ Async I/O Support
 

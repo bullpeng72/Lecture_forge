@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.4 🔄 **배포 준비 중**
-> **최종 수정**: 2026-02-17
+> **최신 버전**: 0.3.5 🔄 **배포 준비 중**
+> **최종 수정**: 2026-02-18
 > **대상**: PyPI (Python Package Index)
-> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.2/
+> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.4/
 
 ---
 
@@ -916,10 +916,26 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.4 (2026-02-17) 🔄 **최신 (배포 준비 중)**
+### v0.3.5 (2026-02-18) 🔄 **최신 (배포 준비 중)**
 
 - **상태**: 개발 완료, 배포 대기
 - **PyPI**: 아직 배포 안 됨
+- **테스트**: 1256개 테스트 (passed), 3 skipped, 50%+ 커버리지
+- **주요 변경사항**:
+  - ✅ **RAG 답변 품질 대폭 향상**
+    - 최소 400단어 + 5개 Markdown 섹션 강제 (개요/상세/핵심/예시/추가고려)
+    - n_results 10→15, top_k 8→12 (+50% 검색 범위)
+    - temperature 0.7→0.3 (정확성 중심)
+    - Rich Markdown Panel 렌더링
+    - source-page당 다양성 한도 2→3
+  - ✅ **신뢰도 수정**: ChromaDB L2 거리 변환 버그 수정
+    - `similarity = 1 - distance` (음수 → 0%) → `max(0, 1 - distance/2)` (정상)
+  - ✅ **deprecated API 수정**: `pkg_resources.path` → `importlib.resources.files()`
+
+### v0.3.4 (2026-02-16) ✅
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.4/
 - **테스트**: 89개 테스트 함수, 29개 테스트 파일, 50%+ 커버리지
 - **주요 변경사항**:
   - ✅ **Async I/O 지원** - 70% 빠른 컨텐츠 수집
@@ -931,16 +947,10 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
   - ✅ **의존성 추가**: httpx>=0.24.0, aiofiles>=23.0.0
   - ✅ **성능 개선**: 3 PDFs + 5 URLs 처리 시간 80s → 24s (70% 감소)
   - ✅ **CLI 통합**: `lecture-forge create --async-mode`
-  - ✅ **문서화**: ASYNC_INTEGRATION_GUIDE.md, TEST_ASYNC_CLI.md
-  - ✅ **에러 수정**: 6개 async 관련 버그 수정
-    - ImageSelector keyword_translator 전달
-    - ContentExpander 파라미터 불일치
-    - HTMLAssembler 경로 처리 개선
-    - 이미지 형식 감지 (PNG/WebP/JPG)
 
 ### v0.3.3 (2026-02-15) ✅
 
-- **상태**: 개발 완료
+- **상태**: 배포 완료
 - **PyPI**: https://pypi.org/project/lecture-forge/0.3.3/
 - **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
 - **주요 변경사항**:
@@ -1001,7 +1011,7 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.3.2: 버그 수정 및 문서 개선
+- v0.3.5: RAG 품질 강화 (배포 준비 중)
 - v0.4.0: 새로운 기능 추가
 - v1.0.0: 안정 버전 릴리스
 
@@ -1083,7 +1093,7 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-14 (v0.3.2 개발 완료, 배포 준비 중)
-**버전**: 2.2.0
+**최종 업데이트**: 2026-02-18 (v0.3.5 개발 완료, 배포 준비 중)
+**버전**: 2.3.0
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: ✅ 실전 검증 완료 (v0.3.2 multilingual support)
+**상태**: 🔄 v0.3.5 배포 대기 (RAG 품질 강화, 신뢰도 수정)

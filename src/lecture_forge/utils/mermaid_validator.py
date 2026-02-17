@@ -217,9 +217,12 @@ class MermaidValidator:
             if len(line) > 300:
                 errors.append(f"Line {i} is too long ({len(line)} chars). Consider breaking it up.")
 
-        # Warning only: Korean text with special characters
+        # Warning only: Korean text with special characters inside labels
         # (Changed from error to warning - logged but not blocking)
-        korean_with_special = re.findall(r"[가-힣]+[()[\]{}]+", code)
+        # Only check inside node labels [...], excluding ] itself to avoid false positives
+        labels = re.findall(r"\[([^\]]+)\]", code)
+        label_text = " ".join(labels)
+        korean_with_special = re.findall(r"[가-힣]+[(){}\"\'!]+", label_text)
         if korean_with_special:
             logger.warning(f"Korean text with special characters detected (may cause issues): {korean_with_special[:3]}")
             # Don't add to errors - just warn

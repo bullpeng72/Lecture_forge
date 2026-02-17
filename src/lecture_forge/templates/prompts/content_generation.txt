@@ -32,13 +32,13 @@
    ⚠️ **IF YOUR CONTENT IS LESS THAN {min_words:,} WORDS, IT WILL BE REJECTED!**
 
    **📊 MANDATORY Word Count Breakdown (CHECK EACH SECTION):**
-   - Introduction: **{intro_words:,} words** (10% - 개요, 중요성, 학습 목표)
+   - {intro_label}: **{intro_words:,} words** (10% - 개요, 중요성, 학습 목표)
    - Main Content ({target_subsections} subsections): **{main_content_words:,} words** (70%)
      * **Each subsection MUST be ~{words_per_subsection:,} words**
      * **Write 3-5 paragraphs per subsection**
      * **Include 2-3 examples per concept**
      * **Explain WHY and HOW, not just WHAT**
-   - Summary & Practice: **{summary_words:,} words** (20% - 요약, 핵심 포인트, 실습)
+   - {summary_label}: **{summary_words:,} words** (20% - 요약, 핵심 포인트, 실습)
 
    **✅ HOW TO VERIFY YOUR WORD COUNT:**
    - Count your words BEFORE submitting
@@ -46,9 +46,9 @@
    - Better to write TOO MUCH than too little
 
 2. **Structure**: {target_subsections}+ subsections (use ### headers)
-   - Introduction (10% of content)
+   - {intro_label} (10% of content)
    - Main content in {target_subsections} detailed subsections (70%)
-   - Summary & Practice (20%)
+   - {summary_label} (20%)
 
 3. **🚨 Code Examples: MINIMUM {target_code_examples} examples 🚨**
    - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**

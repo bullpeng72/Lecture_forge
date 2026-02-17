@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from bs4 import BeautifulSoup
 
-from lecture_forge.slides.utils import convert_to_bullet_points
+from lecture_forge.slides.utils import batch_convert_to_bullet_points, convert_to_bullet_points
 from lecture_forge.utils import logger
 
 
@@ -94,13 +94,19 @@ class HTMLLectureParser:
     def _extract_content_blocks(self, section_elem) -> List[Dict]:
         """Extract content blocks from a section element.
 
+        Paragraphs that require LLM conversion are collected first, then
+        converted in a single batched API call to minimise LLM round-trips.
+
         Args:
             section_elem: BeautifulSoup section element
 
         Returns:
             List of content block dictionaries
         """
-        content_blocks = []
+        content_blocks: List[Dict] = []
+
+        # (placeholder_index, paragraph_text) for paragraphs needing LLM conversion
+        pending_paragraphs: List = []
 
         # Process all content elements
         for elem in section_elem.find_all(["h3", "h4", "p", "ul", "ol", "pre"]):
@@ -111,9 +117,19 @@ class HTMLLectureParser:
                 if text:
                     content_blocks.append({"type": "subsubsection", "content": text})
             elif elem.name == "p":
-                block = self._process_paragraph(elem)
-                if block:
-                    content_blocks.append(block)
+                text = elem.text.strip()
+                # Skip very short paragraphs and those inside code blocks
+                if not text or len(text) <= 20 or elem.find_parent("pre"):
+                    continue
+                # Short texts / already-bulleted: no LLM needed
+                if len(text) < 100 or text.startswith(("•", "-", "*")):
+                    content_blocks.append({"type": "paragraph", "content": text})
+                    self.converted_paragraphs += 1
+                else:
+                    # Reserve a slot; fill after batch conversion
+                    placeholder_idx = len(content_blocks)
+                    content_blocks.append(None)  # type: ignore[arg-type]
+                    pending_paragraphs.append((placeholder_idx, text))
             elif elem.name in ["ul", "ol"]:
                 block = self._process_list(elem)
                 if block:
@@ -122,6 +138,20 @@ class HTMLLectureParser:
                 block = self._process_code_block(elem)
                 if block:
                     content_blocks.append(block)
+
+        # Batch-convert all paragraphs that need LLM processing
+        if pending_paragraphs:
+            texts = [t for _, t in pending_paragraphs]
+            bullet_lists = batch_convert_to_bullet_points(texts)
+            for (placeholder_idx, _), bullet_points in zip(pending_paragraphs, bullet_lists):
+                self.converted_paragraphs += 1
+                if len(bullet_points) > 1:
+                    content_blocks[placeholder_idx] = {"type": "list", "items": bullet_points, "ordered": False}
+                else:
+                    content_blocks[placeholder_idx] = {"type": "paragraph", "content": bullet_points[0]}
+
+        # Remove any remaining None placeholders (should not occur in normal flow)
+        content_blocks = [b for b in content_blocks if b is not None]
 
         # Extract images
         for figure in section_elem.find_all("figure"):

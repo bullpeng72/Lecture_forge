@@ -30,15 +30,20 @@ def detect_language(text: str, default: str = "unknown") -> str:
     if not text or not text.strip():
         return default
 
+    # Check Korean character ratio before calling langdetect.
+    # langdetect often misidentifies mixed Korean-English text (e.g., "판다스(Pandas)가 뭔가요?").
+    # If >= 30% of alphabetic characters are Korean (가-힣 or ㄱ-ㅣ), treat as Korean.
+    korean_chars = sum(1 for c in text if '\uAC00' <= c <= '\uD7A3' or '\u3130' <= c <= '\u318F')
+    total_alpha = sum(1 for c in text if c.isalpha())
+    if total_alpha > 0 and korean_chars / total_alpha >= 0.25:
+        return "ko"
+
     try:
         # langdetect returns ISO 639-1 codes (2-letter)
         lang = detect(text)
         return lang
-    except LangDetectException as e:
+    except (LangDetectException, Exception) as e:
         logger.debug(f"Language detection failed: {e}")
-        return default
-    except Exception as e:
-        logger.warning(f"Unexpected error in language detection: {e}")
         return default
 
 
@@ -138,8 +143,8 @@ Original text:
 Translation:"""
 
         # Get translation
-        response = llm.predict(prompt)
-        translated = response.strip()
+        response = llm.invoke(prompt)
+        translated = response.content.strip()
 
         logger.debug(f"Translated text from {source_lang_name} to {target_lang_name}")
         return translated

@@ -549,7 +549,7 @@ revised = agent.revise(
 
 **Location**: `lecture_forge/agents/qa_agent.py`
 
-Provides interactive Q&A using RAG with enhanced quality (v0.3.2).
+Provides interactive Q&A using RAG with enhanced quality (v0.3.5).
 
 #### Initialization
 
@@ -562,35 +562,43 @@ agent = QAAgent(collection_name="ml_lecture_001")
 #### Main Method
 
 ```python
-answer = agent.answer_question(
+answer = agent.answer(
     question: str,
-    chat_history: List[Dict] = None
 ) -> Dict[str, Any]
 ```
 
 **Returns:**
 Dictionary with:
-- `answer` (str): Generated answer
+- `answer` (str): Generated answer (400+ words, 5 Markdown sections)
 - `sources` (List[dict]): Source documents with pages
-- `confidence` (str): Confidence level (High/Medium/Low)
-- `language` (str): Detected language
+- `confidence` (float): Confidence score (0.0–1.0, correctly calculated)
+- `query_language` (str): Detected language
 
-**Enhanced Features (v0.3.2):**
+**RAG Configuration (v0.3.5):**
+- `n_results`: **15** per query (up from 10 in v0.3.2)
+- `top_k`: **12** after reranking (up from 8)
+- `temperature`: **0.3** (down from 0.7, for accuracy)
+- Diversity limit: **3** chunks per source-page (up from 2)
+- Confidence: `max(0.0, 1 - distance / 2)` (ChromaDB L2 fix)
+
+**Enhanced Features (v0.3.5):**
+- **400-word minimum**: Forces comprehensive structured answers
+- **5 Mandatory sections**: 개요 / 상세 설명 / 핵심 포인트 / 예시 및 근거 / 추가 고려사항
+- **Rich Markdown rendering**: Answers displayed in terminal Panel
+- **15+15 dual-query**: Original + translated queries both use n_results=15
 - Cross-lingual search (Korean ↔ English)
-- Chain of Thought reasoning
-- Diversity-based reranking
-- Automatic answer expansion
-- Dynamic confidence scoring
+- Dynamic confidence scoring (fixed ChromaDB L2 distance conversion)
+- Automatic answer expansion for short answers (< 200 chars)
 
 **Example:**
 
 ```python
 agent = QAAgent("ml_lecture_001")
 
-result = agent.answer_question("What is supervised learning?")
+result = agent.answer("What is supervised learning?")
 
-print(result["answer"])
-print(f"Confidence: {result['confidence']}")
+print(result["answer"])   # 400+ word structured answer
+print(f"Confidence: {result['confidence']:.0%}")
 print(f"Sources: {len(result['sources'])} documents")
 ```
 
@@ -653,5 +661,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-02-16
-**Version**: 0.3.4
+**Last Updated**: 2026-02-18
+**Version**: 0.3.5

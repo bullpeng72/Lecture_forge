@@ -21,7 +21,7 @@ jobs:
 
     - name: Check Python syntax
       run: |
-        python -m py_compile src/lecture_forge/**/*.py
+        find src/lecture_forge -name "*.py" -exec python -m py_compile {} \;
 
     - name: Check for merge conflicts
       run: |
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -54,13 +54,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
-        pip install -r requirements-dev.txt
+        pip install -e ".[dev]"
 
     - name: Run tests
       run: |
         if [ -d "tests" ]; then
-          pytest tests/ -v --cov=lecture_forge --cov-report=term
+          pytest tests/ -v --cov=src/lecture_forge --cov-report=term
         else
           echo "⚠️  Tests not yet implemented"
         fi
@@ -81,8 +80,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        pip install -e ".[dev]"
 
     - name: Check formatting
       run: |

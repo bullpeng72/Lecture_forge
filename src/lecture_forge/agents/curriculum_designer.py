@@ -47,7 +47,7 @@ class CurriculumDesignerAgent(BaseAgent):
         selected_topics = self._select_topics(analysis_result, duration, audience_level)
 
         # 3. Create sections with time allocation
-        sections = self._create_sections(selected_topics, analysis_result, duration, audience_level)
+        sections = self._create_sections(selected_topics, analysis_result, duration, audience_level, topic=topic)
 
         # 4. Build prerequisite map
         prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
@@ -147,8 +147,13 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         analysis_result: AnalysisResult,
         duration: int,
         audience_level: str,
+        topic: str = "",
     ) -> List[Section]:
         """Create curriculum sections from topics."""
+        from lecture_forge.utils.language_utils import detect_language
+
+        is_korean = detect_language(topic) == "ko"
+
         sections = []
 
         # Reserve time for intro and conclusion
@@ -160,13 +165,13 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         sections.append(
             Section(
                 id="section_0_intro",
-                title="Introduction",
-                topics=["Course overview", "Learning objectives"],
+                title="소개" if is_korean else "Introduction",
+                topics=["강의 개요", "학습 목표"] if is_korean else ["Course overview", "Learning objectives"],
                 estimated_time=intro_time,
                 difficulty_level="beginner",
                 learning_outcomes=[
-                    "Understand the course structure",
-                    "Know what will be covered",
+                    "강의 구조를 이해한다" if is_korean else "Understand the course structure",
+                    "다룰 내용을 파악한다" if is_korean else "Know what will be covered",
                 ],
             )
         )
@@ -214,13 +219,13 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         sections.append(
             Section(
                 id=f"section_{len(topics)+1}_conclusion",
-                title="Conclusion and Next Steps",
-                topics=["Summary", "Key takeaways", "Further learning"],
+                title="결론 및 다음 단계" if is_korean else "Conclusion and Next Steps",
+                topics=["요약", "핵심 내용", "심화 학습"] if is_korean else ["Summary", "Key takeaways", "Further learning"],
                 estimated_time=conclusion_time,
                 difficulty_level="beginner",
                 learning_outcomes=[
-                    "Summarize key concepts",
-                    "Identify next steps for learning",
+                    "핵심 개념을 정리한다" if is_korean else "Summarize key concepts",
+                    "다음 학습 단계를 파악한다" if is_korean else "Identify next steps for learning",
                 ],
             )
         )

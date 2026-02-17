@@ -58,7 +58,7 @@ class AsyncBaseAgent(BaseAgent):
                 pdf_path
             )
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         # If kwargs provided, create a partial function
         if kwargs:

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Async I/O Support) (2026-02-16)
-> **버전**: 0.3.4 (Beta Release)
+> **프로젝트 상태**: 🌟 **Production Ready+** (RAG Quality Boost) (2026-02-18)
+> **버전**: 0.3.5 (Beta Release)
 > **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡
 
 ## 📚 프로젝트 개요
@@ -13,7 +13,7 @@
 1. **멀티소스 컨텐츠 수집**: PDF, URL, 키워드 검색을 통한 포괄적 정보 수집
 2. **지식창고 + RAG 기반 Q&A**: 수집된 정보를 벡터 DB에 저장하고 대화형 탐색 지원
 3. **다국어 지원 (v0.3.2)**: 자동 언어 감지, Cross-lingual 검색, 한영 혼합 PDF 지원
-4. **고급 RAG 품질 (v0.3.2)**: Chain of Thought, 다양성 기반 재랭킹, 답변 후처리, 동적 신뢰도
+4. **고급 RAG 품질 (v0.3.5)**: 400단어 구조화 답변, 15+15 듀얼 쿼리, Rich 렌더링, 신뢰도 수정
 5. **고성능 RAG 캐싱**: 쿼리 결과 캐싱으로 60% 성능 향상
 6. **멀티모달 처리**: 텍스트 + 이미지 자동 추출 및 활용
 7. **Location-based 이미지 매칭**: RAG 컨텍스트 페이지 기반 이미지 자동 배치 (PDF 이미지 사용률 +750%)
@@ -710,9 +710,35 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: 🌟 **Production Ready+ (Async I/O Support)** 🌟
+**현재 상태**: 🌟 **Production Ready+ (RAG Quality Boost)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.5 (2026-02-18) - 🎯 RAG Quality Boost
+
+**Chat 답변 품질 대폭 향상**:
+- 🎯 **구조화 답변 강제**: 최소 400단어 + 5개 Markdown 섹션
+  - `## 개요`, `## 상세 설명`, `## 핵심 포인트`, `## 예시 및 근거`, `## 추가 고려사항`
+  - 모든 답변이 교육적 구조를 따르도록 프롬프트 강화
+- 🔍 **검색 강화**: n_results 10→**15** (+50%), top_k 8→**12** (+50%)
+  - 더 많은 컨텍스트로 더 정확하고 풍부한 답변 생성
+- 🌡️ **LLM 온도 최적화**: temperature 0.7→**0.3** (사실 중심 답변에 적합)
+- 🎨 **Rich Markdown 렌더링**: 답변을 터미널 Panel에 아름답게 표시
+- 🎲 **다양성 증가**: source-page당 최대 2→**3**개 chunks 허용
+- 🐛 **신뢰도 수정**: ChromaDB L2 거리 변환 버그 수정
+  - 수정 전: `similarity = 1 - distance` → 거리 > 1 시 음수 → 항상 0%
+  - 수정 후: `similarity = max(0.0, 1 - distance / 2)` → 정상 [0,1] 범위
+
+**버그 수정**:
+- 🔧 **`init_helpers.py`**: deprecated `pkg_resources.path` → `importlib.resources.files()` API 전환
+  - Python 3.11+ DeprecationWarning 완전 제거
+
+**사용법**:
+```bash
+lecture-forge chat
+# → 이제 400단어 이상의 구조화된 답변을 Rich Panel로 표시
+# → 신뢰도가 항상 0%이던 버그 수정됨
+```
 
 ### v0.3.4 (2026-02-16) - ⚡ Async I/O Support
 
@@ -818,23 +844,23 @@ lecture-forge create --async-mode --quality-level strict
 - ✅ 검색 품질 향상 (더 많은 관련 chunks 검색)
 
 **RAG 답변 품질 강화**:
-- 🎯 **검색 범위 확대**: 5개 → 8개 chunks (+60%)
+- 🎯 **검색 범위 확대**: 5개 → 8개 chunks (v0.3.2 초기; v0.3.5에서 12개로 추가 향상)
 - 🧠 **고급 프롬프트**:
   - Chain of Thought 추론 적용
-  - 구조화된 답변 생성 (도입→상세→예시)
+  - 구조화된 답변 생성 (v0.3.5에서 5섹션 Markdown 구조로 대폭 강화)
   - 정확성 검증 강화
 - 🎲 **다양성 기반 재랭킹**:
-  - Source-Page 다양성 보장 (최대 2개/source-page)
+  - Source-Page 다양성 보장 (최대 2개/source-page; v0.3.5에서 3개로 증가)
   - 유사도 필터링 (<30% 자동 제외)
   - 중복 제거 강화
 - ✨ **답변 후처리**:
-  - 짧은 답변 자동 확장 (<50자)
+  - 짧은 답변 자동 확장 (v0.3.5에서 임계값 50자 → 200자로 상향)
   - 부분 정보 추출 (직접 답변 없을 때)
   - 불완전 답변 감지 및 재시도
 - 📊 **동적 신뢰도 점수**:
   - 다차원 계산 (검색 품질, 결과 수, 답변 길이, 불확실성)
   - UI 표시: High/Medium/Low + 색상 코딩
-  - 사용자 판단 지원
+  - v0.3.5에서 ChromaDB L2 거리 변환 버그 수정으로 정확도 향상
 
 **영향**:
 - ✅ 답변 완성도 +50% (자동 확장)

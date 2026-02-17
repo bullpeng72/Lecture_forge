@@ -2,12 +2,14 @@
 HTML Assembler Agent - Generates final HTML output.
 """
 
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List
-import os
+
 import markdown
 from bs4 import BeautifulSoup
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
@@ -21,11 +23,17 @@ class HTMLAssemblerAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         logger.info("Initializing HTML Assembler Agent")
+        templates_dir = Path(__file__).parent.parent / "templates"
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(templates_dir)),
+            autoescape=select_autoescape([]),
+        )
 
     def assemble(
         self,
         lecture: Lecture,
         output_path: str = None,
+        image_search_enabled: bool = True,
     ) -> str:
         """
         Assemble final HTML from lecture content.
@@ -33,6 +41,7 @@ class HTMLAssemblerAgent(BaseAgent):
         Args:
             lecture: Complete lecture data
             output_path: Path to save HTML file
+            image_search_enabled: Whether image search was enabled (affects log level)
 
         Returns:
             Path to generated HTML file
@@ -40,7 +49,7 @@ class HTMLAssemblerAgent(BaseAgent):
         logger.info(f"Assembling HTML for lecture: {lecture.title}")
 
         # Validate image availability
-        self._validate_images(lecture)
+        self._validate_images(lecture, image_search_enabled)
 
         # Generate HTML content
         html_content = self._generate_html(lecture)
@@ -93,7 +102,7 @@ class HTMLAssemblerAgent(BaseAgent):
 
         return output_path
 
-    def _validate_images(self, lecture: Lecture):
+    def _validate_images(self, lecture: Lecture, image_search_enabled: bool = True):
         """Validate image availability and log warnings."""
         total_sections = len(lecture.sections)
         sections_without_images = 0
@@ -106,14 +115,11 @@ class HTMLAssemblerAgent(BaseAgent):
 
         # Log warnings
         if lecture.total_images == 0:
-            logger.error("❌ No images in lecture!")
-            logger.error("   Possible causes:")
-            logger.error("   1. Image search disabled (use --image-search)")
-            logger.error("   2. PDF images disabled (use --include-pdf-images)")
-            logger.error("   3. Image collection failed")
-            logger.error("")
-            logger.error("   Quick fix:")
-            logger.error("   $ lecture-forge create --image-search")
+            if not image_search_enabled:
+                logger.info("ℹ️  No images (image search disabled by --no-image-search)")
+            else:
+                logger.warning("⚠️  No images collected. Check API keys (PEXELS_API_KEY, UNSPLASH_ACCESS_KEY)")
+                logger.warning("   Tip: $ lecture-forge create --image-search")
         elif sections_without_images > 0:
             percentage = (sections_without_images / total_sections) * 100
             logger.warning(f"⚠️  {sections_without_images}/{total_sections} sections ({percentage:.1f}%) have no images")
@@ -129,230 +135,30 @@ class HTMLAssemblerAgent(BaseAgent):
             logger.info(f"✅ All {total_sections} sections have images")
 
     def _generate_html(self, lecture: Lecture) -> str:
-        """Generate complete HTML document."""
+        """Generate complete HTML document using Jinja2 template."""
         # Convert sections to HTML
         sections_html = []
-
         for i, section in enumerate(lecture.sections):
             section_html = self._generate_section_html(section, i + 1)
             sections_html.append(section_html)
 
-        # Generate TOC
+        # Generate TOC and objectives
         toc_html = self._generate_toc(lecture.sections)
+        objectives_html = self._generate_objectives_html(lecture.learning_objectives)
 
-        # Build complete HTML
-        html = f"""<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{lecture.title}</title>
-
-    <!-- TailwindCSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Mermaid.js -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-
-    <!-- Prism.js for code highlighting -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #fafbfc;
-        }}
-        .sidebar {{
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 250px;
-            height: 100vh;
-            overflow-y: auto;
-            background: #f8fafc;
-            border-right: 1px solid #e2e8f0;
-            padding: 2rem 1rem;
-        }}
-        .main-content {{
-            margin-left: 250px;
-            padding: 2rem 3rem;
-            max-width: 900px;
-        }}
-
-        /* Section styling for better visual separation */
-        .section {{
-            margin-bottom: 4rem;
-            background: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }}
-
-        /* Typography hierarchy */
-        h1 {{
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 2rem 0 1rem 0;
-        }}
-
-        h2 {{
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin: 1.5rem 0 1rem 0;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 0.5rem;
-        }}
-
-        .section h3 {{
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #e2e8f0;
-        }}
-
-        .section h4 {{
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #475569;
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-        }}
-
-        /* Paragraphs with better spacing */
-        .section p {{
-            line-height: 1.8;
-            margin-bottom: 1rem;
-            color: #334155;
-        }}
-
-        /* Lists with better readability */
-        .section ul, .section ol {{
-            margin: 1rem 0;
-            padding-left: 1.5rem;
-            line-height: 1.8;
-        }}
-
-        .section li {{
-            margin-bottom: 0.5rem;
-            color: #334155;
-        }}
-
-        /* Code blocks with improved styling */
-        .section code {{
-            background: #f1f5f9;
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #e11d48;
-        }}
-
-        .section pre {{
-            background: #1e293b;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            margin: 1.5rem 0;
-            overflow-x: auto;
-        }}
-
-        .section pre code {{
-            background: transparent;
-            padding: 0;
-            color: #e2e8f0;
-            font-size: 0.9em;
-        }}
-
-        /* Bold text emphasis */
-        .section strong {{
-            color: #0f172a;
-            font-weight: 600;
-        }}
-
-        /* Diagrams with background */
-        .mermaid {{
-            background: #f8fafc;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            margin: 2rem 0;
-            text-align: center;
-        }}
-
-        /* Images */
-        img {{
-            max-width: 100%;
-            height: auto;
-            margin: 1.5rem 0;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }}
-
-        /* TOC styling */
-        .toc-link {{
-            display: block;
-            padding: 0.5rem 0;
-            color: #64748b;
-            text-decoration: none;
-            transition: color 0.2s;
-        }}
-        .toc-link:hover {{
-            color: #3b82f6;
-        }}
-    </style>
-</head>
-<body>
-    <!-- Sidebar TOC -->
-    <div class="sidebar">
-        <h3 class="text-xl font-bold mb-4">{lecture.title}</h3>
-        <div class="text-sm text-gray-600 mb-4">
-            <div>⏱️ {lecture.duration} minutes</div>
-            <div>👥 {lecture.audience_level.capitalize()}</div>
-        </div>
-        <nav class="toc">
-            {toc_html}
-        </nav>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <h1>{lecture.title}</h1>
-
-        <!-- Learning Objectives -->
-        {self._generate_objectives_html(lecture.learning_objectives)}
-
-        <!-- Sections -->
-        {''.join(sections_html)}
-
-        <footer class="mt-12 pt-6 border-t border-gray-200 text-sm text-gray-500">
-            <p>Generated by LectureForge on {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
-            <p>Total: {lecture.total_word_count} words | {lecture.total_images} images | {lecture.total_diagrams} diagrams</p>
-        </footer>
-    </div>
-
-    <script>
-        // Initialize Mermaid
-        mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-
-        // Smooth scrolling for TOC links
-        document.querySelectorAll('.toc-link').forEach(link => {{
-            link.addEventListener('click', (e) => {{
-                e.preventDefault();
-                const target = document.querySelector(e.target.getAttribute('href'));
-                target.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
-            }});
-        }});
-    </script>
-</body>
-</html>"""
-
-        return html
+        template = self.jinja_env.get_template("lecture_html.html")
+        return template.render(
+            title=lecture.title,
+            duration=lecture.duration,
+            audience_level=lecture.audience_level.capitalize(),
+            toc_html=toc_html,
+            objectives_html=objectives_html,
+            sections_html="\n".join(sections_html),
+            created_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            total_word_count=lecture.total_word_count,
+            total_images=lecture.total_images,
+            total_diagrams=lecture.total_diagrams,
+        )
 
     def _generate_toc(self, sections: List[SectionContent]) -> str:
         """Generate table of contents HTML."""

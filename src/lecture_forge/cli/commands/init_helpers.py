@@ -200,13 +200,14 @@ def load_env_template(console: Console) -> Tuple[Optional[str], list[str]]:
                 )
                 template_locations.append("package resources (root)")
             except (AttributeError, FileNotFoundError):
-                # Python 3.7-3.8 fallback
+                # Fallback: try lecture_forge.templates sub-package directly
                 try:
-                    with pkg_resources.path(
-                        "lecture_forge.templates", ".env.example"
-                    ) as template_path:
-                        template_text = template_path.read_text(encoding="utf-8")
-                        template_locations.append("package resources (legacy)")
+                    template_text = (
+                        pkg_resources.files("lecture_forge.templates")
+                        .joinpath(".env.example")
+                        .read_text(encoding="utf-8")
+                    )
+                    template_locations.append("package resources (templates sub-package)")
                 except (FileNotFoundError, TypeError, ModuleNotFoundError):
                     pass
     except Exception as e:

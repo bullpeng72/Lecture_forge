@@ -286,7 +286,11 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         )
 
         html_assembler = HTMLAssemblerAgent()
-        html_path = html_assembler.assemble(lecture, output_path=inputs.get("output_name"))
+        html_path = html_assembler.assemble(
+            lecture,
+            output_path=inputs.get("output_name"),
+            image_search_enabled=inputs.get("image_search", True),
+        )
         progress.update(task4c, completed=True)
         console.print(f"   ✅ HTML assembled: {html_path}")
 
@@ -372,7 +376,11 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Regenerate HTML if improved
         if quality_improved:
             console.print(f"   🎨 Regenerating HTML with improvements...")
-            html_path = html_assembler.assemble(improved_lecture, output_path=inputs.get("output_name"))
+            html_path = html_assembler.assemble(
+                improved_lecture,
+                output_path=inputs.get("output_name"),
+                image_search_enabled=inputs.get("image_search", True),
+            )
             lecture = improved_lecture
 
         progress.update(task5, completed=True)

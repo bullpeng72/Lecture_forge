@@ -7,7 +7,7 @@ name = "lecture-forge"
 version = "0.3.4"
 description = "AI-powered lecture material generator with multilingual support using LangChain"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = {file = "LICENSE"}
 authors = [
     {name = "Sungwoo Kim", email = "sungwoo.kim@gmail.com"}

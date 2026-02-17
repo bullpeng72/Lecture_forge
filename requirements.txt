@@ -1,8 +1,8 @@
 # ===== LectureForge Requirements =====
-# Python 3.11-3.13 compatible (tested on Python 3.13.5)
+# Python 3.11-3.12 compatible (3.13+ not recommended due to ChromaDB/hnswlib issues)
 # Fast installation (~3-5 minutes)
 # Heavy optional packages are commented out - uncomment if needed
-# Last updated: 2026-02-13
+# Last updated: 2026-02-17
 
 # ===== Core Framework =====
 # Updated to 0.3.x for Python 3.13 compatibility and latest features
@@ -24,7 +24,6 @@ requests>=2.31.0,<3.0.0
 
 # ===== Image Processing (Basic) =====
 pillow>=10.2.0,<11.0.0
-imagehash>=4.3.0,<5.0.0
 # Numpy version (Python 3.11-3.12 compatible - requires 1.26+ for Python 3.12)
 numpy>=1.26.0,<2.0.0
 scipy>=1.11.0,<2.0.0  # For advanced image quality analysis (entropy)
@@ -66,4 +65,5 @@ langdetect>=1.0.9,<2.0.0  # Language detection for multilingual support
 # rapidfuzz>=3.0.0,<4.0.0
 # tiktoken>=0.5.0,<1.0.0
 httpx>=0.24.0,<1.0.0  # Async HTTP client for async I/O operations
-aiofiles>=23.0.0,<24.0.0  # Async file I/O
+# aiofiles>=23.0.0,<24.0.0  # Async file I/O (uncomment when async file operations are needed)
+# imagehash>=4.3.0,<5.0.0  # Perceptual image hashing (uncomment if image deduplication needed)

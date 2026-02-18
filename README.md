@@ -1230,7 +1230,7 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 참조
 
 - **이슈 트래커**: [GitHub Issues](https://github.com/bullpeng72/Lecture_forge/issues)
 - **프로젝트 가이드**: [CLAUDE.md](CLAUDE.md)
-- **기술 분석**: [INPUT_LIMITS_ANALYSIS.md](INPUT_LIMITS_ANALYSIS.md)
+- **기술 분석**: [INPUT_LIMITS_ANALYSIS.md](docs/INPUT_LIMITS_ANALYSIS.md)
 - **테스트 가이드**: [tests/README.md](tests/README.md)
 
 ---

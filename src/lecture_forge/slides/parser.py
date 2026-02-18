@@ -52,8 +52,25 @@ class HTMLLectureParser:
 
     def _extract_title(self, soup: BeautifulSoup) -> str:
         """Extract lecture title from HTML."""
+        # 1. Legacy class (never matched by current template, kept for compatibility)
         title_tag = soup.find("h1", class_="lecture-title")
-        return title_tag.text.strip() if title_tag else "Lecture Slides"
+        if title_tag:
+            return title_tag.text.strip()
+        # 2. <title> tag (reliable, always present)
+        title_elem = soup.find("title")
+        if title_elem and title_elem.text.strip():
+            return title_elem.text.strip()
+        # 3. First <h1> in main content area
+        main = soup.find(id="mainContent")
+        if main:
+            h1 = main.find("h1")
+            if h1:
+                return h1.text.strip()
+        # 4. Any <h1>
+        h1 = soup.find("h1")
+        if h1:
+            return h1.text.strip()
+        return "Lecture Slides"
 
     def _extract_subtitle(self, soup: BeautifulSoup) -> str:
         """Extract lecture subtitle from HTML."""
@@ -216,8 +233,13 @@ class HTMLLectureParser:
             return None
 
         # Extract language
+        # Priority 1: data-lang on parent .highlight div (set by Pygments post-processor)
         language = "python"  # default
-        if "class" in code_elem.attrs:
+        parent = elem.parent
+        if parent and parent.get("data-lang"):
+            language = parent["data-lang"]
+        elif "class" in code_elem.attrs:
+            # Priority 2: language-* class on <code> (set by Prism.js / raw fenced blocks)
             for cls in code_elem["class"]:
                 if cls.startswith("language-"):
                     language = cls.replace("language-", "")

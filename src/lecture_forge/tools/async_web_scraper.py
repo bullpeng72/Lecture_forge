@@ -5,7 +5,7 @@ Uses httpx for async HTTP requests with improved performance.
 """
 
 import httpx
-from typing import Dict
+from typing import Dict, List
 from bs4 import BeautifulSoup
 
 from lecture_forge.config import Config
@@ -99,7 +99,7 @@ class AsyncWebScraperTool:
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
 
-    async def run_batch(self, urls: list[str]) -> list[Dict]:
+    async def run_batch(self, urls: List[str]) -> List[Dict]:
         """
         Scrape multiple URLs concurrently.
 

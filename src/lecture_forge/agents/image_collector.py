@@ -4,10 +4,12 @@ Image Collector Agent - Collects images from various sources.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
+from lecture_forge.exceptions import ImageExtractionError, ImageSearchError, WebScrapingError
+from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.tools.image_extractor import PDFImageExtractorTool, WebImageScraperTool
 from lecture_forge.tools.image_search import PexelsSearchTool, UnsplashSearchTool
 from lecture_forge.utils import logger
@@ -16,7 +18,7 @@ from lecture_forge.utils import logger
 class ImageCollectorAgent(BaseAgent):
     """Agent for collecting images from PDFs, URLs, and image search APIs."""
 
-    def __init__(self, vision_model: str = None, session_id: str = None, vector_store=None):
+    def __init__(self, vision_model: Optional[str] = None, session_id: Optional[str] = None, vector_store: Optional[VectorStore] = None) -> None:
         """
         Initialize Image Collector Agent.
 
@@ -101,7 +103,7 @@ class ImageCollectorAgent(BaseAgent):
                     logger.error(f"❌ Failed to extract images: {result['error']}")
 
             except Exception as e:
-                logger.error(f"Error extracting images from PDF {pdf_path}: {e}")
+                logger.error(f"Error extracting images from PDF {pdf_path}: {ImageExtractionError(e)}")
 
         # 1.5. Auto-generate descriptions for PDF images
         if auto_describe_images and pdf_images_by_source:
@@ -141,7 +143,7 @@ class ImageCollectorAgent(BaseAgent):
                     logger.error(f"❌ Failed to access URL: {page_result['error']}")
 
             except Exception as e:
-                logger.error(f"Error scraping images from URL {url}: {e}")
+                logger.error(f"Error scraping images from URL {url}: {WebScrapingError(e)}")
 
         # 3. Search for images with keywords
         for keyword in image_keywords:
@@ -186,7 +188,7 @@ class ImageCollectorAgent(BaseAgent):
                         logger.warning(f"Unsplash search also failed: {unsplash_result['error']}")
 
             except Exception as e:
-                logger.error(f"Error searching images for {keyword}: {e}")
+                logger.error(f"Error searching images for {keyword}: {ImageSearchError(e)}")
 
         # 4. Store image descriptions in Vector DB (if available)
         if self.vector_store:

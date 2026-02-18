@@ -13,6 +13,7 @@ import asyncio
 from typing import Dict, List
 
 from lecture_forge.agents.async_base import AsyncBaseAgent
+from lecture_forge.exceptions import PDFParsingError, SearchAPIError, WebScrapingError
 from lecture_forge.knowledge.chunker import TextChunker
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.tools.async_search_tool import AsyncSerperSearchTool
@@ -207,8 +208,9 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
                 return {"success": False, "error": result["error"]}
 
         except Exception as e:
-            logger.error(f"Error processing PDF {pdf_path}: {e}")
-            return {"success": False, "error": str(e)}
+            exc = PDFParsingError(f"Error processing PDF {pdf_path}: {e}")
+            logger.error(str(exc))
+            return {"success": False, "error": str(exc)}
 
     async def _collect_from_url(self, url: str) -> Dict:
         """
@@ -242,8 +244,9 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
                 return {"success": False, "error": result["error"]}
 
         except Exception as e:
-            logger.error(f"Error processing URL {url}: {e}")
-            return {"success": False, "error": str(e)}
+            exc = WebScrapingError(f"Error processing URL {url}: {e}")
+            logger.error(str(exc))
+            return {"success": False, "error": str(exc)}
 
     async def _collect_from_search(self, keyword: str) -> Dict:
         """
@@ -287,8 +290,9 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
                 return {"success": False, "error": result["error"]}
 
         except Exception as e:
-            logger.error(f"Error searching for {keyword}: {e}")
-            return {"success": False, "error": str(e)}
+            exc = SearchAPIError(f"Error searching for {keyword}: {e}")
+            logger.error(str(exc))
+            return {"success": False, "error": str(exc)}
 
     async def _chunk_documents_async(
         self, documents: List[Dict]

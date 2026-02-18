@@ -3,7 +3,7 @@ Image Selector - Handles intelligent image selection for lecture sections.
 """
 
 from pathlib import Path
-from typing import List, Dict
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 from PIL import Image
@@ -17,7 +17,7 @@ from lecture_forge.utils import logger
 class ImageSelector:
     """Handles image selection with location-based matching and quality scoring."""
 
-    def __init__(self, keyword_expander=None, keyword_translator=None):
+    def __init__(self, keyword_expander: Optional[Callable] = None, keyword_translator: Optional[Callable] = None) -> None:
         """
         Initialize ImageSelector.
 

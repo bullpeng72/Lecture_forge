@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="{{ lang | default('ko') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,17 +8,14 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Prism.js syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-
-    <!-- Custom styles -->
-    <link rel="stylesheet" href="styles.css">
-
     <!-- Mermaid diagrams -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
     <!-- Lunr.js full-text search -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.9/lunr.min.js"></script>
+
+    <!-- Custom styles (includes Pygments monokai theme) -->
+    <link rel="stylesheet" href="styles.css">
 
     <style>
         .toc-link {
@@ -55,34 +52,44 @@
             padding-bottom: 0.5rem;
             border-bottom: 3px solid #3b82f6;
         }
-        figure {
-            margin: 1.5rem 0;
-            text-align: center;
-        }
-        figcaption {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: #6b7280;
-        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
 
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Back to top button -->
+    <button id="backToTop"
+        class="hidden fixed bottom-6 right-6 z-50 bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
+        onclick="window.scrollTo({top:0,behavior:'smooth'})"
+        aria-label="맨 위로">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+        </svg>
+    </button>
+
     <!-- Top Navigation Bar -->
-    <nav class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-6">
+    <nav class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-4 gap-3">
+        <!-- Hamburger button (mobile only) -->
+        <button id="sidebarToggle" onclick="toggleSidebar()" aria-label="목차 열기">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
         <div class="flex items-center space-x-3 flex-1 min-w-0">
             <span class="font-bold text-blue-600 whitespace-nowrap">📚 LectureForge</span>
-            <span class="text-gray-300">|</span>
-            <span class="text-gray-700 font-medium truncate">{{ title }}</span>
+            <span class="text-gray-300 hidden sm:inline">|</span>
+            <span class="text-gray-700 font-medium truncate hidden sm:inline">{{ title }}</span>
         </div>
-        <div class="flex items-center space-x-3 ml-4 shrink-0">
-            <span class="text-sm text-gray-500 whitespace-nowrap">⏱ {{ duration }}분</span>
-            <span class="text-sm text-gray-500 whitespace-nowrap">👤 {{ audience_level }}</span>
+        <div class="flex items-center space-x-2 ml-2 shrink-0">
+            <span class="text-sm text-gray-500 whitespace-nowrap hidden md:inline">⏱ {{ duration }}분</span>
+            <span class="text-sm text-gray-500 whitespace-nowrap hidden md:inline">👤 {{ audience_level }}</span>
             <input
                 id="searchBox"
                 type="text"
                 placeholder="🔍 검색..."
-                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-40 focus:outline-none focus:border-blue-400"
+                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-32 sm:w-40 focus:outline-none focus:border-blue-400"
             />
         </div>
     </nav>
@@ -102,7 +109,7 @@
     <div class="flex pt-14 min-h-screen">
 
         <!-- Sidebar TOC -->
-        <aside class="w-64 bg-white shadow-sm fixed top-14 left-0 bottom-0 overflow-y-auto p-4 z-40">
+        <aside id="sidebar" class="w-64 bg-white shadow-sm fixed top-14 left-0 bottom-0 overflow-y-auto p-4 z-40">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">목차</h2>
             <nav class="flex flex-col gap-0.5">
                 {{ toc_html }}
@@ -121,11 +128,11 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="ml-64 flex-1 px-10 py-10 max-w-5xl">
+        <main id="mainContent" class="ml-64 flex-1 px-6 lg:px-10 py-10 max-w-5xl">
 
             <!-- Header -->
             <header class="mb-10">
-                <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ title }}</h1>
+                <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">{{ title }}</h1>
                 <div class="flex flex-wrap items-center gap-2 text-sm">
                     <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">⏱ {{ duration }}분</span>
                     <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">👤 {{ audience_level }}</span>
@@ -156,16 +163,13 @@
         </main>
     </div>
 
-    <!-- Prism.js syntax highlighting -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-
     <!-- Mermaid initialization -->
     <script>
         mermaid.initialize({
             startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose'
+            theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'neutral',
+            securityLevel: 'loose',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         });
     </script>
 
@@ -178,16 +182,77 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     tocLinks.forEach(link => link.classList.remove('active'));
-                    const activeLink = document.querySelector(`.toc-link[href="#${entry.target.id}"]`);
-                    if (activeLink) activeLink.classList.add('active');
+                    const sectionId = CSS.escape(entry.target.id);
+                    const activeLink = document.querySelector(`.toc-link[href="#${sectionId}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                        // Scroll active link into view in sidebar
+                        activeLink.scrollIntoView({ block: 'nearest' });
+                    }
                 }
             });
-        }, { rootMargin: '-15% 0px -75% 0px' });
+        }, { rootMargin: '-10% 0px -80% 0px' });
 
         sections.forEach(section => observer.observe(section));
     </script>
 
-    <!-- Search -->
+    <!-- Mobile sidebar toggle -->
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+        }
+        // Close sidebar on TOC link click (mobile)
+        document.querySelectorAll('.toc-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) closeSidebar();
+            });
+        });
+    </script>
+
+    <!-- Code block copy buttons -->
+    <script>
+        document.querySelectorAll('.highlight').forEach(block => {
+            const btn = document.createElement('button');
+            btn.className = 'code-copy-btn';
+            btn.textContent = '복사';
+            btn.addEventListener('click', () => {
+                const code = block.querySelector('pre').innerText;
+                navigator.clipboard.writeText(code).then(() => {
+                    btn.textContent = '✓ 복사됨';
+                    btn.classList.add('copied');
+                    setTimeout(() => {
+                        btn.textContent = '복사';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                });
+            });
+            block.appendChild(btn);
+        });
+    </script>
+
+    <!-- Back to top button visibility -->
+    <script>
+        window.addEventListener('scroll', function() {
+            const btn = document.getElementById('backToTop');
+            if (window.scrollY > 400) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }, { passive: true });
+    </script>
+
+    <!-- Search data + search.js -->
+    <script>
+        const LECTURE_DATA = {{ search_data_json }};
+    </script>
     <script src="search.js"></script>
 </body>
 </html>

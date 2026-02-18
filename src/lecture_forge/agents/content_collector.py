@@ -5,6 +5,7 @@ Content Collector Agent - Collects text content from various sources.
 from typing import Dict, List
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.exceptions import PDFParsingError, SearchAPIError, WebScrapingError
 from lecture_forge.knowledge.chunker import TextChunker
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.tools.deep_web_crawler import DeepWebCrawler
@@ -81,7 +82,7 @@ class ContentCollectorAgent(BaseAgent):
                     logger.error(f"❌ Failed to parse PDF: {result['error']}")
 
             except Exception as e:
-                logger.error(f"Error processing PDF {pdf_path}: {e}")
+                logger.error(f"Error processing PDF {pdf_path}: {PDFParsingError(e)}")
 
         # 2. Collect from URLs
         for url in urls:
@@ -103,7 +104,7 @@ class ContentCollectorAgent(BaseAgent):
                     logger.error(f"❌ Failed to scrape URL: {result['error']}")
 
             except Exception as e:
-                logger.error(f"Error processing URL {url}: {e}")
+                logger.error(f"Error processing URL {url}: {WebScrapingError(e)}")
 
         # 3. Collect from web searches
         for keyword in keywords:
@@ -135,7 +136,7 @@ class ContentCollectorAgent(BaseAgent):
                     logger.error(f"❌ Search failed: {result['error']}")
 
             except Exception as e:
-                logger.error(f"Error searching for {keyword}: {e}")
+                logger.error(f"Error searching for {keyword}: {SearchAPIError(e)}")
 
         # 4. Deep crawl Hada.io searches
         for hada_keyword in hada_keywords:
@@ -161,7 +162,7 @@ class ContentCollectorAgent(BaseAgent):
                     )
 
             except Exception as e:
-                logger.error(f"Error deep crawling Hada.io for {hada_keyword}: {e}")
+                logger.error(f"Error deep crawling Hada.io for {hada_keyword}: {WebScrapingError(e)}")
 
         # 5. Chunk all documents
         logger.info("Chunking collected documents...")

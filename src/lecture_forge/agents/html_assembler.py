@@ -2,7 +2,10 @@
 HTML Assembler Agent - Generates final HTML output.
 """
 
+import json
 import os
+import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -58,6 +61,10 @@ class HTMLAssemblerAgent(BaseAgent):
         output_dir = Config.OUTPUT_DIR  # Always use configured output directory
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Copy static assets (styles.css, search.js) alongside the HTML so that
+        # relative href/src links in the template resolve correctly.
+        self._copy_static_assets(output_dir)
+
         if not output_path:
             # Generate filename if not provided
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -77,6 +84,8 @@ class HTMLAssemblerAgent(BaseAgent):
                 # but ensure .html extension
                 if not str(output_path_obj).endswith(".html"):
                     output_path = f"{output_path}.html"
+                # Copy static assets to the target directory too
+                self._copy_static_assets(Path(output_path).parent)
                 # Write directly and return early
                 with open(output_path, "w", encoding="utf-8") as f:
                     f.write(html_content)
@@ -101,6 +110,42 @@ class HTMLAssemblerAgent(BaseAgent):
         logger.info(f"   - Diagrams: {lecture.total_diagrams}")
 
         return output_path
+
+    def _copy_static_assets(self, dest_dir: Path) -> None:
+        """Copy styles.css and search.js next to the generated HTML file.
+
+        The template references these files with relative paths, so they must
+        exist in the same directory as the HTML output.  We always overwrite so
+        that updated assets are deployed whenever a new lecture is generated.
+        """
+        templates_dir = Path(__file__).parent.parent / "templates"
+        for asset in ("styles.css", "search.js"):
+            src = templates_dir / asset
+            if src.exists():
+                shutil.copy2(src, dest_dir / asset)
+
+    def _detect_lang(self, lecture: Lecture) -> str:
+        """Detect primary language from lecture title and first section content.
+
+        Returns an IETF language tag ('ko', 'ja', 'zh', 'en', …) for use in
+        the HTML lang attribute.  Falls back to 'ko' when CJK characters are
+        dominant, 'en' otherwise.
+        """
+        sample = lecture.title
+        if lecture.sections:
+            sample += " " + lecture.sections[0].markdown_content[:300]
+        # Count Hangul, CJK, Hiragana/Katakana characters
+        hangul = sum(1 for c in sample if '\uac00' <= c <= '\ud7af')
+        cjk    = sum(1 for c in sample if '\u4e00' <= c <= '\u9fff')
+        kana   = sum(1 for c in sample if '\u3040' <= c <= '\u30ff')
+        total  = max(len(sample), 1)
+        if hangul / total > 0.05:
+            return "ko"
+        if kana / total > 0.05:
+            return "ja"
+        if cjk / total > 0.05:
+            return "zh"
+        return "en"
 
     def _validate_images(self, lecture: Lecture, image_search_enabled: bool = True):
         """Validate image availability and log warnings."""
@@ -146,9 +191,23 @@ class HTMLAssemblerAgent(BaseAgent):
         toc_html = self._generate_toc(lecture.sections)
         objectives_html = self._generate_objectives_html(lecture.learning_objectives)
 
+        # Build search data (first 500 chars of content for snippet preview)
+        search_data = {
+            "sections": [
+                {
+                    "section_id": self._sanitize_section_id(section.section_id),
+                    "title": section.title,
+                    "markdown_content": section.markdown_content[:500],
+                }
+                for section in lecture.sections
+            ]
+        }
+        search_data_json = json.dumps(search_data, ensure_ascii=False)
+
         template = self.jinja_env.get_template("lecture_html.html")
         return template.render(
             title=lecture.title,
+            lang=self._detect_lang(lecture),
             duration=lecture.duration,
             audience_level=lecture.audience_level.capitalize(),
             toc_html=toc_html,
@@ -158,14 +217,34 @@ class HTMLAssemblerAgent(BaseAgent):
             total_word_count=lecture.total_word_count,
             total_images=lecture.total_images,
             total_diagrams=lecture.total_diagrams,
+            search_data_json=search_data_json,
         )
+
+    def _sanitize_section_id(self, section_id: str) -> str:
+        """
+        Convert a section_id to an ASCII-safe HTML id attribute value.
+
+        Strips non-ASCII characters (e.g. Korean) and replaces special
+        characters that would break CSS attribute selectors (parentheses,
+        brackets, etc.) with underscores.
+        """
+        # Remove non-ASCII characters
+        safe = re.sub(r'[^\x00-\x7F]', '', section_id)
+        # Replace anything that isn't alphanumeric, underscore, or hyphen
+        safe = re.sub(r'[^a-zA-Z0-9_\-]', '_', safe)
+        # Collapse multiple consecutive underscores
+        safe = re.sub(r'_+', '_', safe)
+        # Strip leading/trailing underscores
+        safe = safe.strip('_')
+        return safe or 'section'
 
     def _generate_toc(self, sections: List[SectionContent]) -> str:
         """Generate table of contents HTML."""
         toc_items = []
 
         for section in sections:
-            toc_items.append(f'<a href="#{section.section_id}" class="toc-link">{section.title}</a>')
+            safe_id = self._sanitize_section_id(section.section_id)
+            toc_items.append(f'<a href="#{safe_id}" class="toc-link">{section.title}</a>')
 
         return "\n".join(toc_items)
 
@@ -213,6 +292,27 @@ class HTMLAssemblerAgent(BaseAgent):
             logger.warning(f"Error cleaning up HTML: {e}")
             return html_content
 
+    def _annotate_code_languages(self, markdown_source: str, html_content: str) -> str:
+        """Add data-lang attributes to .highlight divs from fenced code block languages.
+
+        Pygments does not emit a language class on <code>, so we extract languages
+        from the markdown source in order and stamp each .highlight wrapper div with
+        data-lang="<language>" so the slides parser can detect the language correctly.
+        """
+        # Extract fenced code-block languages in document order (```lang or ~~~lang)
+        languages = re.findall(r'(?:```|~~~)(\w+)', markdown_source)
+        if not languages:
+            return html_content
+
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            highlight_divs = soup.find_all("div", class_="highlight")
+            for div, lang in zip(highlight_divs, languages):
+                div["data-lang"] = lang
+            return str(soup)
+        except Exception:
+            return html_content
+
     def _generate_section_html(self, section: SectionContent, section_num: int) -> str:
         """Generate HTML for a single section."""
         # Convert markdown to HTML with improved code highlighting
@@ -231,6 +331,9 @@ class HTMLAssemblerAgent(BaseAgent):
 
         # Clean up HTML structure
         md_html = self._cleanup_content(md_html)
+
+        # Annotate .highlight divs with data-lang for slides parser
+        md_html = self._annotate_code_languages(section.markdown_content, md_html)
 
         # Add diagrams
         diagrams_html = []
@@ -278,7 +381,8 @@ class HTMLAssemblerAgent(BaseAgent):
             images_html.append(
                 f"""
             <figure class="my-6">
-                <img src="{corrected_path}" alt="{img.description}" loading="lazy" />
+                <img src="{corrected_path}" alt="{img.description}" loading="lazy"
+                     onerror="this.closest('figure').style.display='none'" />
                 <figcaption class="text-center text-sm text-gray-600 mt-2">
                     {img.caption or img.description}
                     {f'<br><span class="text-xs">{img.attribution}</span>' if img.attribution else ''}
@@ -286,8 +390,9 @@ class HTMLAssemblerAgent(BaseAgent):
             </figure>"""
             )
 
+        safe_id = self._sanitize_section_id(section.section_id)
         return f"""
-        <section id="{section.section_id}" class="section">
+        <section id="{safe_id}" class="section">
             <h2>{section_num}. {section.title}</h2>
             {md_html}
             {''.join(diagrams_html)}

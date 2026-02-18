@@ -98,7 +98,7 @@ class AsyncSerperSearchTool:
             logger.error(error_msg)
             return {"success": False, "error": error_msg, "results": []}
 
-    async def run_batch(self, queries: list[str], num_results: int = 5) -> list[Dict]:
+    async def run_batch(self, queries: List[str], num_results: int = 5) -> List[Dict]:
         """
         Search multiple queries concurrently.
 

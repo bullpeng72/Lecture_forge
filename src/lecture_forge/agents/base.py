@@ -2,6 +2,8 @@
 Base agent class for common functionality.
 """
 
+from typing import Optional
+
 from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 
@@ -14,7 +16,7 @@ from lecture_forge.utils.token_tracker import track_tokens
 class BaseAgent:
     """Base class for all agents."""
 
-    def __init__(self, model: str = None, temperature: float = None):
+    def __init__(self, model: Optional[str] = None, temperature: Optional[float] = None) -> None:
         """
         Initialize base agent.
 

@@ -5,6 +5,7 @@ Revision Agent - Revises lecture based on evaluation.
 from copy import deepcopy
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.exceptions import ContentGenerationError
 from lecture_forge.models.evaluation import EvaluationResult, Issue
 from lecture_forge.models.lecture import Lecture, SectionContent, MermaidDiagram
 from lecture_forge.utils import logger
@@ -171,7 +172,7 @@ Generate the code examples NOW (in Korean):"""
             logger.info(f"  ✅ Added {len(new_code_blocks) - len(section.code_blocks)} code example(s) to '{section.title}'")
 
         except Exception as e:
-            logger.error(f"  ❌ Failed to generate code example: {e}")
+            logger.error(f"  ❌ {ContentGenerationError(f'Failed to generate code example: {e}')}")
 
     def _expand_content(self, lecture: Lecture, issue: Issue) -> None:
         """Strategic content expansion - analyzes all sections and expands intelligently."""
@@ -359,7 +360,7 @@ WRITE {target_gap:,}+ WORDS NOW (NOT {added_words}):
             return actual_increase
 
         except Exception as e:
-            logger.error(f"  ❌ Failed to expand section: {e}")
+            logger.error(f"  ❌ {ContentGenerationError(f'Failed to expand section: {e}')}")
             import traceback
 
             logger.debug(traceback.format_exc())

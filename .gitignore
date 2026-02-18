@@ -47,6 +47,7 @@ data/images/
 data/cache/
 outputs/
 *.html
+!src/lecture_forge/templates/*.html
 *.pdf
 *.log
 

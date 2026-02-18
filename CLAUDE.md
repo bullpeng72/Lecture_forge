@@ -118,9 +118,9 @@ lecture-forge/  (Git 저장소)
     ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
     ├── ✅ quality/                 ✅ 품질 평가 시스템
     ├── 📊 models/                  ✅ 데이터 모델
-    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager 포함)
+    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry 포함)
     ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
-    ├── 💻 cli.py                   ✅ CLI (3,565줄, home 커맨드 포함)
+    ├── 💻 cli/                     ✅ CLI 모듈 (7개 명령어, v0.3.0 모듈화)
     ├── ⚙️ config.py                ✅ 설정 관리 (자동 마이그레이션)
     └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (349줄)
 ```
@@ -519,9 +519,9 @@ xychart-beta
 ### 🔄 진행 중 (선택적 개선사항)
 
 - [ ] **테스트 확장** (80%+ 커버리지 목표)
-- [ ] **CLI 리팩토링** (모듈화, 계획 문서화 완료)
+- ✅ **CLI 리팩토링** (v0.3.0 완료: 모듈화, 7개 명령어)
 - [ ] **문서화** (API 레퍼런스, 튜토리얼)
-- ✅ **PyPI 배포** (v0.3.2 배포 완료: https://pypi.org/project/lecture-forge/)
+- ✅ **PyPI 배포** (v0.3.5 배포 완료: https://pypi.org/project/lecture-forge/)
 
 ---
 
@@ -596,7 +596,6 @@ xychart-beta
 - **이미지 품질**: thumbnail 버그 수정으로 원본 크기 보존 (v0.2.6)
 
 ### 계획 중인 기능
-- 다국어 지원 (Translation Chain)
 - 추가 출력 포맷 (PDF 생성, PPTX 직접 변환)
 - 웹 UI (Streamlit/Gradio)
 - 협업 기능 (지식창고 공유)
@@ -653,10 +652,8 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 프로젝트는 현재 Production Ready 상태입니다. 아래는 선택적 개선사항입니다:
 
 - 📊 **테스트 확장**: 현재 ~48% → 목표 80% 커버리지
-- 🌐 **다국어 지원**: Translation Chain 추가
 - 📱 **웹 UI**: Streamlit/Gradio 인터페이스
 - 🤝 **협업 기능**: 지식창고 공유, 템플릿 마켓플레이스
-- 📦 **PyPI 배포**: 공식 패키지 배포 (현재는 git install)
 
 ---
 
@@ -664,7 +661,7 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 
 - **프로젝트 구조**: `src/lecture_forge/` 참조
 - **에이전트 구현**: `src/lecture_forge/agents/` 참조
-- **CLI 코드**: `src/lecture_forge/cli.py` 참조
+- **CLI 코드**: `src/lecture_forge/cli/` 참조
 - **설정 예시**: `.env.example`, `config.example.yaml` 참조
 
 ### 외부 문서
@@ -676,7 +673,7 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 
 ## 📊 프로젝트 통계
 
-- 📊 **총 코드**: 47개 Python 파일 (agents 11개, tools 9개, tests 20개 외 기타)
+- 📊 **총 코드**: 81개+ Python 파일 (agents 11개, tools 9개, tests 81개 외 기타)
 - 🤖 **에이전트**: 10개 (모두 구현 및 테스트)
 - 🛠️ **Tools**: 9개 (PDF, 웹, 이미지, 검색, 이미지 편집 등)
 - 💻 **CLI**: 7개 명령어 (init, create, chat, edit-images, improve, cleanup, home)
@@ -710,7 +707,7 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: 🌟 **Production Ready+ (RAG Quality Boost)** 🌟
+**현재 상태**: 🌟 **Production Ready+ (Code Quality & Reliability)** 🌟
 
 ## 📝 변경 이력
 

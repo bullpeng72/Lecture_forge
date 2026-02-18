@@ -3,11 +3,10 @@ include README.md
 include LICENSE
 include CLAUDE.md
 include DEPLOYMENT_GUIDE.md
-include INPUT_LIMITS_ANALYSIS.md
+include docs/INPUT_LIMITS_ANALYSIS.md
 
 # Include requirements files
 include requirements.txt
-include requirements-dev.txt
 
 # Include environment template
 include .env.example

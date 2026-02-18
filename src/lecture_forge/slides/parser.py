@@ -135,8 +135,9 @@ class HTMLLectureParser:
                     content_blocks.append({"type": "subsubsection", "content": text})
             elif elem.name == "p":
                 text = elem.text.strip()
-                # Skip very short paragraphs and those inside code blocks
-                if not text or len(text) <= 20 or elem.find_parent("pre"):
+                # Skip very short paragraphs, those inside code blocks, and
+                # those inside list items (already captured by the list processor)
+                if not text or len(text) <= 20 or elem.find_parent(["pre", "li", "ul", "ol"]):
                     continue
                 # Short texts / already-bulleted: no LLM needed
                 if len(text) < 100 or text.startswith(("•", "-", "*")):
@@ -148,6 +149,9 @@ class HTMLLectureParser:
                     content_blocks.append(None)  # type: ignore[arg-type]
                     pending_paragraphs.append((placeholder_idx, text))
             elif elem.name in ["ul", "ol"]:
+                # Skip nested lists (already captured as text by the parent list processor)
+                if elem.find_parent(["li", "ul", "ol"]):
+                    continue
                 block = self._process_list(elem)
                 if block:
                     content_blocks.append(block)
@@ -212,11 +216,39 @@ class HTMLLectureParser:
         Returns:
             Content block dictionary or None
         """
-        items = [li.text.strip() for li in elem.find_all("li", recursive=False)]
+        items = [self._li_inner_html(li) for li in elem.find_all("li", recursive=False)]
+        items = [item for item in items if item]  # filter empty strings
         if not items:
             return None
 
         return {"type": "list", "items": items, "ordered": elem.name == "ol"}
+
+    def _li_inner_html(self, li) -> str:
+        """Extract inner HTML of a <li>, unwrapping a single <p> wrapper and
+        preserving inline formatting tags (strong, em, code, b, i).
+
+        Plain .text.strip() loses <strong>/<code> emphasis which is meaningful
+        in slide bullet points.
+        """
+        _INLINE_TAGS = {"strong", "b", "em", "i", "code", "mark"}
+
+        # Unwrap a single <p> child so <li><p>content</p></li> is treated
+        # the same as <li>content</li>
+        direct = [c for c in li.children if hasattr(c, "name") or str(c).strip()]
+        if len(direct) == 1 and hasattr(direct[0], "name") and direct[0].name == "p":
+            li = direct[0]
+
+        # Rebuild content: keep inline tags as-is, convert block tags to plain text
+        parts = []
+        for child in li.children:
+            if not hasattr(child, "name"):          # NavigableString
+                parts.append(str(child))
+            elif child.name in _INLINE_TAGS:
+                parts.append(str(child))
+            else:
+                parts.append(child.get_text())
+
+        return "".join(parts).strip()
 
     def _process_code_block(self, elem) -> Dict:
         """Process code block element.

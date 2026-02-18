@@ -457,31 +457,49 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.3.7: UI & Slides Enhancement
+
+#### 7. Lightbox (Click-to-Zoom)
+- **Images**: Click any `<figure img>` to open full-screen modal with zoom
+- **Mermaid diagrams**: `cloneNode(true)` removes Mermaid's inline `max-width`, SVG fills `min(92vw, 1400px)`
+- Async Mermaid render handled with polling retries (300ms / 800ms / 2000ms)
+- ESC and backdrop click to close
+
+#### 8. Substring Search (replaces Lunr.js)
+- Lunr.js `\W` trimmer silently dropped all Korean tokens (treated as non-word characters)
+- Replaced with `String.prototype.includes()` for Korean and English mixed search
+
+#### 9. Slides: Mermaid Full-Width Fix
+- `section { align-items: flex-start }` caused `.mermaid` div to shrink to content width (~300px)
+- Fix: `.reveal .mermaid { width: 100%; box-sizing: border-box; }` breaks the circular dependency
+- Result: diagrams render at full slide width (~1180px)
+
+#### 10. Slides: Mermaid 10 API Fix
+- `startOnLoad: true` + `mermaid.contentLoaded()` → `startOnLoad: false` + `mermaid.run()`
+- Added `useMaxWidth: true` per diagram type (flowchart, sequence, gantt, etc.)
+
+---
+
 ### v0.3.6: Code Quality & Reliability
 
-#### 7. Retry Utility Extraction
+#### 11. Retry Utility Extraction
 **New**: `utils/retry.py` — `make_api_retry(service_name)` factory
 
-**Before**: `@retry(stop=..., wait=..., before_sleep=...)` duplicated in 4 places
-**After**: `@make_api_retry("Search")` — single source of truth
+#### 12. BaseImageSearchTool Extraction
+Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via base class.
 
-#### 8. BaseImageSearchTool Extraction
-**Before**: Unsplash and Pexels had 80-90% duplicated download/save logic
-**After**: `BaseImageSearchTool` base class with shared `_download_and_save_image()` and `_error_response()`
-
-#### 9. Config Centralization
-- RAG parameters now env-configurable: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
+#### 13. Config Centralization
+- RAG parameters env-configurable: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
 - Config validation: `IMAGE_WEIGHT_*` and `CONTENT_*_RATIO` must sum to 1.0
 
-#### 10. Bug Fixes
+#### 14. Bug Fixes
 - `BaseAgent.temperature=0.0` falsy bug fixed (used `or` operator)
 - `QAAgent` hardcoded home directory replaced with `Config.USER_CONFIG_DIR`
 
-#### 11. Chat Logging
+#### 15. Chat Logging
 - `conversation_log.txt` now records both user questions and AI responses
-- Separate from `chat_history.txt` (prompt-toolkit autocomplete)
 
 ---
 
 **Last Updated**: 2026-02-18
-**Version**: 0.3.6
+**Version**: 0.3.7

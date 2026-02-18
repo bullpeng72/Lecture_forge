@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.3.7-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.6 Beta Release** | Code Quality & Reliability 🔧 (retry utility, base classes, config validation)
+> 🚀 **v0.3.7 Beta Release** | UI & Slides Enhancement 🖼️ (lightbox zoom, diagram full-width, search fix)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -65,6 +65,20 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ---
 
 ## 🚀 최근 개선사항
+
+### v0.3.7 (2026-02-18) - UI & 슬라이드 개선 🖼️
+
+**HTML 강의 개선**:
+- **Lightbox (클릭 확대)**: 이미지 및 Mermaid 다이어그램 클릭시 전체화면 모달로 확대 표시
+  - SVG 인라인 `max-width` 제약 자동 제거 → 최대 `min(92vw, 1400px)` 너비로 표시
+  - ESC / 배경 클릭으로 닫기, 비동기 Mermaid 렌더링 대응 (300ms/800ms/2000ms 폴링)
+- **검색 개선**: Lunr.js → 서브스트링 검색으로 교체
+  - 한국어 토큰이 `\\W` trimmer에 의해 누락되던 Lunr.js 버그 완전 해결
+  - `String.prototype.includes()` 기반 한국어·영어 혼합 검색 완벽 지원
+
+**슬라이드 개선**:
+- **Mermaid 다이어그램 전체 너비**: ~300px 축소 문제 수정 → 슬라이드 전체 너비(~1180px) 표시
+- **Mermaid 10 API 수정**: `contentLoaded()` → `mermaid.run()`, `startOnLoad: false`
 
 ### v0.3.6 (2026-02-18) - 코드 품질 & 안정성 🔧
 

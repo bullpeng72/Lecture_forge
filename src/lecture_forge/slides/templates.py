@@ -140,14 +140,14 @@ class RevealJsTemplate:
                 if not current_slide_content and current_title:
                     current_slide_content.append(f"<h3>{current_title}</h3>")
                     slide_item_count += 1
-                list_slides = self._process_list_block(block, current_slide_content, slide_item_count)
+                list_slides = self._process_list_block(block, current_slide_content, slide_item_count, current_title)
                 if list_slides:
                     slides.extend(list_slides)
                     current_slide_content = []
                     slide_item_count = 0
                 else:
-                    # List added to current slide
-                    slide_item_count += 1
+                    # List added to current slide; count actual items to detect overflow
+                    slide_item_count += len(block["items"])
 
             elif block_type == "code":
                 # Code blocks take a full slide
@@ -196,7 +196,13 @@ class RevealJsTemplate:
 
         return slides
 
-    def _process_list_block(self, block: Dict, current_slide_content: List[str], slide_item_count: int) -> List[str]:
+    def _process_list_block(
+        self,
+        block: Dict,
+        current_slide_content: List[str],
+        slide_item_count: int,
+        current_title: str = "",
+    ) -> List[str]:
         """Process list block, potentially splitting into multiple slides.
 
         Returns:
@@ -213,13 +219,18 @@ class RevealJsTemplate:
             if current_slide_content:
                 slides.append(self._create_content_slide(current_slide_content))
 
-            # Split list into chunks
+            # Split list into chunks; each chunk gets a heading for context
             for i in range(0, len(list_items), self.max_bullet_points):
                 chunk = list_items[i : i + self.max_bullet_points]
                 items_html = "".join(f"<li>{item}</li>" for item in chunk)
-                chunk_content = [f"<{list_tag}>{items_html}</{list_tag}>"]
 
-                # Add continuation indicator if needed
+                chunk_content = []
+                if current_title:
+                    heading = current_title if i == 0 else f"{current_title} (계속...)"
+                    chunk_content.append(f"<h3>{heading}</h3>")
+                chunk_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
+
+                # Add continuation indicator for non-final chunks
                 if i + self.max_bullet_points < len(list_items):
                     chunk_content.append("<p><em>(계속...)</em></p>")
 
@@ -373,6 +384,8 @@ class RevealJsTemplate:
             font-size: 0.5em;
             margin: 1.5em 0;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 550px;
+            overflow-y: auto;
         }
         .reveal code {
             max-height: 520px;
@@ -428,14 +441,13 @@ class RevealJsTemplate:
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            max-height: 600px;
             overflow: auto;
+            /* align-items: flex-start 때문에 수축하는 것을 막고 슬라이드 전체 폭 사용 */
+            width: 100%;
+            box-sizing: border-box;
+            /* 높이는 viewBox 비율로 자동 결정되도록 max-height 제거 */
         }
-        /* 코드 블록 스크롤 */
-        .reveal pre {
-            max-height: 550px;
-            overflow-y: auto;
-        }
+        /* 코드 블록 스크롤바 */
         .reveal pre::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -471,18 +483,19 @@ class RevealJsTemplate:
             display: 'block',
             scrollActivationWidth: null,
         }).then(() => {
-            // Mermaid 초기화
+            // Mermaid 초기화 (Mermaid 10 API)
             mermaid.initialize({
-                startOnLoad: true,
+                startOnLoad: false,  // Reveal.js와 충돌 방지; mermaid.run()으로 수동 실행
                 theme: 'default',
                 securityLevel: 'loose',
-                flowchart: {
-                    useMaxWidth: true,
-                    htmlLabels: true,
-                    curve: 'basis'
-                }
+                // useMaxWidth: true → SVG가 컨테이너 폭을 꽉 채우도록 허용
+                flowchart:    { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+                sequence:     { useMaxWidth: true },
+                gantt:        { useMaxWidth: true },
+                classDiagram: { useMaxWidth: true },
+                stateDiagram: { useMaxWidth: true },
             });
-            mermaid.contentLoaded();
+            mermaid.run();  // contentLoaded()는 Mermaid 10에서 제거됨
 
             // 스크롤 인디케이터 관리
             const updateScrollIndicator = (section) => {

@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.6 🔄 **배포 준비 중**
+> **최신 버전**: 0.3.7 🔄 **배포 준비 중**
 > **최종 수정**: 2026-02-18
 > **대상**: PyPI (Python Package Index)
-> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.5/
+> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
 ---
 
@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 버전 확인
-grep -r "0.3.6" pyproject.toml setup.py src/lecture_forge/__version__.py
+grep -r "0.3.7" pyproject.toml setup.py src/lecture_forge/__version__.py
 
 # 2. 테스트 실행
 pytest tests/ -v
@@ -222,18 +222,18 @@ python -m build
 
 # 빌드 결과 확인
 ls -lh dist/
-# lecture-forge-0.3.6.tar.gz
-# lecture_forge-0.3.6-py3-none-any.whl
+# lecture-forge-0.3.7.tar.gz
+# lecture_forge-0.3.7-py3-none-any.whl
 ```
 
 ### D. 빌드 파일 검증
 
 ```bash
 # wheel 파일 내용 확인
-unzip -l dist/lecture_forge-0.3.6-py3-none-any.whl
+unzip -l dist/lecture_forge-0.3.7-py3-none-any.whl
 
 # 패키지 메타데이터 확인
-tar -tzf dist/lecture-forge-0.3.6.tar.gz | grep -E "PKG-INFO|setup.py"
+tar -tzf dist/lecture-forge-0.3.7.tar.gz | grep -E "PKG-INFO|setup.py"
 
 # Twine으로 검증
 twine check dist/*
@@ -241,8 +241,8 @@ twine check dist/*
 
 **예상 출력:**
 ```
-Checking dist/lecture-forge-0.3.6.tar.gz: PASSED
-Checking dist/lecture_forge-0.3.6-py3-none-any.whl: PASSED
+Checking dist/lecture-forge-0.3.7.tar.gz: PASSED
+Checking dist/lecture_forge-0.3.7-py3-none-any.whl: PASSED
 ```
 
 ---
@@ -264,10 +264,10 @@ twine upload --repository testpypi dist/* \
 **예상 출력:**
 ```
 Uploading distributions to https://test.pypi.org/legacy/
-Uploading lecture-forge-0.3.6.tar.gz
-Uploading lecture_forge-0.3.6-py3-none-any.whl
+Uploading lecture-forge-0.3.7.tar.gz
+Uploading lecture_forge-0.3.7-py3-none-any.whl
 View at:
-https://test.pypi.org/project/lecture-forge/0.3.6/
+https://test.pypi.org/project/lecture-forge/0.3.7/
 ```
 
 ### B. TestPyPI 페이지 확인
@@ -326,10 +326,10 @@ echo "  [ ] entry_point 수정 완료"
 **방법 1: ~/.pypirc 사용 (권장 - 가장 간단)**
 ```bash
 # ~/.pypirc에 토큰이 저장되어 있으면
-twine upload dist/lecture_forge-0.3.6*
+twine upload dist/lecture_forge-0.3.7*
 
 # 또는 (zsh에서 glob 패턴 문제 시)
-twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
+twine upload dist/lecture_forge-0.3.7-py3-none-any.whl dist/lecture_forge-0.3.7.tar.gz
 ```
 
 **방법 2: 환경 변수 사용**
@@ -337,7 +337,7 @@ twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.
 export TWINE_USERNAME=__token__
 export TWINE_PASSWORD=pypi-실제토큰
 
-twine upload dist/lecture_forge-0.3.6*
+twine upload dist/lecture_forge-0.3.7*
 ```
 
 **방법 3: 명령줄 옵션 (매번 입력)**
@@ -345,8 +345,8 @@ twine upload dist/lecture_forge-0.3.6*
 twine upload \
   -u __token__ \
   -p pypi-실제토큰 \
-  dist/lecture_forge-0.3.6-py3-none-any.whl \
-  dist/lecture_forge-0.3.6.tar.gz
+  dist/lecture_forge-0.3.7-py3-none-any.whl \
+  dist/lecture_forge-0.3.7.tar.gz
 ```
 
 **⚠️ macOS/zsh 사용자 주의:**
@@ -356,7 +356,7 @@ twine upload dist/*
 # zsh: no matches found: dist/*
 
 # ✅ 해결 방법 1: 파일명 명시
-twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
+twine upload dist/lecture_forge-0.3.7-py3-none-any.whl dist/lecture_forge-0.3.7.tar.gz
 
 # ✅ 해결 방법 2: noglob 사용
 noglob twine upload dist/*
@@ -368,13 +368,13 @@ bash -c 'twine upload dist/*'
 **실제 성공 출력 예시:**
 ```
 Uploading distributions to https://upload.pypi.org/legacy/
-Uploading lecture_forge-0.3.6-py3-none-any.whl
+Uploading lecture_forge-0.3.7-py3-none-any.whl
 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 195.0/195.0 kB • 00:01 • 306.3 kB/s
-Uploading lecture_forge-0.3.6.tar.gz
+Uploading lecture_forge-0.3.7.tar.gz
 100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 205.0/205.0 kB • 00:00 • 174.9 MB/s
 
 View at:
-https://pypi.org/project/lecture-forge/0.3.6/
+https://pypi.org/project/lecture-forge/0.3.7/
 ```
 
 ### C. PyPI 페이지 확인
@@ -418,7 +418,7 @@ pip install lecture-forge
 
 # 버전 확인
 lecture-forge --version
-# 출력: python -m lecture_forge.cli, version 0.3.6
+# 출력: python -m lecture_forge.cli, version 0.3.7
 
 # 기능 테스트
 lecture-forge --help
@@ -568,7 +568,7 @@ zsh: no matches found: dist/*
 **해결 방법:**
 ```bash
 # 방법 1: 파일명 명시 (권장)
-twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
+twine upload dist/lecture_forge-0.3.7-py3-none-any.whl dist/lecture_forge-0.3.7.tar.gz
 
 # 방법 2: noglob 사용
 noglob twine upload dist/*
@@ -610,7 +610,7 @@ twine upload dist/*
 **증상:**
 ```
 ERROR    InvalidDistribution: Cannot find file (or expand pattern):
-         'dist/lecture_forge-0.3.6-py3-none-any.whl'
+         'dist/lecture_forge-0.3.7-py3-none-any.whl'
 ```
 
 **원인:**
@@ -681,8 +681,8 @@ rm -rf dist/ build/ *.egg-info
 python -m build
 
 # 패키지 내용 확인
-tar -tzf dist/lecture-forge-0.3.6.tar.gz
-unzip -l dist/lecture_forge-0.3.6-py3-none-any.whl
+tar -tzf dist/lecture-forge-0.3.7.tar.gz
+unzip -l dist/lecture_forge-0.3.7-py3-none-any.whl
 ```
 
 #### 7. "README rendering error"
@@ -708,11 +708,11 @@ twine check dist/*
 
 ```bash
 # 빌드 파일 상세 확인
-tar -xzf dist/lecture-forge-0.3.6.tar.gz
-ls -la lecture-forge-0.3.6/
+tar -xzf dist/lecture-forge-0.3.7.tar.gz
+ls -la lecture-forge-0.3.7/
 
 # wheel 파일 확인
-unzip dist/lecture_forge-0.3.6-py3-none-any.whl -d wheel_contents
+unzip dist/lecture_forge-0.3.7-py3-none-any.whl -d wheel_contents
 tree wheel_contents
 
 # 설치된 패키지 확인
@@ -845,25 +845,23 @@ jobs:
 
 ```bash
 # Git 태그 생성
-git tag -a v0.3.6 -m "Release v0.3.6 - Code quality & reliability"
-git push origin v0.3.6
+git tag -a v0.3.7 -m "Release v0.3.7 - UI & Slides Enhancement"
+git push origin v0.3.7
 
 # GitHub Release 생성
-gh release create v0.3.6 \
-  --title "v0.3.6 - Code Quality & Reliability" \
+gh release create v0.3.7 \
+  --title "v0.3.7 - UI & Slides Enhancement" \
   --notes "## 주요 변경사항
 
-- 코드 품질 & 안정성 개선 (기술부채 해소)
-- make_api_retry() factory 추출 → utils/retry.py
-- BaseImageSearchTool 추출 (Pexels/Unsplash 공통 로직)
-- RAG 파라미터 환경변수화
-- BaseAgent temperature 버그 수정
-- QAAgent 하드코딩 경로 수정
-- 비동기 도구 테스트 23개 추가
+- HTML 강의: 이미지·다이어그램 클릭 확대 (Lightbox) 추가
+- HTML 강의: 검색 개선 (Lunr.js → 서브스트링 검색, 한국어 지원)
+- 슬라이드: Mermaid 다이어그램 전체 너비 표시 (~300px → ~1180px)
+- 슬라이드: Mermaid 10 API 수정 (contentLoaded → mermaid.run)
+- 슬라이드: 파서 6가지 버그 수정
 
 ## 설치
 \`\`\`bash
-pip install lecture-forge==0.3.6
+pip install lecture-forge==0.3.7
 \`\`\`
 
 See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for details."
@@ -918,10 +916,23 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.6 (2026-02-18) 🔄 **최신 (배포 준비 중)**
+### v0.3.7 (2026-02-18) 🔄 **최신 (배포 준비 중)**
 
 - **상태**: 개발 완료, 배포 대기
 - **PyPI**: 아직 배포 안 됨
+- **주요 변경사항**:
+  - ✅ **HTML 강의 UI 개선**:
+    - Lightbox 클릭 확대: 이미지·Mermaid 다이어그램 클릭시 전체화면 모달 표시
+    - 검색 개선: Lunr.js → 서브스트링 검색 (한국어·영어 혼합 완벽 지원)
+  - ✅ **슬라이드 개선**:
+    - Mermaid 다이어그램 전체 너비: ~300px → ~1180px (`width: 100%` 추가)
+    - Mermaid 10 API 수정: `contentLoaded()` → `mermaid.run()`, `useMaxWidth: true`
+    - 슬라이드 파서 6가지 버그 수정
+
+### v0.3.6 (2026-02-18) ✅
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.6/
 - **테스트**: 827개+ 테스트, 81개 테스트 파일, ~48% 커버리지
 - **주요 변경사항**:
   - ✅ **코드 품질 & 안정성 개선** (기술부채 해소)
@@ -932,13 +943,8 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
   - ✅ **버그 수정**:
     - `BaseAgent.temperature=0.0` falsy 비교 버그 수정 (`or` → `is not None`)
     - `QAAgent` 하드코딩 홈 디렉토리 → `Config.USER_CONFIG_DIR`
-    - `invoke_llm` 반환 타입 수정 (`str` → `AIMessage`)
-    - `slides/utils.py` LLM 싱글톤 테스트 격리 문제 수정
-  - ✅ **기능 추가**:
-    - Chat 응답 로깅: `conversation_log.txt`에 질문 + AI 답변 모두 기록
+  - ✅ **기능 추가**: Chat 응답 로깅 (`conversation_log.txt`)
   - ✅ **테스트 확장**: 비동기 도구 테스트 23개 추가
-    - `test_async_search_tool.py` (10개 테스트)
-    - `test_async_web_scraper.py` (13개 테스트)
 
 ### v0.3.5 (2026-02-18) ✅
 
@@ -1035,7 +1041,7 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.3.6: 코드 품질 & 안정성 (배포 준비 중)
+- v0.3.7: UI & 슬라이드 개선 (배포 준비 중)
 - v0.4.0: 새로운 기능 추가 (웹 UI, 다국어 확장 등)
 - v1.0.0: 안정 버전 릴리스
 
@@ -1117,7 +1123,7 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-18 (v0.3.6 개발 완료, 배포 준비 중)
-**버전**: 2.4.0
+**최종 업데이트**: 2026-02-18 (v0.3.7 개발 완료, 배포 준비 중)
+**버전**: 2.5.0
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: 🔄 v0.3.6 배포 대기 (코드 품질 & 안정성 개선)
+**상태**: 🔄 v0.3.7 배포 대기 (UI & 슬라이드 개선)

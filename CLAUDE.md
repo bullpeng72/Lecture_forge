@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (Code Quality & Reliability) (2026-02-18)
-> **버전**: 0.3.6 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡ | 코드 품질 강화 🔧
+> **프로젝트 상태**: 🌟 **Production Ready+** (UI & Slides Enhancement) (2026-02-18)
+> **버전**: 0.3.7 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡ | UI 개선 🖼️
 
 ## 📚 프로젝트 개요
 
@@ -19,7 +19,7 @@
 7. **Location-based 이미지 매칭**: RAG 컨텍스트 페이지 기반 이미지 자동 배치 (PDF 이미지 사용률 +750%)
 8. **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 9. **자동 품질 보증**: 반복적 평가 및 개선을 통한 고품질 출력 보장
-10. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스
+10. **구조화된 HTML 출력**: 통일된 스타일, Mermaid 다이어그램, 검색 가능한 인덱스, 이미지/다이어그램 클릭 확대 (v0.3.7)
 11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (v0.3.0 대폭 개선)
 12. **사용자 친화적 디렉토리**: 접근 가능한 폴더로 데이터 관리 (v0.3.1)
 13. **빠른 폴더 접근**: home 커맨드로 Finder/탐색기에서 바로 열기 (v0.3.1)
@@ -560,6 +560,12 @@ xychart-beta
 
 ### ✅ 최근 추가된 기능
 
+#### v0.3.7 (2026-02-18) - UI & 슬라이드 개선
+- **🖼️ Lightbox (클릭 확대)**: 강의 HTML에서 이미지·Mermaid 다이어그램 클릭시 전체화면 모달로 확대
+- **🔍 검색 개선**: Lunr.js → 서브스트링 검색 (한국어·영어 혼합 완벽 지원)
+- **📊 슬라이드 다이어그램 전체 너비**: Mermaid SVG가 슬라이드 전체 너비(~1180px)로 표시 (기존 ~300px)
+- **🐛 Mermaid 10 API**: `contentLoaded()` → `mermaid.run()`, `startOnLoad: false`로 수정
+
 #### v0.3.0 (2026-02-12) - 프레젠테이션 최적화
 - **🎯 슬라이드 생성 대폭 개선**: 프레젠테이션에 최적화된 구조
   - 슬라이드당 항목 수 감소: 4개 → 3개 (가독성 향상)
@@ -707,9 +713,39 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: 🌟 **Production Ready+ (Code Quality & Reliability)** 🌟
+**현재 상태**: 🌟 **Production Ready+ (UI & Slides Enhancement)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.7 (2026-02-18) - 🖼️ UI Enhancement & Slides Fixes
+
+**HTML 강의 출력 개선**:
+- 🖼️ **이미지/다이어그램 클릭 확대 (Lightbox)**: 강의 HTML에서 이미지와 Mermaid 다이어그램을 클릭하면 전체화면 모달로 확대 표시
+  - 이미지: 클릭시 `zoom-in` 커서, 확대 보기 후 ESC 또는 배경 클릭으로 닫기
+  - Mermaid 다이어그램: SVG `cloneNode(true)`로 복제 후 Mermaid 인라인 `max-width` 제약 제거 → 전체 너비(`min(92vw, 1400px)`)로 표시
+  - 비동기 렌더링 대응: 300ms/800ms/2000ms 폴링 재시도로 Mermaid 렌더링 후 클릭 핸들러 부착
+- 🔍 **검색 개선**: Lunr.js 전문 색인 → 서브스트링 검색으로 교체
+  - Lunr.js의 `\\W` trimmer가 한국어 토큰을 빈 문자열로 축소하는 문제 해결
+  - `String.prototype.includes()`로 한국어·영어 모두 정확하게 검색
+
+**슬라이드 출력 개선**:
+- 📊 **Mermaid 다이어그램 전체 너비 표시**: Reveal.js에서 다이어그램이 ~300px로 축소되던 문제 수정
+  - 원인: `section { align-items: flex-start }` → `.mermaid` div가 콘텐츠 너비로 축소
+  - 수정: `.reveal .mermaid { width: 100%; box-sizing: border-box; }` 추가
+  - 효과: 다이어그램이 슬라이드 전체 너비(~1180px)로 표시
+- 🐛 **Mermaid 10 API 수정**: 슬라이드에서 deprecated API 사용 수정
+  - `startOnLoad: true` + `mermaid.contentLoaded()` → `startOnLoad: false` + `mermaid.run()`
+  - `flowchart`, `sequence`, `gantt`, `classDiagram`, `stateDiagram`에 `useMaxWidth: true` 추가
+- 🐛 **슬라이드 파서 6가지 수정** (이전 세션):
+  - 컨텐츠 중복 문제 수정
+  - 리스트 분할 시 헤딩 처리 개선
+  - 슬라이드당 항목 수 일관성 수정
+  - 중복 CSS 제거
+  - 인라인 포맷팅 개선
+
+**결과**: 기존 생성된 HTML 강의 파일 3개 및 슬라이드 파일 2개에도 소급 적용
+
+---
 
 ### v0.3.6 (2026-02-18) - 🔧 Code Quality & Reliability
 

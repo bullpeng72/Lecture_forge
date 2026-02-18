@@ -254,5 +254,92 @@
         const LECTURE_DATA = {{ search_data_json }};
     </script>
     <script src="search.js"></script>
+
+    <!-- Lightbox modal -->
+    <div id="lightbox" role="dialog" aria-modal="true" aria-label="이미지 확대 보기">
+        <button id="lightbox-close" onclick="closeLightbox()" aria-label="닫기">✕</button>
+        <div id="lightbox-inner"></div>
+        <p id="lightbox-caption"></p>
+    </div>
+
+    <!-- Lightbox logic -->
+    <script>
+        function openLightbox(innerHtml, caption) {
+            document.getElementById('lightbox-inner').innerHTML = innerHtml;
+            document.getElementById('lightbox-caption').textContent = caption || '';
+            document.getElementById('lightbox').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('open');
+            document.getElementById('lightbox-inner').innerHTML = '';
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // ── Images ──────────────────────────────────────────
+            document.querySelectorAll('figure img').forEach(function (img) {
+                img.addEventListener('click', function () {
+                    var caption = '';
+                    var figcaption = img.closest('figure').querySelector('figcaption');
+                    if (figcaption) caption = figcaption.innerText;
+                    openLightbox(
+                        '<img src="' + img.src + '" alt="' + (img.alt || '') + '">',
+                        caption
+                    );
+                });
+            });
+
+            // ── Mermaid diagrams ─────────────────────────────────
+            // Mermaid renders async; poll until SVG appears then attach click.
+            function attachDiagramClicks() {
+                document.querySelectorAll('.mermaid').forEach(function (div) {
+                    if (div.querySelector('svg') && !div.dataset.lightboxReady) {
+                        div.dataset.lightboxReady = '1';
+                        div.classList.add('zoomable');
+                        div.addEventListener('click', function () {
+                            var svgEl = div.querySelector('svg');
+                            if (!svgEl) return;
+                            // SVG를 DOM 복제: Mermaid의 인라인 max-width 제약 제거
+                            var clonedSvg = svgEl.cloneNode(true);
+                            clonedSvg.style.maxWidth = '';   // 인라인 max-width 제거
+                            clonedSvg.setAttribute('width', '100%');  // CSS로 제어
+                            clonedSvg.removeAttribute('height');       // viewBox 비율로 자동
+                            // 라이트박스에 삽입
+                            var wrapper = document.createElement('div');
+                            wrapper.className = 'lightbox-svg';
+                            wrapper.appendChild(clonedSvg);
+                            var inner = document.getElementById('lightbox-inner');
+                            inner.innerHTML = '';
+                            inner.appendChild(wrapper);
+                            // 제목 (앞 h4)
+                            var titleEl = div.previousElementSibling;
+                            document.getElementById('lightbox-caption').textContent =
+                                titleEl ? titleEl.innerText : '';
+                            document.getElementById('lightbox').classList.add('open');
+                            document.body.style.overflow = 'hidden';
+                        });
+                    }
+                });
+            }
+
+            // Try immediately, then retry while Mermaid renders
+            attachDiagramClicks();
+            [300, 800, 2000].forEach(function (ms) {
+                setTimeout(attachDiagramClicks, ms);
+            });
+
+            // Close on backdrop click
+            document.getElementById('lightbox').addEventListener('click', function (e) {
+                if (e.target === this) closeLightbox();
+            });
+
+            // Close on ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLightbox();
+            });
+        });
+    </script>
 </body>
 </html>

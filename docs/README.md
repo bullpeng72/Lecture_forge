@@ -58,17 +58,17 @@ Looking for something specific?
 
 ## 📊 Project Status
 
-**Version**: 0.3.5 (Beta Release)
-**Status**: Production Ready+ (RAG Quality Boost)
-**Test Coverage**: 50%+ with 89 test functions
+**Version**: 0.3.7 (Beta Release)
+**Status**: Production Ready+ (UI & Slides Enhancement)
+**Test Coverage**: ~48% with 827+ test functions
 
 **Recent Updates:**
+- ✅ **UI & Slides Enhancement (v0.3.7)** - Lightbox zoom, substring search, diagram full-width, Mermaid 10 API fix
+- ✅ **Code Quality & Reliability (v0.3.6)** - retry utility, base classes, config validation, async tests
 - ✅ **RAG quality boost (v0.3.5)** - 400-word answers, 15+15 retrieval, confidence fix, Markdown rendering
 - ✅ **Async I/O support (v0.3.4)** - 70% faster content collection
 - ✅ Enhanced input system with prompt-toolkit (v0.3.3)
 - ✅ Python 3.12 full support (v0.3.3)
-- ✅ CLI refactored into modular structure
-- ✅ ContentWriter refactored (1,611 → 519 lines)
 - ✅ Multilingual support (v0.3.2)
 - ✅ RAG quality enhancements (v0.3.2)
 
@@ -88,5 +88,5 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 ---
 
-**Last Updated**: 2026-02-18 (v0.3.5)
+**Last Updated**: 2026-02-18 (v0.3.7)
 **Maintained by**: Sungwoo Kim

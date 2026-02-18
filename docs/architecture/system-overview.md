@@ -245,7 +245,7 @@ RevisionAgent (if score < threshold)
 Final HTML Lecture + Knowledge Base
 ```
 
-### 2. Q&A Flow (v0.3.2 Enhanced)
+### 2. Q&A Flow (v0.3.5 Enhanced)
 
 ```
 User Question
@@ -253,28 +253,32 @@ User Question
 Language Detection (ko/en/ja/zh)
     ↓
 Dual Query Generation
-    ├─ Original query
-    └─ Translated query (if cross-lingual)
+    ├─ Original query (15 chunks)
+    └─ Translated query (15 chunks, if cross-lingual)
     ↓
-RAG Retrieval (8 chunks, hybrid search)
+RAG Retrieval (top-12 after reranking)
     ↓
 Diversity Reranking
-    ├─ Max 2 chunks per source-page
+    ├─ Max 3 chunks per source-page
     └─ Same-language bonus (+10%)
     ↓
-Chain of Thought Generation
+Chain of Thought Generation (temperature=0.3)
+    ├─ Structured answer: 5 Markdown sections
+    └─ Min 400 words enforced
     ↓
 Answer Post-processing
-    ├─ Expand if too short (<50 chars)
+    ├─ Expand if too short (<200 chars)
     └─ Extract partial info if incomplete
     ↓
-Confidence Calculation
+Confidence Calculation (ChromaDB L2 distance corrected)
     ├─ Search quality (30%)
     ├─ Result count (25%)
     ├─ Answer length (25%)
     └─ Uncertainty detection (20%)
     ↓
-Formatted Answer + Sources + Confidence
+Rich Panel Rendering + Sources + Confidence
+    ↓
+Logged to conversation_log.txt (v0.3.6+)
 ```
 
 ---
@@ -453,5 +457,31 @@ Formatted Answer + Sources + Confidence
 
 ---
 
+### v0.3.6: Code Quality & Reliability
+
+#### 7. Retry Utility Extraction
+**New**: `utils/retry.py` — `make_api_retry(service_name)` factory
+
+**Before**: `@retry(stop=..., wait=..., before_sleep=...)` duplicated in 4 places
+**After**: `@make_api_retry("Search")` — single source of truth
+
+#### 8. BaseImageSearchTool Extraction
+**Before**: Unsplash and Pexels had 80-90% duplicated download/save logic
+**After**: `BaseImageSearchTool` base class with shared `_download_and_save_image()` and `_error_response()`
+
+#### 9. Config Centralization
+- RAG parameters now env-configurable: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
+- Config validation: `IMAGE_WEIGHT_*` and `CONTENT_*_RATIO` must sum to 1.0
+
+#### 10. Bug Fixes
+- `BaseAgent.temperature=0.0` falsy bug fixed (used `or` operator)
+- `QAAgent` hardcoded home directory replaced with `Config.USER_CONFIG_DIR`
+
+#### 11. Chat Logging
+- `conversation_log.txt` now records both user questions and AI responses
+- Separate from `chat_history.txt` (prompt-toolkit autocomplete)
+
+---
+
 **Last Updated**: 2026-02-18
-**Version**: 0.3.5
+**Version**: 0.3.6

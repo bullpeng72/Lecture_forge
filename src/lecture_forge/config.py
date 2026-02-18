@@ -317,6 +317,12 @@ class Config:
     RAG_DEFAULT_RESULTS: int = int(os.getenv("RAG_DEFAULT_RESULTS", "10"))
     # Top-k results for context building
     RAG_TOP_K_RESULTS: int = int(os.getenv("RAG_TOP_K_RESULTS", "5"))
+    # Q&A mode: dual-query retrieval count (original + translated each)
+    RAG_QA_N_RESULTS: int = int(os.getenv("RAG_QA_N_RESULTS", "15"))
+    # Q&A mode: top-k after merge and re-ranking
+    RAG_QA_TOP_K: int = int(os.getenv("RAG_QA_TOP_K", "12"))
+    # Content generation: RAG retrieval count per section query
+    RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "10"))
 
     # ===== Quality Assurance =====
     QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
@@ -464,6 +470,29 @@ class Config:
                     "❌ SERPER_API_KEY appears invalid (too short)\n"
                     "   Please verify your API key from serper.dev"
                 )
+
+        # Validate weight constants sum to 1.0
+        image_weight_sum = (
+            cls.IMAGE_WEIGHT_QUALITY
+            + cls.IMAGE_WEIGHT_IMPORTANCE
+            + cls.IMAGE_WEIGHT_POSITION
+        )
+        if abs(image_weight_sum - 1.0) > 0.01:
+            errors.append(
+                f"❌ IMAGE_WEIGHT_* values must sum to 1.0, got {image_weight_sum:.3f}\n"
+                "   Check IMAGE_WEIGHT_QUALITY, IMAGE_WEIGHT_IMPORTANCE, IMAGE_WEIGHT_POSITION in .env"
+            )
+
+        content_ratio_sum = (
+            cls.CONTENT_INTRO_RATIO
+            + cls.CONTENT_MAIN_RATIO
+            + cls.CONTENT_SUMMARY_RATIO
+        )
+        if abs(content_ratio_sum - 1.0) > 0.01:
+            errors.append(
+                f"❌ CONTENT_*_RATIO values must sum to 1.0, got {content_ratio_sum:.3f}\n"
+                "   Check CONTENT_INTRO_RATIO, CONTENT_MAIN_RATIO, CONTENT_SUMMARY_RATIO in .env"
+            )
 
         if errors:
             # Import here to avoid circular dependency

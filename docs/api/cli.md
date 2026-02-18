@@ -605,4 +605,4 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 ---
 
 **Last Updated**: 2026-02-18
-**Version**: 0.3.5
+**Version**: 0.3.6

@@ -191,7 +191,7 @@ class ContentWriterAgent(BaseAgent):
 
         try:
             # Increase from 5 to 10 for more comprehensive context
-            results = self.vector_store.query(query, n_results=10)
+            results = self.vector_store.query(query, n_results=Config.RAG_CONTENT_N_RESULTS)
 
             if results and results["documents"]:
                 documents = results["documents"][0]

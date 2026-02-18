@@ -2,8 +2,9 @@
 Q&A Agent - Answers questions using knowledge base.
 """
 
+import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -16,6 +17,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.utils import detect_language, get_language_name, logger, translate_to_english, translate_to_korean
 
@@ -36,8 +38,10 @@ class QAAgent(BaseAgent):
 
         # Setup prompt session with history and auto-suggest
         # History file is stored in user-friendly location (v0.3.1+)
-        history_path = Path.home() / "Documents" / "LectureForge" / "chat_history.txt"
-        history_path.parent.mkdir(parents=True, exist_ok=True)
+        lf_dir = Config.USER_CONFIG_DIR
+        lf_dir.mkdir(parents=True, exist_ok=True)
+        history_path = lf_dir / "chat_history.txt"
+        self.conversation_log_path = lf_dir / "conversation_log.txt"
 
         self.prompt_session = PromptSession(
             history=FileHistory(str(history_path)),
@@ -74,7 +78,7 @@ class QAAgent(BaseAgent):
         # 2. Dual Query: Original + Translated
         try:
             # Query 1: Original language
-            results_original = self.vector_store.query(question, n_results=15)
+            results_original = self.vector_store.query(question, n_results=Config.RAG_QA_N_RESULTS)
 
             # Query 2: Translated (if enabled and language is known)
             results_translated = None
@@ -90,7 +94,7 @@ class QAAgent(BaseAgent):
                     logger.info(f"[Translation] Korean query: {translated_query}")
 
                 if translated_query and translated_query != question:
-                    results_translated = self.vector_store.query(translated_query, n_results=15)
+                    results_translated = self.vector_store.query(translated_query, n_results=Config.RAG_QA_N_RESULTS)
 
             # 3. Merge and re-rank results
             merged_results = self._merge_and_rerank(
@@ -98,7 +102,7 @@ class QAAgent(BaseAgent):
                 query_language=query_language,
                 results_original=results_original,
                 results_translated=results_translated,
-                top_k=12,  # Increased to 12 for richer answer context
+                top_k=Config.RAG_QA_TOP_K,
             )
 
             if not merged_results:
@@ -538,6 +542,54 @@ However, the context does not directly address: [missing aspects]
             else:
                 return "I'm sorry, but I cannot find relevant information in the provided context."
 
+    def _log_session_start(self) -> None:
+        """Write session start header to conversation log."""
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(self.conversation_log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n{'='*60}\n")
+                f.write(f"Session Start: {timestamp}\n")
+                f.write(f"Knowledge Base: {self.knowledge_base_path.name}\n")
+                f.write(f"{'='*60}\n")
+        except Exception as e:
+            logger.warning(f"Failed to write session start to conversation log: {e}")
+
+    def _log_session_end(self, question_count: int) -> None:
+        """Write session end marker to conversation log."""
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(self.conversation_log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n--- Session End: {timestamp} | Questions: {question_count} ---\n")
+        except Exception as e:
+            logger.warning(f"Failed to write session end to conversation log: {e}")
+
+    def _log_exchange(self, question: str, result: Dict) -> None:
+        """Append a Q&A exchange to the conversation log."""
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            confidence = result.get("confidence", 0.0)
+            confidence_pct = confidence * 100
+            if confidence >= 0.8:
+                confidence_label = "High"
+            elif confidence >= 0.5:
+                confidence_label = "Medium"
+            else:
+                confidence_label = "Low"
+
+            with open(self.conversation_log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n[{timestamp}] You:\n{question}\n\n")
+                f.write(f"[{timestamp}] Assistant ({confidence_label} {confidence_pct:.0f}%):\n")
+                f.write(result["answer"])
+                f.write("\n")
+                sources = result.get("sources", [])
+                if sources:
+                    f.write("\nSources:\n")
+                    for source in sources:
+                        f.write(f"  - {source}\n")
+                f.write("\n" + "-" * 40 + "\n")
+        except Exception as e:
+            logger.warning(f"Failed to write exchange to conversation log: {e}")
+
     def start_chat(self):
         """Start interactive chat mode."""
         logger.info("Starting Q&A chat mode")
@@ -564,6 +616,7 @@ However, the context does not directly address: [missing aspects]
         console.print(welcome)
 
         question_count = 0
+        self._log_session_start()
 
         while True:
             try:
@@ -577,6 +630,7 @@ However, the context does not directly address: [missing aspects]
 
                 # Check for commands
                 if question.lower() in ["/exit", "/quit"]:
+                    self._log_session_end(question_count)
                     self._show_goodbye(console, question_count)
                     break
 
@@ -641,8 +695,12 @@ However, the context does not directly address: [missing aspects]
                         console.print(f"\n[dim]📊 Retrieved {num_results} relevant chunks[/dim]")
                     console.print()
 
+                # Persist Q&A exchange to conversation log
+                self._log_exchange(question, result)
+
             except KeyboardInterrupt:
                 console.print("\n")
+                self._log_session_end(question_count)
                 self._show_goodbye(console, question_count)
                 break
             except Exception as e:

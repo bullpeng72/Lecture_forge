@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (RAG Quality Boost) (2026-02-18)
-> **버전**: 0.3.5 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡
+> **프로젝트 상태**: 🌟 **Production Ready+** (Code Quality & Reliability) (2026-02-18)
+> **버전**: 0.3.6 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡ | 코드 품질 강화 🔧
 
 ## 📚 프로젝트 개요
 
@@ -509,7 +509,7 @@ xychart-beta
 - ✅ **이미지 편집** (대화형 UI, Vector DB 기반 대안 검색)
 - ✅ **품질 보증** (6차원 평가, 자동 개선)
 - ✅ **Templates** (HTML, CSS, JS + 프롬프트 템플릿)
-- ✅ **자동화 테스트** (89개 테스트, 20개 테스트 파일, 50%+ 커버리지)
+- ✅ **자동화 테스트** (827개 테스트, 81개 테스트 파일, ~48% 커버리지)
 - ✅ **Type Safety** (71% type hints, mypy 설정)
 - ✅ **성능 최적화** (RAG 캐싱, API 재시도, Async I/O)
 - ✅ **예외 처리 시스템** (구조화된 예외 계층, 9개 카테고리)
@@ -622,7 +622,7 @@ A: 네, PDF/URL 이미지만으로도 작동합니다. Pexels/Unsplash는 선택
 A: `/exit` 또는 `/quit`를 입력하거나 `Ctrl+C`로 종료 가능합니다.
 
 **Q: 테스트 코드는?**
-A: **네, 있습니다!** 89개 테스트 함수, 50%+ 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
+A: **네, 있습니다!** 827개 테스트 함수, ~48% 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
 
 **Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.**
 A: **Python 3.11 또는 3.12로 다운그레이드하세요.** Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다. Python 3.11-3.12 환경을 생성하면 모든 기능이 정상 작동합니다:
@@ -652,7 +652,7 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 
 프로젝트는 현재 Production Ready 상태입니다. 아래는 선택적 개선사항입니다:
 
-- 📊 **테스트 확장**: 현재 45-50% → 목표 80% 커버리지
+- 📊 **테스트 확장**: 현재 ~48% → 목표 80% 커버리지
 - 🌐 **다국어 지원**: Translation Chain 추가
 - 📱 **웹 UI**: Streamlit/Gradio 인터페이스
 - 🤝 **협업 기능**: 지식창고 공유, 템플릿 마켓플레이스
@@ -684,7 +684,7 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 - 📦 **패키지**: PyPI 배포 완료, Python 3.11-3.12 지원 (3.13 비권장)
 - 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
 - 💰 **비용**: ~$0.035 per 60분 강의 (실측, GPT-4o-mini 기준)
-- 🧪 **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
+- 🧪 **테스트**: 827개 테스트 함수, 81개 테스트 파일, ~48% 커버리지
 - 📝 **Type Hints**: 71% 적용 (207/292 함수)
 - 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
 - 📝 **프롬프트 관리**: 템플릿 기반 시스템
@@ -713,6 +713,40 @@ lecture-forge --help
 **현재 상태**: 🌟 **Production Ready+ (RAG Quality Boost)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.6 (2026-02-18) - 🔧 Code Quality & Reliability
+
+**버그 수정**:
+- 🐛 **`BaseAgent.temperature=0.0` 버그 수정**: `or` 연산자가 `0.0`을 falsy로 처리해 기본값으로 덮어쓰이던 문제 수정
+  - 수정 전: `self.temperature = temperature or Config.TEMPERATURE` → temperature=0.0 무시됨
+  - 수정 후: `self.temperature = temperature if temperature is not None else Config.TEMPERATURE`
+- 🐛 **`QAAgent` 하드코딩 경로 수정**: `Path.home() / "Documents" / "LectureForge"` → `Config.USER_CONFIG_DIR` 사용
+
+**코드 품질 개선**:
+- 🔧 **`make_api_retry()` 공통 유틸 추출** (`utils/retry.py` 신규): 4곳에 중복된 tenacity `@retry` 데코레이터 일원화
+  - 적용: `BaseAgent`, `SerperSearchTool`, `UnsplashSearchTool`, `PexelsSearchTool`, `slides/utils.py`
+- 🏗️ **`BaseImageSearchTool` 기반 클래스 추출** (`tools/image_search.py`): Unsplash/Pexels 80-90% 중복 코드 제거
+  - `_download_and_save_image()`, `_error_response()` 공유 메서드로 약 100줄 감소
+- ⚙️ **RAG 파라미터 Config 집중화**: 하드코딩된 값을 환경변수로 오버라이드 가능
+  - `RAG_QA_N_RESULTS` (기본 15), `RAG_QA_TOP_K` (기본 12), `RAG_CONTENT_N_RESULTS` (기본 10)
+- ✅ **Config 검증 강화**: `validate()`에 가중치 합계 검증 추가
+  - `IMAGE_WEIGHT_*` 합계 ≠ 1.0 시 오류 발생
+  - `CONTENT_*_RATIO` 합계 ≠ 1.0 시 오류 발생
+- 📝 **`invoke_llm()` 반환 타입 추가**: `-> AIMessage` 명시
+
+**Chat 개선**:
+- 💬 **Chat 응답 로깅**: 사용자 질문뿐 아니라 AI 응답도 `conversation_log.txt`에 기록
+  - 세션 시작/종료 타임스탬프, 신뢰도 레이블 포함
+  - `chat_history.txt` (prompt-toolkit 자동완성용)와 별도 파일 유지
+
+**테스트**:
+- 🧪 **async 도구 유닛 테스트 추가** (23개, 2개 파일):
+  - `tests/unit/tools/test_async_search_tool.py` (10개)
+  - `tests/unit/tools/test_async_web_scraper.py` (13개)
+
+**결과**: 1,395개 테스트 수집, 1,366개 통과, 회귀 없음
+
+---
 
 ### v0.3.5 (2026-02-18) - 🎯 RAG Quality Boost
 

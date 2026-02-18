@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.3.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
-[![Test Coverage](https://img.shields.io/badge/coverage-50%25%2B-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.5 Beta Release** | RAG Quality Boost 🎯 (400-word answers, Markdown rendering, confidence fix)
+> 🚀 **v0.3.6 Beta Release** | Code Quality & Reliability 🔧 (retry utility, base classes, config validation)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 89개 테스트 (50%+ 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 827개+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -42,7 +42,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
 - 🔄 **자동 개선**: 품질 기준 미달 시 최대 3회 자동 수정
-- 🧪 **테스트 커버리지**: 89개 테스트 함수 (20개 파일, 50%+ 커버리지)
+- 🧪 **테스트 커버리지**: 827개+ 테스트 함수 (81개 파일, ~48% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -65,6 +65,25 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ---
 
 ## 🚀 최근 개선사항
+
+### v0.3.6 (2026-02-18) - 코드 품질 & 안정성 🔧
+
+**버그 수정**:
+- **`temperature=0.0` 버그 수정**: `BaseAgent`에서 `or` 연산자가 `0.0`을 falsy로 처리하던 문제 수정
+- **`QAAgent` 하드코딩 경로 수정**: `Config.USER_CONFIG_DIR` 사용으로 이식성 향상
+
+**코드 품질 개선**:
+- **`make_api_retry()` 유틸리티**: 4곳에 중복된 retry 로직을 `utils/retry.py` 팩토리 함수로 통합
+- **`BaseImageSearchTool` 기반 클래스**: Unsplash/Pexels 중복 코드 ~100줄 제거
+- **RAG 파라미터 환경변수화**: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
+- **Config 검증 강화**: `IMAGE_WEIGHT_*` 및 `CONTENT_*_RATIO` 합계 1.0 검증 추가
+
+**Chat 개선**:
+- **응답 로깅**: AI 답변도 `conversation_log.txt`에 저장 (기존엔 사용자 질문만 기록)
+
+**테스트**:
+- async 도구 유닛 테스트 23개 신규 추가 (`async_search_tool`, `async_web_scraper`)
+- 총 827개+ 테스트 함수 (81개 파일)
 
 ### v0.3.5 (2026-02-18) - RAG 품질 대폭 향상 🎯
 
@@ -1013,6 +1032,17 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.3.6 (2026-02-18) - 🔧 코드 품질 & 안정성
+
+- 🐛 `BaseAgent.temperature=0.0` falsy 버그 수정
+- 🐛 `QAAgent` 하드코딩 경로 → `Config.USER_CONFIG_DIR`
+- 🔧 `utils/retry.py`: `make_api_retry()` 공통 팩토리 (중복 4곳 제거)
+- 🏗️ `BaseImageSearchTool`: Unsplash/Pexels 공통 로직 추출 (~100줄 감소)
+- ⚙️ RAG 파라미터 환경변수 지원: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
+- ✅ Config 검증: `IMAGE_WEIGHT_*`, `CONTENT_*_RATIO` 합계 1.0 검증
+- 💬 Chat 응답 `conversation_log.txt` 저장 (질문 + AI 답변 모두)
+- 🧪 async 도구 테스트 23개 추가
 
 ### v0.3.5 (2026-02-18) - 🎯 RAG 품질 대폭 향상
 

@@ -5,13 +5,25 @@ Utility functions for slide generation.
 import re
 from typing import List
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
+from lecture_forge.utils.retry import make_api_retry
 
 _BATCH_SIZE = 15
+
+
+@make_api_retry("Slides")
+def _invoke_llm(messages: list) -> AIMessage:
+    """Invoke the slides LLM with retry logic."""
+    llm = ChatOpenAI(
+        model=Config.DEFAULT_MODEL,
+        temperature=0.3,
+        api_key=Config.OPENAI_API_KEY,
+    )
+    return llm.invoke(messages)
 
 
 def _parse_batch_response(response: str, expected_count: int) -> List[List[str]]:
@@ -61,8 +73,6 @@ def _process_batch(texts: List[str]) -> List[List[str]]:
     Falls back to returning each text as a one-element list on error.
     """
     try:
-        llm = ChatOpenAI(model=Config.DEFAULT_MODEL, temperature=0.3, api_key=Config.OPENAI_API_KEY)
-
         sections = "\n\n".join(f"===PARA_{i}===\n{text}" for i, text in enumerate(texts))
 
         prompt = f"""다음 {len(texts)}개의 서술식 텍스트를 각각 프레젠테이션 슬라이드에 적합한 개조식 표현으로 변환해주세요.
@@ -81,7 +91,7 @@ def _process_batch(texts: List[str]) -> List[List[str]]:
 
 변환 결과 (===PARA_0===, ===PARA_1=== 등으로 구분):"""
 
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _invoke_llm([HumanMessage(content=prompt)])
         return _parse_batch_response(response.content.strip(), len(texts))
 
     except Exception as e:
@@ -154,8 +164,6 @@ def convert_to_bullet_points(text: str) -> List[str]:
         if len(text) < 100 or text.strip().startswith(("•", "-", "*")):
             return [text]
 
-        llm = ChatOpenAI(model=Config.DEFAULT_MODEL, temperature=0.3, api_key=Config.OPENAI_API_KEY)
-
         prompt = f"""다음 서술식 텍스트를 프레젠테이션 슬라이드에 적합한 개조식 표현으로 변환해주세요.
 
 요구사항:
@@ -171,7 +179,7 @@ def convert_to_bullet_points(text: str) -> List[str]:
 
 개조식 bullet points (각 줄을 구분하여 출력):"""
 
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _invoke_llm([HumanMessage(content=prompt)])
         bullet_text = response.content.strip()
 
         # Parse bullet points

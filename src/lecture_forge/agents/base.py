@@ -2,15 +2,12 @@
 Base agent class for common functionality.
 """
 
+from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
+from lecture_forge.utils.retry import make_api_retry
 from lecture_forge.utils.token_tracker import track_tokens
 
 
@@ -25,8 +22,8 @@ class BaseAgent:
             model: LLM model name (default: Config.DEFAULT_MODEL)
             temperature: Temperature for LLM (default: Config.TEMPERATURE)
         """
-        self.model = model or Config.DEFAULT_MODEL
-        self.temperature = temperature or Config.TEMPERATURE
+        self.model = model if model is not None else Config.DEFAULT_MODEL
+        self.temperature = temperature if temperature is not None else Config.TEMPERATURE
         self.llm = self._create_llm()
         self.agent_name = self.__class__.__name__
 
@@ -38,14 +35,8 @@ class BaseAgent:
             openai_api_key=Config.OPENAI_API_KEY,
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        before_sleep=lambda retry_state: logger.warning(
-            f"API call failed (attempt {retry_state.attempt_number}/3), retrying..."
-        ),
-    )
-    def invoke_llm(self, prompt: str, phase: str = "unknown"):
+    @make_api_retry()
+    def invoke_llm(self, prompt: str, phase: str = "unknown") -> AIMessage:
         """
         Invoke LLM and track token usage with automatic retry on failures.
 

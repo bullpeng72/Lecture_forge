@@ -7,7 +7,7 @@ name = "lecture-forge"
 version = "0.3.6"
 description = "AI-powered lecture material generator with multilingual support using LangChain"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11"
 license = {file = "LICENSE"}
 authors = [
     {name = "Sungwoo Kim", email = "sungwoo.kim@gmail.com"}
@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: Education",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dynamic = ["dependencies"]
 

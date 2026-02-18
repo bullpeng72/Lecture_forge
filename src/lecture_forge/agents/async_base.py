@@ -203,7 +203,7 @@ class AsyncRateLimiter:
         Waits if necessary to respect rate limit.
         """
         async with self._lock:
-            now = asyncio.get_event_loop().time()
+            now = asyncio.get_running_loop().time()
             time_since_last = now - self.last_call
 
             if time_since_last < self.min_interval:
@@ -211,7 +211,7 @@ class AsyncRateLimiter:
                 logger.debug(f"Rate limit: waiting {wait_time:.2f}s")
                 await asyncio.sleep(wait_time)
 
-            self.last_call = asyncio.get_event_loop().time()
+            self.last_call = asyncio.get_running_loop().time()
 
     async def __aenter__(self):
         """Async context manager entry."""

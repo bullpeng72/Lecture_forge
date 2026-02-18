@@ -110,11 +110,11 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
 
         # Execute all tasks in parallel
         logger.info(f"Executing {len(tasks)} collection tasks in parallel...")
-        start_time = asyncio.get_event_loop().time()
+        start_time = asyncio.get_running_loop().time()
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        elapsed = asyncio.get_event_loop().time() - start_time
+        elapsed = asyncio.get_running_loop().time() - start_time
         logger.info(f"✅ All collection tasks completed in {elapsed:.2f}s")
 
         # Process results

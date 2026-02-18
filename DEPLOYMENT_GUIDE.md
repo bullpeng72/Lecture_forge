@@ -1,9 +1,9 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.5 🔄 **배포 준비 중**
+> **최신 버전**: 0.3.6 🔄 **배포 준비 중**
 > **최종 수정**: 2026-02-18
 > **대상**: PyPI (Python Package Index)
-> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.4/
+> **이전 배포**: https://pypi.org/project/lecture-forge/0.3.5/
 
 ---
 
@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 버전 확인
-grep -r "0.2.0" pyproject.toml setup.py src/lecture_forge/__version__.py
+grep -r "0.3.6" pyproject.toml setup.py src/lecture_forge/__version__.py
 
 # 2. 테스트 실행
 pytest tests/ -v
@@ -222,18 +222,18 @@ python -m build
 
 # 빌드 결과 확인
 ls -lh dist/
-# lecture-forge-0.2.0.tar.gz
-# lecture_forge-0.2.0-py3-none-any.whl
+# lecture-forge-0.3.6.tar.gz
+# lecture_forge-0.3.6-py3-none-any.whl
 ```
 
 ### D. 빌드 파일 검증
 
 ```bash
 # wheel 파일 내용 확인
-unzip -l dist/lecture_forge-0.2.0-py3-none-any.whl
+unzip -l dist/lecture_forge-0.3.6-py3-none-any.whl
 
 # 패키지 메타데이터 확인
-tar -tzf dist/lecture-forge-0.2.0.tar.gz | grep -E "PKG-INFO|setup.py"
+tar -tzf dist/lecture-forge-0.3.6.tar.gz | grep -E "PKG-INFO|setup.py"
 
 # Twine으로 검증
 twine check dist/*
@@ -241,8 +241,8 @@ twine check dist/*
 
 **예상 출력:**
 ```
-Checking dist/lecture-forge-0.2.0.tar.gz: PASSED
-Checking dist/lecture_forge-0.2.0-py3-none-any.whl: PASSED
+Checking dist/lecture-forge-0.3.6.tar.gz: PASSED
+Checking dist/lecture_forge-0.3.6-py3-none-any.whl: PASSED
 ```
 
 ---
@@ -264,10 +264,10 @@ twine upload --repository testpypi dist/* \
 **예상 출력:**
 ```
 Uploading distributions to https://test.pypi.org/legacy/
-Uploading lecture-forge-0.2.0.tar.gz
-Uploading lecture_forge-0.2.0-py3-none-any.whl
+Uploading lecture-forge-0.3.6.tar.gz
+Uploading lecture_forge-0.3.6-py3-none-any.whl
 View at:
-https://test.pypi.org/project/lecture-forge/0.2.0/
+https://test.pypi.org/project/lecture-forge/0.3.6/
 ```
 
 ### B. TestPyPI 페이지 확인
@@ -326,10 +326,10 @@ echo "  [ ] entry_point 수정 완료"
 **방법 1: ~/.pypirc 사용 (권장 - 가장 간단)**
 ```bash
 # ~/.pypirc에 토큰이 저장되어 있으면
-twine upload dist/lecture_forge-0.2.0*
+twine upload dist/lecture_forge-0.3.6*
 
 # 또는 (zsh에서 glob 패턴 문제 시)
-twine upload dist/lecture_forge-0.2.0-py3-none-any.whl dist/lecture_forge-0.2.0.tar.gz
+twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
 ```
 
 **방법 2: 환경 변수 사용**
@@ -337,7 +337,7 @@ twine upload dist/lecture_forge-0.2.0-py3-none-any.whl dist/lecture_forge-0.2.0.
 export TWINE_USERNAME=__token__
 export TWINE_PASSWORD=pypi-실제토큰
 
-twine upload dist/lecture_forge-0.2.0*
+twine upload dist/lecture_forge-0.3.6*
 ```
 
 **방법 3: 명령줄 옵션 (매번 입력)**
@@ -345,8 +345,8 @@ twine upload dist/lecture_forge-0.2.0*
 twine upload \
   -u __token__ \
   -p pypi-실제토큰 \
-  dist/lecture_forge-0.2.0-py3-none-any.whl \
-  dist/lecture_forge-0.2.0.tar.gz
+  dist/lecture_forge-0.3.6-py3-none-any.whl \
+  dist/lecture_forge-0.3.6.tar.gz
 ```
 
 **⚠️ macOS/zsh 사용자 주의:**
@@ -356,7 +356,7 @@ twine upload dist/*
 # zsh: no matches found: dist/*
 
 # ✅ 해결 방법 1: 파일명 명시
-twine upload dist/lecture_forge-0.2.0-py3-none-any.whl dist/lecture_forge-0.2.0.tar.gz
+twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
 
 # ✅ 해결 방법 2: noglob 사용
 noglob twine upload dist/*
@@ -365,16 +365,16 @@ noglob twine upload dist/*
 bash -c 'twine upload dist/*'
 ```
 
-**실제 성공 출력 (2026-02-09):**
+**실제 성공 출력 예시:**
 ```
 Uploading distributions to https://upload.pypi.org/legacy/
-Uploading lecture_forge-0.2.0-py3-none-any.whl
-100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 188.2/188.2 kB • 00:01 • 306.3 kB/s
-Uploading lecture_forge-0.2.0.tar.gz
-100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 197.9/197.9 kB • 00:00 • 174.9 MB/s
+Uploading lecture_forge-0.3.6-py3-none-any.whl
+100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 195.0/195.0 kB • 00:01 • 306.3 kB/s
+Uploading lecture_forge-0.3.6.tar.gz
+100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 205.0/205.0 kB • 00:00 • 174.9 MB/s
 
 View at:
-https://pypi.org/project/lecture-forge/0.2.0/
+https://pypi.org/project/lecture-forge/0.3.6/
 ```
 
 ### C. PyPI 페이지 확인
@@ -418,7 +418,7 @@ pip install lecture-forge
 
 # 버전 확인
 lecture-forge --version
-# 출력: python -m lecture_forge.cli, version 0.2.0
+# 출력: python -m lecture_forge.cli, version 0.3.6
 
 # 기능 테스트
 lecture-forge --help
@@ -457,17 +457,17 @@ deactivate
 ```bash
 # 1. 버전 번호 변경
 # pyproject.toml
-version = "0.2.1"
+version = "0.3.7"
 
 # setup.py
-version="0.2.1"
+version="0.3.7"
 
 # src/lecture_forge/__version__.py
-__version__ = "0.2.1"
+__version__ = "0.3.7"
 
 # 2. CHANGELOG 업데이트 (권장)
 cat >> CHANGELOG.md << 'EOF'
-## [0.2.1] - 2026-02-10
+## [0.3.7] - 2026-03-01
 
 ### Fixed
 - Bug fixes and improvements
@@ -500,12 +500,12 @@ twine upload dist/*
 
 ```bash
 # Git 태그 생성
-git tag -a v0.2.1 -m "Release version 0.2.1"
-git push origin v0.2.1
+git tag -a v0.3.7 -m "Release version 0.3.7"
+git push origin v0.3.7
 
 # GitHub Release 생성 (선택)
-gh release create v0.2.1 \
-  --title "v0.2.1" \
+gh release create v0.3.7 \
+  --title "v0.3.7" \
   --notes "Release notes here"
 ```
 
@@ -568,7 +568,7 @@ zsh: no matches found: dist/*
 **해결 방법:**
 ```bash
 # 방법 1: 파일명 명시 (권장)
-twine upload dist/lecture_forge-0.2.0-py3-none-any.whl dist/lecture_forge-0.2.0.tar.gz
+twine upload dist/lecture_forge-0.3.6-py3-none-any.whl dist/lecture_forge-0.3.6.tar.gz
 
 # 방법 2: noglob 사용
 noglob twine upload dist/*
@@ -610,7 +610,7 @@ twine upload dist/*
 **증상:**
 ```
 ERROR    InvalidDistribution: Cannot find file (or expand pattern):
-         'dist/lecture_forge-0.2.0-py3-none-any.whl'
+         'dist/lecture_forge-0.3.6-py3-none-any.whl'
 ```
 
 **원인:**
@@ -649,7 +649,7 @@ ERROR    HTTPError: 400 Bad Request
 ```bash
 # 버전 번호 올리기
 # pyproject.toml, setup.py, __version__.py 수정
-version = "0.2.1"  # 0.2.0 → 0.2.1
+version = "0.3.7"  # 0.3.6 → 0.3.7
 
 # 재빌드
 rm -rf dist/
@@ -681,8 +681,8 @@ rm -rf dist/ build/ *.egg-info
 python -m build
 
 # 패키지 내용 확인
-tar -tzf dist/lecture_forge-0.2.0.tar.gz
-unzip -l dist/lecture_forge-0.2.0-py3-none-any.whl
+tar -tzf dist/lecture-forge-0.3.6.tar.gz
+unzip -l dist/lecture_forge-0.3.6-py3-none-any.whl
 ```
 
 #### 7. "README rendering error"
@@ -708,11 +708,11 @@ twine check dist/*
 
 ```bash
 # 빌드 파일 상세 확인
-tar -xzf dist/lecture-forge-0.2.0.tar.gz
-ls -la lecture-forge-0.2.0/
+tar -xzf dist/lecture-forge-0.3.6.tar.gz
+ls -la lecture-forge-0.3.6/
 
 # wheel 파일 확인
-unzip dist/lecture_forge-0.2.0-py3-none-any.whl -d wheel_contents
+unzip dist/lecture_forge-0.3.6-py3-none-any.whl -d wheel_contents
 tree wheel_contents
 
 # 설치된 패키지 확인
@@ -768,7 +768,7 @@ pip list | grep lecture-forge
 
 ### 1. 버전 관리
 - **Semantic Versioning** 사용: MAJOR.MINOR.PATCH
-- 예: 0.2.0 → 0.2.1 (버그 수정), 0.3.0 (기능 추가), 1.0.0 (메이저 릴리스)
+- 예: 0.3.6 → 0.3.7 (버그 수정), 0.4.0 (기능 추가), 1.0.0 (메이저 릴리스)
 
 ### 2. 배포 자동화
 ```bash
@@ -845,24 +845,26 @@ jobs:
 
 ```bash
 # Git 태그 생성
-git tag -a v0.2.0 -m "Release v0.2.0 - First PyPI release"
-git push origin v0.2.0
+git tag -a v0.3.6 -m "Release v0.3.6 - Code quality & reliability"
+git push origin v0.3.6
 
 # GitHub Release 생성
-gh release create v0.2.0 \
-  --title "v0.2.0 - First PyPI Release" \
-  --notes "🎉 First official release on PyPI!
+gh release create v0.3.6 \
+  --title "v0.3.6 - Code Quality & Reliability" \
+  --notes "## 주요 변경사항
 
-## Installation
+- 코드 품질 & 안정성 개선 (기술부채 해소)
+- make_api_retry() factory 추출 → utils/retry.py
+- BaseImageSearchTool 추출 (Pexels/Unsplash 공통 로직)
+- RAG 파라미터 환경변수화
+- BaseAgent temperature 버그 수정
+- QAAgent 하드코딩 경로 수정
+- 비동기 도구 테스트 23개 추가
+
+## 설치
 \`\`\`bash
-pip install lecture-forge
+pip install lecture-forge==0.3.6
 \`\`\`
-
-## What's New
-- Multi-agent lecture generation system
-- RAG-based content creation
-- HTML + Reveal.js output
-- Interactive Q&A mode
 
 See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for details."
 ```
@@ -916,11 +918,33 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.5 (2026-02-18) 🔄 **최신 (배포 준비 중)**
+### v0.3.6 (2026-02-18) 🔄 **최신 (배포 준비 중)**
 
 - **상태**: 개발 완료, 배포 대기
 - **PyPI**: 아직 배포 안 됨
-- **테스트**: 1256개 테스트 (passed), 3 skipped, 50%+ 커버리지
+- **테스트**: 827개+ 테스트, 81개 테스트 파일, ~48% 커버리지
+- **주요 변경사항**:
+  - ✅ **코드 품질 & 안정성 개선** (기술부채 해소)
+    - `make_api_retry()` factory 추출 → `utils/retry.py` (DRY 원칙 적용)
+    - `BaseImageSearchTool` 추출 → Pexels/Unsplash 공통 다운로드/저장 로직 통합
+    - RAG 파라미터 환경변수화: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
+    - Config 검증 추가: `IMAGE_WEIGHT_*`, `CONTENT_*_RATIO` 합산 검증
+  - ✅ **버그 수정**:
+    - `BaseAgent.temperature=0.0` falsy 비교 버그 수정 (`or` → `is not None`)
+    - `QAAgent` 하드코딩 홈 디렉토리 → `Config.USER_CONFIG_DIR`
+    - `invoke_llm` 반환 타입 수정 (`str` → `AIMessage`)
+    - `slides/utils.py` LLM 싱글톤 테스트 격리 문제 수정
+  - ✅ **기능 추가**:
+    - Chat 응답 로깅: `conversation_log.txt`에 질문 + AI 답변 모두 기록
+  - ✅ **테스트 확장**: 비동기 도구 테스트 23개 추가
+    - `test_async_search_tool.py` (10개 테스트)
+    - `test_async_web_scraper.py` (13개 테스트)
+
+### v0.3.5 (2026-02-18) ✅
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.5/
+- **테스트**: 804개 테스트 함수, 79개 테스트 파일, 50%+ 커버리지
 - **주요 변경사항**:
   - ✅ **RAG 답변 품질 대폭 향상**
     - 최소 400단어 + 5개 Markdown 섹션 강제 (개요/상세/핵심/예시/추가고려)
@@ -967,7 +991,7 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### v0.3.2 (2026-02-14) ✅
 
-- **상태**: 개발 완료
+- **상태**: 배포 완료
 - **PyPI**: https://pypi.org/project/lecture-forge/0.3.2/
 - **테스트**: 89개 테스트 함수, 20개 테스트 파일, 50%+ 커버리지
 - **주요 변경사항**:
@@ -1011,8 +1035,8 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.3.5: RAG 품질 강화 (배포 준비 중)
-- v0.4.0: 새로운 기능 추가
+- v0.3.6: 코드 품질 & 안정성 (배포 준비 중)
+- v0.4.0: 새로운 기능 추가 (웹 UI, 다국어 확장 등)
 - v1.0.0: 안정 버전 릴리스
 
 ---
@@ -1093,7 +1117,7 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-18 (v0.3.5 개발 완료, 배포 준비 중)
-**버전**: 2.3.0
+**최종 업데이트**: 2026-02-18 (v0.3.6 개발 완료, 배포 준비 중)
+**버전**: 2.4.0
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: 🔄 v0.3.5 배포 대기 (RAG 품질 강화, 신뢰도 수정)
+**상태**: 🔄 v0.3.6 배포 대기 (코드 품질 & 안정성 개선)

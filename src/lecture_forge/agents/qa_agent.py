@@ -313,13 +313,15 @@ class QAAgent(BaseAgent):
                 seen_chunks.add(chunk_id)
 
         # Filter low-quality results (similarity threshold)
-        min_similarity = 0.3  # Filter out results with < 30% similarity
-        filtered_results = [r for r in all_results if r["score"] >= min_similarity]
+        filtered_results = [r for r in all_results if r["score"] >= Config.RAG_SIMILARITY_THRESHOLD]
 
         if not filtered_results:
-            # If all results are filtered out, keep top 3 anyway
-            filtered_results = all_results[:3]
-            logger.warning(f"All results below similarity threshold, keeping top 3")
+            # If all results are filtered out, keep top N anyway
+            filtered_results = all_results[:Config.RAG_MIN_FALLBACK_RESULTS]
+            logger.warning(
+                f"All results below similarity threshold ({Config.RAG_SIMILARITY_THRESHOLD}), "
+                f"keeping top {Config.RAG_MIN_FALLBACK_RESULTS}"
+            )
 
         # Sort by score (descending)
         filtered_results.sort(key=lambda x: x["score"], reverse=True)
@@ -368,8 +370,8 @@ class QAAgent(BaseAgent):
             # Diversity penalty: prefer different source-pages
             current_count = source_page_count.get(source_page_key, 0)
 
-            # Allow up to 3 chunks from the same source-page (dense topics need more coverage)
-            if current_count < 3:
+            # Allow up to N chunks from the same source-page (dense topics need more coverage)
+            if current_count < Config.RAG_MAX_CHUNKS_PER_SOURCE_PAGE:
                 selected.append(result)
                 source_page_count[source_page_key] = current_count + 1
 

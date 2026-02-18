@@ -324,6 +324,14 @@ class Config:
     # Content generation: RAG retrieval count per section query
     RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "10"))
 
+    # ===== RAG Similarity & Diversity =====
+    # Minimum similarity score to include a result (L2 distance based)
+    RAG_SIMILARITY_THRESHOLD: float = float(os.getenv("RAG_SIMILARITY_THRESHOLD", "0.3"))
+    # Number of top results to keep when all results fall below threshold
+    RAG_MIN_FALLBACK_RESULTS: int = int(os.getenv("RAG_MIN_FALLBACK_RESULTS", "3"))
+    # Maximum chunks allowed from the same source-page in diversity selection
+    RAG_MAX_CHUNKS_PER_SOURCE_PAGE: int = int(os.getenv("RAG_MAX_CHUNKS_PER_SOURCE_PAGE", "3"))
+
     # ===== Quality Assurance =====
     QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
     QUALITY_THRESHOLD_SECTION: int = int(os.getenv("QUALITY_THRESHOLD_SECTION", "70"))  # Relaxed for section-level
@@ -362,6 +370,19 @@ class Config:
     # Word count tolerance
     MIN_WORDS_RATIO: float = float(os.getenv("MIN_WORDS_RATIO", "0.75"))  # Allow 25% under
     MAX_WORDS_RATIO: float = float(os.getenv("MAX_WORDS_RATIO", "1.3"))  # Allow 30% over
+
+    # Content quality metric constants
+    # Reading speed used for completeness check (expected content volume)
+    CONTENT_READING_WPM: int = int(os.getenv("CONTENT_READING_WPM", "250"))
+    # Fraction of lecture time expected to be covered by text (completeness)
+    CONTENT_TIME_COVERAGE: float = float(os.getenv("CONTENT_TIME_COVERAGE", "0.7"))
+    # Minutes per code block baseline (1 code block expected per N minutes)
+    CONTENT_CODE_PER_MINUTES: int = int(os.getenv("CONTENT_CODE_PER_MINUTES", "30"))
+    # Words per minute bounds for time-alignment score
+    CONTENT_WPM_MIN: int = int(os.getenv("CONTENT_WPM_MIN", "150"))
+    CONTENT_WPM_MAX: int = int(os.getenv("CONTENT_WPM_MAX", "250"))
+    # Minimum number of sections for structural checks
+    CONTENT_MIN_SECTIONS: int = int(os.getenv("CONTENT_MIN_SECTIONS", "3"))
 
     # ===== Content Generation - Section Structure =====
     # Content distribution ratios for section parts (should sum to 1.0)
@@ -470,6 +491,32 @@ class Config:
                     "❌ SERPER_API_KEY appears invalid (too short)\n"
                     "   Please verify your API key from serper.dev"
                 )
+
+        # Validate numeric ranges
+        if not 0.0 <= cls.TEMPERATURE <= 1.0:
+            errors.append(
+                f"❌ TEMPERATURE must be between 0.0 and 1.0, got {cls.TEMPERATURE}"
+            )
+        if not 0 <= cls.QUALITY_THRESHOLD <= 100:
+            errors.append(
+                f"❌ QUALITY_THRESHOLD must be between 0 and 100, got {cls.QUALITY_THRESHOLD}"
+            )
+        if not 0 <= cls.QUALITY_THRESHOLD_SECTION <= 100:
+            errors.append(
+                f"❌ QUALITY_THRESHOLD_SECTION must be between 0 and 100, got {cls.QUALITY_THRESHOLD_SECTION}"
+            )
+        if not 1 <= cls.MAX_ITERATIONS <= 10:
+            errors.append(
+                f"❌ MAX_ITERATIONS must be between 1 and 10, got {cls.MAX_ITERATIONS}"
+            )
+        if cls.CHUNK_SIZE <= 0:
+            errors.append(
+                f"❌ CHUNK_SIZE must be positive, got {cls.CHUNK_SIZE}"
+            )
+        if not 0 <= cls.CHUNK_OVERLAP < cls.CHUNK_SIZE:
+            errors.append(
+                f"❌ CHUNK_OVERLAP must be >= 0 and < CHUNK_SIZE ({cls.CHUNK_SIZE}), got {cls.CHUNK_OVERLAP}"
+            )
 
         # Validate weight constants sum to 1.0
         image_weight_sum = (

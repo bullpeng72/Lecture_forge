@@ -4,6 +4,7 @@ Quality metrics for lecture evaluation.
 
 from typing import Dict
 
+from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture
 from lecture_forge.utils import logger
 
@@ -32,19 +33,19 @@ class QualityMetrics:
 
         # 2. Check for code examples (30점)
         total_code_blocks = sum(len(s.code_blocks) for s in lecture.sections)
-        expected_code_blocks = max(1, lecture.duration // 30)  # 30분당 1개
+        expected_code_blocks = max(1, lecture.duration // Config.CONTENT_CODE_PER_MINUTES)
         code_ratio = min(1.0, total_code_blocks / expected_code_blocks)
         score += 30 * code_ratio
 
         # 3. Check word count sufficiency (40점)
         if lecture.total_word_count > 0:
             # 예상: 250 words/minute reading speed
-            expected_words = lecture.duration * 250 * 0.7  # 70% of reading time
+            expected_words = lecture.duration * Config.CONTENT_READING_WPM * Config.CONTENT_TIME_COVERAGE
             word_ratio = min(1.0, lecture.total_word_count / expected_words)
             score += 40 * word_ratio
 
         # 4. Check section coverage (20점)
-        if len(lecture.sections) >= 3:  # At least intro, content, conclusion
+        if len(lecture.sections) >= Config.CONTENT_MIN_SECTIONS:  # At least intro, content, conclusion
             score += 20
 
         return min(100.0, score)
@@ -72,7 +73,7 @@ class QualityMetrics:
             score += 25
 
         # 3. Check section balance (25점)
-        if len(lecture.sections) >= 3:
+        if len(lecture.sections) >= Config.CONTENT_MIN_SECTIONS:
             # Sections should not be too unbalanced
             word_counts = [s.word_count for s in lecture.sections if s.word_count > 0]
             if word_counts:
@@ -84,7 +85,7 @@ class QualityMetrics:
 
         # 4. Check logical progression (25점)
         # Simple heuristic: difficulty should generally increase
-        if len(lecture.sections) >= 3:
+        if len(lecture.sections) >= Config.CONTENT_MIN_SECTIONS:
             difficulty_map = {"beginner": 1, "intermediate": 2, "advanced": 3}
             # Just check that we don't have advanced before beginner
             has_logical_order = True
@@ -115,8 +116,8 @@ class QualityMetrics:
         # 1. Check overall content vs time (60점)
         # 250 words/min reading speed, but lecture has discussion/exercises
         # So expect 150-200 words per minute of lecture time
-        expected_words_min = lecture.duration * 150
-        expected_words_max = lecture.duration * 250
+        expected_words_min = lecture.duration * Config.CONTENT_WPM_MIN
+        expected_words_max = lecture.duration * Config.CONTENT_WPM_MAX
 
         if expected_words_min <= lecture.total_word_count <= expected_words_max:
             score += 60
@@ -129,7 +130,7 @@ class QualityMetrics:
             score += 60 * ratio
 
         # 2. Check section time balance (40점)
-        if len(lecture.sections) >= 3:
+        if len(lecture.sections) >= Config.CONTENT_MIN_SECTIONS:
             # Get word counts per section
             section_words = [s.word_count for s in lecture.sections if s.word_count > 0]
             if section_words:

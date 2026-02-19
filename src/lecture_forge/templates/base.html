@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ lecture.title }}</title>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+    <!-- Lunr.js for search -->
+    <script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-blue-600">{{ lecture.title }}</h1>
+            <div class="flex items-center gap-4">
+                <input
+                    type="search"
+                    id="searchBox"
+                    placeholder="검색..."
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span class="text-sm text-gray-500">{{ lecture.duration }}분</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex">
+        <!-- Sidebar TOC -->
+        <aside class="w-64 bg-white shadow-lg p-6 sticky top-16 h-screen overflow-y-auto">
+            <h2 class="text-lg font-bold mb-4 text-gray-800">목차</h2>
+            <nav id="toc" class="space-y-2">
+                {% for section in lecture.sections %}
+                <a href="#{{ section.section_id }}"
+                   class="block px-3 py-2 rounded hover:bg-blue-50 hover:text-blue-600 transition">
+                    {{ loop.index }}. {{ section.title }}
+                </a>
+                {% endfor %}
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-8 max-w-4xl mx-auto">
+            <!-- Header -->
+            <header class="mb-12">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ lecture.title }}</h1>
+                <div class="flex gap-4 text-sm text-gray-600">
+                    <span>📚 {{ lecture.audience_level }}</span>
+                    <span>⏱️ {{ lecture.duration }}분</span>
+                    <span>📄 {{ lecture.sections|length }}개 섹션</span>
+                </div>
+
+                {% if lecture.learning_objectives %}
+                <div class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                    <h3 class="font-bold text-blue-900 mb-2">학습 목표</h3>
+                    <ul class="list-disc list-inside space-y-1 text-blue-800">
+                        {% for objective in lecture.learning_objectives %}
+                        <li>{{ objective }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </header>
+
+            <!-- Sections -->
+            {% for section in lecture.sections %}
+            <section id="{{ section.section_id }}" class="mb-12 scroll-mt-20">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 pb-2 border-b-2 border-gray-200">
+                    {{ loop.index }}. {{ section.title }}
+                </h2>
+
+                <!-- Section Content -->
+                <div class="prose prose-lg max-w-none">
+                    {{ section.markdown_content | markdown }}
+                </div>
+
+                <!-- Images -->
+                {% for image in section.images %}
+                <figure class="my-8">
+                    <img
+                        src="{{ image.path }}"
+                        alt="{{ image.description }}"
+                        class="max-w-full h-auto rounded-lg shadow-lg mx-auto"
+                        style="min-width: 600px; max-width: 100%;"
+                        loading="lazy"
+                    />
+                    <figcaption class="mt-2 text-center text-sm text-gray-600">
+                        {{ image.caption }}
+                        {% if image.attribution %}
+                        <span class="block text-xs text-gray-400 mt-1">{{ image.attribution }}</span>
+                        {% endif %}
+                    </figcaption>
+                </figure>
+                {% endfor %}
+
+                <!-- Diagrams -->
+                {% for diagram in section.diagrams %}
+                <div class="my-8 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="text-lg font-semibold mb-4">{{ diagram.title }}</h4>
+                    <div class="mermaid">
+{{ diagram.mermaid_code }}
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+            {% endfor %}
+
+            <!-- Footer -->
+            <footer class="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+                <p>Generated with <a href="https://github.com/yourusername/lecture-forge" class="text-blue-600 hover:underline">LectureForge Pro</a></p>
+                <p class="mt-2">Created on {{ lecture.created_at }}</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Search Results Modal -->
+    <div id="searchResults" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div class="container mx-auto mt-20 max-w-2xl bg-white rounded-lg shadow-xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">검색 결과</h3>
+                <button onclick="closeSearch()" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div id="searchResultsList" class="space-y-3 max-h-96 overflow-y-auto">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="search.js"></script>
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+
+        // Smooth scrolling for TOC links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Highlight current section in TOC
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    document.querySelectorAll('#toc a').forEach(link => {
+                        link.classList.remove('bg-blue-100', 'text-blue-700', 'font-semibold');
+                    });
+                    const activeLink = document.querySelector(`#toc a[href="#${id}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('bg-blue-100', 'text-blue-700', 'font-semibold');
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('section[id]').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

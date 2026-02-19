@@ -65,7 +65,10 @@ class CurriculumDesignerAgent(BaseAgent):
             prerequisite_map=prerequisite_map,
         )
 
-        logger.info(f"Curriculum designed: {len(sections)} sections, {total_time} minutes total")
+        # RMC: Self-review of generated curriculum
+        curriculum = self._review_with_rmc(curriculum, analysis_result)
+
+        logger.info(f"Curriculum designed: {len(curriculum.sections)} sections, {curriculum.total_estimated_time} minutes total")
         return curriculum
 
     def _generate_learning_objectives(
@@ -231,6 +234,116 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         )
 
         return sections
+
+    def _review_with_rmc(self, curriculum: "Curriculum", analysis_result: "AnalysisResult") -> "Curriculum":
+        """
+        RMC (Reflective Meta-Cognition) self-review of the generated curriculum.
+
+        Layer 1: Review the curriculum for logical ordering, coverage, and coherence.
+        Layer 2: Review the review itself to avoid over-correction.
+        Applies corrections to the curriculum object before returning.
+        """
+        # Build section summary for the prompt
+        section_lines = []
+        for i, s in enumerate(curriculum.sections):
+            section_lines.append(
+                f"  {i+1}. [{s.id}] {s.title} | {s.estimated_time}min | {s.difficulty_level}"
+            )
+        sections_str = "\n".join(section_lines)
+        objectives_str = "\n".join(f"  - {obj}" for obj in curriculum.learning_objectives)
+
+        prompt = f"""You are a senior curriculum reviewer. Critically evaluate the following lecture curriculum.
+
+## Curriculum Details
+- Topic: {curriculum.topic}
+- Total Duration: {curriculum.duration} minutes
+- Audience Level: {curriculum.audience_level}
+
+## Learning Objectives
+{objectives_str}
+
+## Sections (in current order)
+{sections_str}
+
+---
+
+## Layer 1 — Curriculum Review (answer each item):
+1. **Difficulty progression**: Are sections ordered from simpler to more complex? If not, which sections should swap?
+2. **Time consistency**: Does the sum of section times roughly match the total duration ({curriculum.duration} min)?
+3. **Objective coverage**: Is there at least one section that addresses each learning objective?
+4. **Redundancy**: Are any sections overlapping or too broad to be useful?
+5. **Prerequisite order**: Are foundational topics placed before sections that depend on them?
+
+## Layer 2 — Review of the Review:
+- Are your judgments appropriate for a {curriculum.audience_level}-level audience?
+- Did you overlook important pedagogical dimensions (engagement, real-world relevance, pacing)?
+- Are your suggested changes actually necessary, or is the curriculum already sound?
+
+---
+
+## Response Format (strict JSON, no markdown fences):
+{{
+  "revised_objectives": ["objective 1", "objective 2"] or null,
+  "section_reorder": ["section_id_1", "section_id_2", ...] or null,
+  "issues": ["issue description 1", "issue description 2"],
+  "reasoning": "Brief explanation of decisions",
+  "no_changes": true or false
+}}
+
+Rules:
+- "section_reorder": include ALL section IDs in the desired order, or null if order is fine
+- "revised_objectives": only if objectives need rewording, otherwise null
+- "issues": list real problems found (empty list [] if none)
+- "no_changes": true only if curriculum is already well-structured"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="curriculum_rmc_review")
+            raw = response.content.strip()
+
+            # Strip markdown fences if present
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0].strip()
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0].strip()
+
+            review = json.loads(raw)
+
+            if review.get("no_changes"):
+                logger.info("RMC curriculum review: no changes needed")
+                return curriculum
+
+            # Log identified issues
+            for issue in review.get("issues", []):
+                logger.info(f"RMC curriculum issue: {issue}")
+
+            # Apply revised objectives
+            if review.get("revised_objectives"):
+                curriculum.learning_objectives = review["revised_objectives"]
+                logger.info(f"RMC: updated {len(curriculum.learning_objectives)} learning objectives")
+
+            # Apply section reordering
+            if review.get("section_reorder"):
+                reorder_ids = review["section_reorder"]
+                section_map = {s.id: s for s in curriculum.sections}
+                reordered = []
+                for sid in reorder_ids:
+                    if sid in section_map:
+                        reordered.append(section_map[sid])
+                # Keep any sections not mentioned (append at end)
+                mentioned = set(reorder_ids)
+                for s in curriculum.sections:
+                    if s.id not in mentioned:
+                        reordered.append(s)
+                if len(reordered) == len(curriculum.sections):
+                    curriculum.sections = reordered
+                    logger.info(f"RMC: reordered {len(reordered)} curriculum sections")
+
+            logger.info(f"RMC curriculum review applied: {review.get('reasoning', '')[:100]}")
+
+        except Exception as e:
+            logger.warning(f"RMC curriculum review failed (returning original): {e}")
+
+        return curriculum
 
     def _build_prerequisite_map(
         self,

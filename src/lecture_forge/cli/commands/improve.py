@@ -58,7 +58,8 @@ def _find_image_dir_from_html(html_path: Path) -> Path:
 )
 @click.option("--source-pdf", type=click.Path(exists=True), help="Source PDF file (required for --enhance-pdf-images)")
 @click.option("--to-slides", is_flag=True, help="Convert lecture to presentation slides format (Reveal.js)")
-def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool) -> None:
+@click.option("--with-notes", is_flag=True, help="Auto-generate presenter notes for each slide (requires --to-slides, uses LLM)")
+def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool, with_notes: bool) -> None:
     """
     Improve existing lecture quality with optional enhancements.
 
@@ -82,6 +83,11 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
                             Optimized for presentations (v0.3.0+ improvements)
                             Preserves images, code blocks, and Mermaid diagrams
 
+      --with-notes:         Auto-generate presenter notes for each slide
+                            Requires --to-slides flag
+                            Uses LLM (GPT-4o-mini) to write 2-4 sentence notes
+                            per slide; press S in browser to open speaker view
+
     \b
     Slide Keyboard Shortcuts:
       Arrow Keys / Space    - Navigate slides (→ next, ← previous, ↑↓ vertical)
@@ -103,6 +109,10 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
     \b
       # Convert to presentation slides
       $ lecture-forge improve outputs/lecture.html --to-slides
+
+    \b
+      # Convert with auto-generated presenter notes
+      $ lecture-forge improve outputs/lecture.html --to-slides --with-notes
 
     \b
       # Combine both enhancements
@@ -186,6 +196,10 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         console.print()
         console.print("[yellow]💡 Tip: For now, you can regenerate the lecture to use new descriptions[/yellow]")
 
+    if with_notes and not to_slides:
+        console.print("[yellow]⚠️  --with-notes requires --to-slides. Ignoring --with-notes.[/yellow]")
+        console.print()
+
     if to_slides:
         # Run slides conversion
         console.print("[bold]Converting to Presentation Slides[/bold]")
@@ -196,11 +210,14 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
 
         # Use SlideConverter from slides module
         converter = SlideConverter(console=console)
-        success = converter.convert(lecture_path, slides_path)
+        success = converter.convert(lecture_path, slides_path, with_notes=with_notes)
 
         if success:
             console.print(f"[green]✅ Slides created: {slides_path}[/green]")
-            console.print(f"[green]   Open in browser and press 's' for speaker notes[/green]")
+            if with_notes:
+                console.print(f"[green]   발표자 노트 포함 — 브라우저에서 S키로 발표자 뷰 열기[/green]")
+            else:
+                console.print(f"[green]   Open in browser and press 's' for speaker notes[/green]")
             console.print()
         else:
             console.print(f"[red]❌ Slides conversion failed[/red]")

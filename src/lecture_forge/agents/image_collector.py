@@ -413,8 +413,19 @@ class ImageCollectorAgent(BaseAgent):
                     "alt_text": img.get("alt_text", ""),
                     "width": img.get("width"),
                     "height": img.get("height"),
+                    "y0": img.get("page_y0"),  # Vertical position from top of page
                 }
             )
+
+        # Sort images within each page by y0 ascending (top-to-bottom visual order).
+        # This ensures idx=0 in image_selector.py always refers to the topmost image
+        # on the page, so the position_weight term correctly rewards images that appear
+        # near the beginning of the page content (most likely adjacent to key text).
+        for source in image_page_map:
+            for page in image_page_map[source]:
+                image_page_map[source][page].sort(
+                    key=lambda img: img["y0"] if img["y0"] is not None else float("inf")
+                )
 
         logger.debug(
             f"Built image-page map: {len(image_page_map)} sources, "
@@ -452,6 +463,62 @@ class ImageCollectorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Failed to save image-page map: {e}")
+
+    def load_images_from_vector_store(self) -> List[Dict]:
+        """
+        Load previously stored image metadata from the vector store.
+
+        Used when reusing or extending an existing KB so that images
+        collected in the original run are available for the new lecture.
+
+        Returns:
+            List of image dicts reconstructed from vector store metadata
+        """
+        if not self.vector_store:
+            logger.warning("⚠️  No vector store attached – cannot load existing images")
+            return []
+
+        try:
+            results = self.vector_store.collection.get(
+                where={"type": "image"},
+                include=["metadatas", "documents"],
+            )
+        except Exception as e:
+            logger.warning(f"Failed to query vector store for images: {e}")
+            return []
+
+        images = []
+        for doc, meta in zip(
+            results.get("documents") or [],
+            results.get("metadatas") or [],
+        ):
+            if not meta:
+                continue
+            image_id = meta.get("image_id", "")
+            if not image_id:
+                continue
+            img_path = meta.get("path", "")
+            # Only include images whose file still exists on disk
+            if img_path and not Path(img_path).exists():
+                logger.debug(f"Skipping missing image file: {img_path}")
+                continue
+            images.append(
+                {
+                    "id": image_id,
+                    "source": meta.get("source", "unknown"),
+                    "path": img_path,
+                    "hash": meta.get("hash", ""),
+                    "page": meta.get("page"),
+                    "width": meta.get("width"),
+                    "height": meta.get("height"),
+                    "description": doc,
+                    "query": meta.get("query", doc),
+                    "alt_text": meta.get("alt_text", doc),
+                }
+            )
+
+        logger.info(f"✅ Loaded {len(images)} existing images from vector store")
+        return images
 
     def get_images_by_keyword(self, keyword: str) -> List[Dict]:
         """

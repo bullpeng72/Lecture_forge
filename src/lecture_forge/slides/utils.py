@@ -13,6 +13,38 @@ from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 
 _BATCH_SIZE = 15
+_MAX_BULLET_CHARS = 60  # hard limit for a single bullet point (한글 기준)
+
+
+def _truncate_bullet(text: str, max_chars: int = _MAX_BULLET_CHARS) -> str:
+    """Truncate a bullet point to max_chars at a natural language boundary.
+
+    Priority: colon > comma > Korean clause marker > last space.
+    Returns original text if already within limit.
+    """
+    if len(text) <= max_chars:
+        return text
+
+    window = text[:max_chars]
+
+    # 1) Natural break at colon (topic: description pattern)
+    for sep in (":", "："):
+        pos = window.find(sep)
+        if 10 <= pos < max_chars:
+            return text[: pos + 1].rstrip() + "…"
+
+    # 2) Comma / Korean clause boundary
+    for sep in (",", "，", " —", " -"):
+        pos = window.rfind(sep)
+        if pos > max_chars // 2:
+            return text[:pos].rstrip() + "…"
+
+    # 3) Last space
+    last_space = window.rfind(" ")
+    if last_space > max_chars // 2:
+        return text[:last_space] + "…"
+
+    return window + "…"
 
 
 @make_api_retry("Slides")
@@ -59,7 +91,7 @@ def _parse_batch_response(response: str, expected_count: int) -> List[List[str]]
             line = line.strip().lstrip("•-*").strip()
             line = re.sub(r"^\d+[\.)]\s*", "", line)
             if line and len(line) > 5:
-                bullets.append(line)
+                bullets.append(_truncate_bullet(line))
 
         if bullets:
             results[para_idx] = bullets
@@ -191,7 +223,7 @@ def convert_to_bullet_points(text: str) -> List[str]:
             # Remove numbering if present
             line = re.sub(r"^\d+[\.)]\s*", "", line)
             if line and len(line) > 5:  # Filter out very short lines
-                bullets.append(line)
+                bullets.append(_truncate_bullet(line))
 
         return bullets if bullets else [text]
 

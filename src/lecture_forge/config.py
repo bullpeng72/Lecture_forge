@@ -286,9 +286,22 @@ class Config:
     IMAGE_COMPRESSION_HIGH: float = float(os.getenv("IMAGE_COMPRESSION_HIGH", "1.5"))  # High quality
 
     # ===== Image Selection - Weighting Factors =====
-    # Weights for image selection scoring (should sum to ~1.0)
-    IMAGE_WEIGHT_QUALITY: float = float(os.getenv("IMAGE_WEIGHT_QUALITY", "0.35"))  # Quality score weight
-    IMAGE_WEIGHT_IMPORTANCE: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE", "0.55"))  # Topic relevance weight
+    # Each content-type group has its own quality/importance pair.
+    # All three groups share IMAGE_WEIGHT_POSITION, and each pair + position must sum to ~1.0.
+
+    # diagram / chart: quality matters more (structured content)
+    IMAGE_WEIGHT_QUALITY: float = float(os.getenv("IMAGE_WEIGHT_QUALITY", "0.35"))
+    IMAGE_WEIGHT_IMPORTANCE: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE", "0.55"))
+
+    # screenshot / technical: page location matters slightly more than pure quality
+    IMAGE_WEIGHT_QUALITY_SCREENSHOT: float = float(os.getenv("IMAGE_WEIGHT_QUALITY_SCREENSHOT", "0.25"))
+    IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT", "0.65"))
+
+    # photo / unknown: page location is the primary signal
+    IMAGE_WEIGHT_QUALITY_PHOTO: float = float(os.getenv("IMAGE_WEIGHT_QUALITY_PHOTO", "0.20"))
+    IMAGE_WEIGHT_IMPORTANCE_PHOTO: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE_PHOTO", "0.70"))
+
+    # Shared position weight across all content types
     IMAGE_WEIGHT_POSITION: float = float(os.getenv("IMAGE_WEIGHT_POSITION", "0.10"))  # Location proximity weight
 
     # ===== Image Content Detection =====
@@ -395,7 +408,7 @@ class Config:
     CONTENT_MAX_EXPANSION_ITERATIONS: int = int(os.getenv("CONTENT_MAX_EXPANSION_ITERATIONS", "2"))  # Max expansion attempts
 
     # ===== Slide Generation =====
-    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "4"))  # Maximum content blocks per slide
+    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "5"))  # Maximum content blocks per slide
 
     # ===== Web Scraping =====
     WEB_SCRAPER_TIMEOUT: int = int(os.getenv("WEB_SCRAPER_TIMEOUT", "30"))
@@ -518,17 +531,18 @@ class Config:
                 f"❌ CHUNK_OVERLAP must be >= 0 and < CHUNK_SIZE ({cls.CHUNK_SIZE}), got {cls.CHUNK_OVERLAP}"
             )
 
-        # Validate weight constants sum to 1.0
-        image_weight_sum = (
-            cls.IMAGE_WEIGHT_QUALITY
-            + cls.IMAGE_WEIGHT_IMPORTANCE
-            + cls.IMAGE_WEIGHT_POSITION
-        )
-        if abs(image_weight_sum - 1.0) > 0.01:
-            errors.append(
-                f"❌ IMAGE_WEIGHT_* values must sum to 1.0, got {image_weight_sum:.3f}\n"
-                "   Check IMAGE_WEIGHT_QUALITY, IMAGE_WEIGHT_IMPORTANCE, IMAGE_WEIGHT_POSITION in .env"
-            )
+        # Validate weight constants sum to 1.0 for each content-type group
+        for group_name, q_weight, imp_weight in [
+            ("diagram/chart", cls.IMAGE_WEIGHT_QUALITY, cls.IMAGE_WEIGHT_IMPORTANCE),
+            ("screenshot/technical", cls.IMAGE_WEIGHT_QUALITY_SCREENSHOT, cls.IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT),
+            ("photo/unknown", cls.IMAGE_WEIGHT_QUALITY_PHOTO, cls.IMAGE_WEIGHT_IMPORTANCE_PHOTO),
+        ]:
+            weight_sum = q_weight + imp_weight + cls.IMAGE_WEIGHT_POSITION
+            if abs(weight_sum - 1.0) > 0.01:
+                errors.append(
+                    f"❌ IMAGE_WEIGHT_* values for {group_name} must sum to 1.0, got {weight_sum:.3f}\n"
+                    "   Check IMAGE_WEIGHT_QUALITY/IMPORTANCE/POSITION variants in .env"
+                )
 
         content_ratio_sum = (
             cls.CONTENT_INTRO_RATIO

@@ -468,7 +468,103 @@ class QAAgent(BaseAgent):
                 logger.info("Answer claims no info, attempting to extract partial information")
                 return self._extract_partial_info(question, contexts, query_language)
 
+        # RMC: Self-review answer for hallucinations before returning
+        answer = self._review_answer_with_rmc(answer, question, contexts, query_language)
+
         return answer
+
+    def _review_answer_with_rmc(
+        self,
+        answer: str,
+        question: str,
+        contexts: list,
+        query_language: str,
+    ) -> str:
+        """
+        RMC (Reflective Meta-Cognition) self-review of generated Q&A answer.
+
+        Layer 1: Identify claims not grounded in the provided context (hallucination risk).
+        Layer 2: Re-examine to avoid false positives (removing correct content).
+        Returns a cleaned answer, or the original if review fails or the result is too short.
+        """
+        original_word_count = len(answer.split())
+        answer_language = "한국어" if query_language == "ko" else "English"
+
+        # Format up to 5 context snippets (200 chars each) for the prompt
+        context_snippets = []
+        for i, ctx in enumerate(contexts[:5], 1):
+            # Defensive: ctx may be a dict or a str
+            if isinstance(ctx, dict):
+                text = str(ctx.get("document", ctx))
+            else:
+                text = str(ctx)
+            context_snippets.append(f"[Source {i}]: {text[:200]}")
+        context_summary = "\n".join(context_snippets) if context_snippets else "(no context available)"
+
+        # Slice answer to avoid token overload
+        answer_slice = answer[:2000] if len(answer) > 2000 else answer
+
+        prompt = f"""You are a strict factual accuracy reviewer for an educational Q&A system.
+
+## Question
+{question}
+
+## Available Source Context (summaries)
+{context_summary}
+
+## Answer to Review
+{answer_slice}
+
+---
+
+## Layer 1 — Grounding Check:
+For each major claim in the answer, classify it as:
+  ✓ — Clearly supported by the source context above
+  ~ — Reasonably inferable from the source context
+  ✗ — Not found in the source context (hallucination risk)
+
+List each ✗ item explicitly.
+
+## Layer 2 — Review of the Review:
+- Did you incorrectly mark any factually correct, widely-known information as ✗?
+- Did you let through any genuinely unsupported claims as ✓ or ~?
+- Confirm: only mark ✗ if the claim is truly absent from the context AND could mislead learners.
+
+---
+
+## Instructions:
+- Output the answer in {answer_language} with only ✗ items removed or marked as:
+  "(강의 자료에서 직접 확인되지 않은 내용입니다)" if Korean, or
+  "(This was not directly confirmed in the lecture materials)" if English
+- If no ✗ items are found, output the answer UNCHANGED.
+- Do NOT add preamble, explanation, or meta-commentary — just output the corrected answer.
+
+## Corrected Answer:"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="qa_rmc_review")
+            revised = response.content.strip()
+
+            # Validate: revised must be at least 50% of original word count
+            # (hallucination removal may legitimately reduce length)
+            revised_word_count = len(revised.split())
+            min_words = int(original_word_count * 0.5)
+
+            if revised_word_count < min_words:
+                logger.warning(
+                    f"RMC answer review returned too-short result "
+                    f"({revised_word_count} < {min_words} words) — using original"
+                )
+                return answer
+
+            logger.info(
+                f"RMC answer review applied: {original_word_count} → {revised_word_count} words"
+            )
+            return revised
+
+        except Exception as e:
+            logger.warning(f"RMC answer review failed (returning original): {e}")
+            return answer
 
     def _expand_short_answer(self, short_answer: str, question: str, contexts: list, query_language: str) -> str:
         """Expand a too-short answer."""

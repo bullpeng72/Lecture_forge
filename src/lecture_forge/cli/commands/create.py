@@ -178,20 +178,81 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     ) as progress:
         # Phase 1: Content Collection
         task1 = progress.add_task("[cyan]📚 Phase 1: Collecting content...", total=None)
-        content_agent = ContentCollectorAgent(collection_name=collection_name)
-        content_result = content_agent.collect(
-            {
-                "pdfs": inputs.get("pdfs", []),
-                "urls": inputs.get("urls", []),
-                "keywords": inputs.get("keywords", []),
-                "hada_keywords": inputs.get("hada_keywords", []),
-            }
-        )
-        progress.update(task1, completed=True)
-        console.print(
-            f"   ✅ Content collected: {content_result['metadata']['total_docs']} docs, "
-            f"{content_result['metadata']['total_chunks']} chunks"
-        )
+
+        existing_kb_path = inputs.get("existing_kb_path")
+        kb_mode = inputs.get("kb_mode", "new")
+
+        if existing_kb_path:
+            # Use existing KB directory name as collection name
+            collection_name = Path(existing_kb_path).name
+            content_agent = ContentCollectorAgent(collection_name=collection_name)
+
+            if kb_mode == "reuse_only":
+                # Read-only: sample representative documents for analysis
+                stats = content_agent.vector_store.get_stats()
+                sample_results = content_agent.vector_store.query(inputs["topic"], n_results=20)
+                sample_texts = (sample_results.get("documents") or [[]])[0]
+                synthetic_docs = [
+                    {
+                        "text": t,
+                        "source": "existing_kb",
+                        "source_type": "vector_db",
+                        "metadata": {},
+                        "pages": [],
+                    }
+                    for t in sample_texts
+                ]
+                content_result = {
+                    "success": True,
+                    "documents": synthetic_docs,
+                    "chunks": [],
+                    "chunk_ids": [],
+                    "metadata": {
+                        "total_docs": stats["document_count"],
+                        "total_chunks": stats["document_count"],
+                        "sources": {"existing_kb": collection_name},
+                        "vector_db": stats,
+                    },
+                }
+                progress.update(task1, completed=True)
+                console.print(
+                    f"   ✅ Reusing KB '{collection_name}': {stats['document_count']} chunks"
+                )
+
+            else:  # extend
+                # Add new sources to existing KB in-place
+                content_result = content_agent.collect(
+                    {
+                        "pdfs": inputs.get("pdfs", []),
+                        "urls": inputs.get("urls", []),
+                        "keywords": inputs.get("keywords", []),
+                        "hada_keywords": inputs.get("hada_keywords", []),
+                    }
+                )
+                progress.update(task1, completed=True)
+                total_after = content_agent.vector_store.get_stats()["document_count"]
+                console.print(
+                    f"   ✅ Extended KB '{collection_name}': "
+                    f"+{content_result['metadata']['total_chunks']} new chunks "
+                    f"(total: {total_after})"
+                )
+
+        else:
+            # New KB (existing behaviour)
+            content_agent = ContentCollectorAgent(collection_name=collection_name)
+            content_result = content_agent.collect(
+                {
+                    "pdfs": inputs.get("pdfs", []),
+                    "urls": inputs.get("urls", []),
+                    "keywords": inputs.get("keywords", []),
+                    "hada_keywords": inputs.get("hada_keywords", []),
+                }
+            )
+            progress.update(task1, completed=True)
+            console.print(
+                f"   ✅ Content collected: {content_result['metadata']['total_docs']} docs, "
+                f"{content_result['metadata']['total_chunks']} chunks"
+            )
 
         # Phase 2: Image Collection
         task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=None)
@@ -216,6 +277,18 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             # max_images_per_keyword: uses Config.MAX_IMAGES_PER_SEARCH by default
             auto_describe_images=inputs.get("auto_describe_images", True),
         )
+
+        # When reusing/extending an existing KB, load images previously stored in vector store
+        if existing_kb_path:
+            stored_images = image_agent.load_images_from_vector_store()
+            if stored_images:
+                existing_ids = {img["id"] for img in image_result.get("images", [])}
+                new_from_store = [img for img in stored_images if img["id"] not in existing_ids]
+                image_result["images"] = image_result.get("images", []) + new_from_store
+                image_result["total_collected"] = len(image_result["images"])
+                if new_from_store:
+                    console.print(f"   📸 Loaded {len(new_from_store)} existing images from KB")
+
         progress.update(task2, completed=True)
         console.print(f"   ✅ Images collected: {image_result['total_collected']}")
 
@@ -248,7 +321,10 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
 
         # Phase 4a: Content Writing
         task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
-        writer = ContentWriterAgent(vector_store=content_agent.vector_store)
+        writer = ContentWriterAgent(
+            vector_store=content_agent.vector_store,
+            with_code=inputs.get("with_code", False),
+        )
         section_contents = writer.write_all_sections(
             curriculum=curriculum,
             available_images=image_result.get("images", []),
@@ -302,8 +378,9 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
         from lecture_forge.agents.revision_agent import RevisionAgent
 
-        evaluator = QualityEvaluatorAgent()
-        revision_agent = RevisionAgent()
+        with_code = inputs.get("with_code", False)
+        evaluator = QualityEvaluatorAgent(with_code=with_code)
+        revision_agent = RevisionAgent(with_code=with_code)
 
         task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None)
 
@@ -442,6 +519,25 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     is_flag=True,
     help="🚀 Use async I/O for faster content collection (70% speedup, experimental)",
 )
+@click.option(
+    "--with-code",
+    is_flag=True,
+    default=False,
+    help="Include code examples in lecture content (default: excluded)",
+)
+@click.option(
+    "--existing-kb",
+    type=click.Path(exists=True),
+    default=None,
+    help="Path to an existing knowledge base directory to reuse or extend",
+)
+@click.option(
+    "--kb-mode",
+    type=click.Choice(["reuse_only", "extend"]),
+    default="reuse_only",
+    show_default=True,
+    help="How to use --existing-kb: reuse_only (read-only) or extend (add new sources)",
+)
 def create(
     config: Optional[str],
     interactive: bool,
@@ -451,6 +547,9 @@ def create(
     include_pdf_images: bool,
     auto_describe_images: bool,
     async_mode: bool,
+    with_code: bool,
+    existing_kb: Optional[str],
+    kb_mode: str,
 ) -> None:
     """
     Create a new lecture material from various sources.
@@ -495,6 +594,15 @@ def create(
       # High quality with image search (recommended)
       $ lecture-forge create --quality-level strict --image-search
 
+      # Include code examples in lecture
+      $ lecture-forge create --with-code
+
+      # Reuse an existing knowledge base (read-only)
+      $ lecture-forge create --existing-kb data/vector_db/MyLecture_20260219 --kb-mode reuse_only
+
+      # Extend an existing knowledge base with new sources
+      $ lecture-forge create --existing-kb data/vector_db/MyLecture_20260219 --kb-mode extend
+
     \b
     Config File Format (YAML):
       topic: "Introduction to Machine Learning"
@@ -508,6 +616,7 @@ def create(
       keywords:
         - "machine learning basics"
         - "supervised learning"
+      with_code: false
 
     \b
     Quality Levels:
@@ -543,6 +652,9 @@ def create(
                 output=output,
                 include_pdf_images=include_pdf_images,
                 auto_describe_images=auto_describe_images,
+                with_code=with_code,
+                existing_kb=existing_kb,
+                kb_mode=kb_mode,
             )
         )
         return
@@ -600,6 +712,9 @@ def create(
     inputs["output_name"] = output
     inputs["include_pdf_images"] = include_pdf_images
     inputs["auto_describe_images"] = auto_describe_images
+    inputs["with_code"] = with_code
+    inputs["existing_kb_path"] = existing_kb if existing_kb else inputs.get("existing_kb_path")
+    inputs["kb_mode"] = kb_mode if existing_kb else inputs.get("kb_mode", "new")
 
     # Generate lecture
     try:

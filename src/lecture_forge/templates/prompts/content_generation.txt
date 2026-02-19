@@ -2,8 +2,8 @@
 
 ⚠️⚠️⚠️ CRITICAL FAILURE CONDITIONS (ANY = AUTO REJECT):
 1. ❌ WORD COUNT < {min_words:,} words → REJECTED AND YOU WILL BE FIRED
-2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED
-3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED
+{code_fail_condition}
+{practice_fail_condition}
 4. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
 
 ⚠️ You MUST satisfy ALL requirements or your output will be REJECTED.
@@ -50,52 +50,9 @@
    - Main content in {target_subsections} detailed subsections (70%)
    - {summary_label} (20%)
 
-3. **🚨 Code Examples: MINIMUM {target_code_examples} examples 🚨**
-   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
-   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
-   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
-   - Show complete, runnable, real-world examples
-   - Include setup, execution, and output
-   - Both basic AND advanced examples
+{code_requirement_section}
 
-   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
-   ```python
-   # ========================================
-   # 예제 #N: [예제 제목]
-   # ========================================
-   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
-   # 난이도: [쉬움/보통/어려움]
-   # ========================================
-
-   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
-   variable1 = "example"
-
-   # Step 2: [두 번째 단계 설명]
-   variable2 = process(variable1)
-
-   # Step 3: [세 번째 단계 설명]
-   result = finalize(variable2)
-
-   # ... (continue for 30-80 lines)
-
-   # 예상 출력:
-   # 결과: ...
-   ```
-
-   **After EACH code block, add 100-150 words explaining:**
-   - 코드가 무엇을 하는가
-   - 각 단계의 의미
-   - 실무에서 어떻게 활용하는가
-   - 주의할 점
-
-4. **Practice Problems: {target_practice_problems}+ detailed exercises**
-   - **Each problem: 100-150 words description**
-   - Clear problem statement (what needs to be solved)
-   - Requirements specification (3-5 requirements)
-   - Difficulty level indicator (쉬움/보통/어려움)
-   - 2-3 hints or guidance points
-   - Expected outcome and success criteria
-   - Bonus challenges for advanced learners
+{practice_requirement_section}
 
 **🚨 CRITICAL FORMATTING RULES:**
 - **NEVER use h1 (#) headings** - The section already has a title
@@ -176,34 +133,7 @@ For each main concept:
 - Discuss common pitfalls (주의사항)
 - Provide best practices (모범 사례)
 
-**💻 CODE EXAMPLE TEMPLATE (MANDATORY - COPY THIS STRUCTURE):**
-
-### 코드 예제 1: [기본 사용법]
-
-다음은 [개념]의 기본적인 사용 예제입니다.
-
-```python
-# 예제 설명: [이 예제가 무엇을 보여주는가]
-
-# 1단계: [무엇을 하는가]
-code_here = "example"
-
-# 2단계: [다음 단계 설명]
-result = process(code_here)
-
-# 3단계: [최종 단계]
-print(f"결과: {{result}}")
-
-# 예상 출력:
-# 결과: example processed
-```
-
-**설명:**
-- 첫 번째 단계에서는...
-- 두 번째 단계에서는...
-- 최종적으로...
-
-**YOU MUST INCLUDE AT LEAST {target_code_examples} CODE BLOCKS LIKE THE ABOVE TEMPLATE.**
+{code_template_section}
 
 **📝 WRITING STYLE:**
 - Conversational but professional
@@ -224,12 +154,9 @@ Before you submit, verify EVERY requirement:
    - Each subsection: {words_per_subsection:,}+ words
    - Summary: {summary_words:,}+ words
 
-✅ **Code Examples**: I included {target_code_examples}+ code blocks
-   - Each 30-80 lines with detailed Korean comments
-   - Followed by 100-150 word explanation
+{code_checklist_item}
 
-✅ **Practice Problems**: I included {target_practice_problems}+ detailed problems
-   - Each 100-150 words with hints and requirements
+{practice_checklist_item}
 
 ✅ **Structure**: I have {target_subsections}+ subsections (### headers)
 

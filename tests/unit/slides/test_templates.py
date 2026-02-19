@@ -159,12 +159,20 @@ class TestCreateContentSlidesBlockTypes:
     def t(self, test_env_vars):
         return RevealJsTemplate()
 
-    def test_subsection_creates_title_slide(self, t):
-        """subsection block → dedicated h2 title slide."""
-        blocks = [{"type": "subsection", "content": "My Subsection"}]
+    def test_subsection_creates_h3_heading(self, t):
+        """subsection block → h3 heading injected into content slide (no standalone h2 title slide)."""
+        blocks = [
+            {"type": "subsection", "content": "My Subsection"},
+            {"type": "paragraph", "content": "Some content"},
+        ]
         slides = t._create_content_slides(blocks)
-        assert any("My Subsection" in s for s in slides)
-        assert any("h2" in s for s in slides)
+        full = "".join(slides)
+        assert "My Subsection" in full
+        # Subsection heading is now h3 inside a content slide, not a standalone h2 slide
+        assert "h3" in full
+        # No standalone empty h2 title slide (h2 used only for chapter-level slides)
+        standalone_h2_slides = [s for s in slides if "<h2>My Subsection</h2>" in s]
+        assert len(standalone_h2_slides) == 0
 
     def test_subsection_flushes_existing_content(self, t):
         """subsection after paragraph → paragraph slide + title slide."""

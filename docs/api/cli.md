@@ -245,12 +245,15 @@ lecture-forge create [OPTIONS]
 **Options:**
 - `-c, --config PATH`: Configuration YAML file
 - `-i, --interactive`: Enable interactive mode
-- `--image-search/--no-image-search`: Enable image search (default: enabled)
-- `--quality-level [lenient|balanced|strict]`: Quality threshold (default: balanced)
-- `-o, --output TEXT`: Output filename
+- `--image-search/--no-image-search`: Enable image search from web sources — Pexels (default: enabled)
+- `--quality-level [lenient|balanced|strict]`: Quality threshold — lenient(70), balanced(80), strict(90) (default: balanced)
+- `-o, --output TEXT`: Output filename without extension (auto-generated if omitted)
+- `--include-pdf-images/--no-include-pdf-images`: Extract images from PDFs with location-based matching (default: enabled)
+- `--auto-describe-images/--no-auto-describe-images`: Auto-generate GPT-4o-mini descriptions for PDF images (default: enabled, requires `--include-pdf-images`)
 - `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
-- `--include-pdf-images/--no-include-pdf-images`: Extract PDF images (default: enabled)
-- `--auto-describe-images/--no-auto-describe-images`: Auto-generate descriptions (default: enabled)
+- `--with-code`: Include code examples in lecture content (default: excluded)
+- `--existing-kb PATH`: Reuse or extend an existing knowledge base directory instead of building a new one
+- `--kb-mode [reuse_only|extend]`: How to use `--existing-kb` — `reuse_only` (read-only, default) or `extend` (add new sources to the KB)
 
 #### Python API
 
@@ -267,6 +270,12 @@ result = generate_lecture({
     "keywords": ["machine learning"],
     "image_search": True,
     "quality_level": "balanced",
+    "include_pdf_images": True,
+    "auto_describe_images": True,
+    "with_code": False,
+    # Optional: reuse an existing knowledge base
+    # "existing_kb_path": "/path/to/vector_db/my_kb",
+    # "kb_mode": "reuse_only",  # or "extend"
 })
 
 print(f"HTML: {result['html_path']}")
@@ -352,9 +361,10 @@ lecture-forge improve LECTURE_PATH [OPTIONS]
 - `LECTURE_PATH`: Path to lecture HTML file
 
 **Options:**
-- `--enhance-pdf-images`: Generate descriptions for PDF images
-- `--source-pdf PATH`: Source PDF file (required with --enhance-pdf-images)
-- `--to-slides`: Convert to Reveal.js slides
+- `--enhance-pdf-images`: (Legacy) Re-generate descriptions for PDF images using page text. Mainly useful for lectures created before v0.2.4 when auto-describe was not the default.
+- `--source-pdf PATH`: Source PDF file (required with `--enhance-pdf-images`)
+- `--to-slides`: Convert lecture HTML to a Reveal.js presentation (creates `*_slides.html`)
+- `--with-notes`: Auto-generate presenter notes for each slide using LLM (requires `--to-slides`; press **S** in browser to view speaker notes)
 
 #### Python API
 
@@ -464,6 +474,9 @@ result = generate_lecture({
     "quality_level": "balanced",
     "include_pdf_images": True,
     "auto_describe_images": True,
+    "with_code": True,
+    # "existing_kb_path": "/path/to/vector_db/existing_kb",
+    # "kb_mode": "reuse_only",
 })
 
 # 2. Display results
@@ -604,5 +617,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-18
-**Version**: 0.3.7
+**Last Updated**: 2026-02-19
+**Version**: 0.3.8

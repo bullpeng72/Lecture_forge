@@ -2,6 +2,7 @@
 Image Editor Tool - Edit images in generated HTML lectures.
 """
 
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -33,21 +34,23 @@ class ImageEditor:
 
         self.soup = BeautifulSoup(self.html_content, "html.parser")
 
-        # Extract images
+        # Extract images and diagrams
         self.images = self._extract_images()
+        self.diagrams = self._extract_diagrams()
 
         # Track changes
         self.changes = {
-            "delete": set(),  # Image IDs to delete
-            "replace": {},  # Image ID -> new image info
-            "add": [],  # New images to add
+            "delete": set(),          # image indices to delete
+            "replace": {},            # image index -> new image info
+            "add": [],                # new images to add
+            "diagram_delete": set(),  # diagram indices to delete
         }
 
         # Initialize Vector Store (for finding alternatives)
         self.vector_store = None
         self._init_vector_store()
 
-        logger.info(f"Image Editor initialized: {len(self.images)} images found")
+        logger.info(f"Image Editor initialized: {len(self.images)} images, {len(self.diagrams)} diagrams found")
 
     def _init_vector_store(self):
         """Initialize Vector Store if available."""
@@ -104,6 +107,40 @@ class ImageEditor:
             images.append(img_info)
 
         return images
+
+    def _extract_diagrams(self) -> List[Dict]:
+        """Extract all Mermaid diagrams from HTML.
+
+        Returns:
+            List of diagram metadata dictionaries
+        """
+        diagrams = []
+
+        mermaid_divs = self.soup.find_all("div", class_="mermaid")
+        for idx, mermaid_div in enumerate(mermaid_divs, 1):
+            # Outer wrapper div (contains title h4 + mermaid div)
+            container = mermaid_div.find_parent("div", class_="my-8") or mermaid_div
+
+            # Title from h4 inside the container
+            h4 = container.find("h4") if container is not mermaid_div else None
+            title = h4.get_text(strip=True) if h4 else f"다이어그램 {idx}"
+
+            # Mermaid code and type (first keyword)
+            code = mermaid_div.get_text(strip=True)
+            words = code.split()
+            diagram_type = words[0].lower() if words else "diagram"
+
+            diagrams.append({
+                "index": idx,
+                "mermaid_div": mermaid_div,   # used for DOM-order walking
+                "container": container,        # decompose() target
+                "mermaid_code": code,
+                "title": title,
+                "diagram_type": diagram_type,
+                "section": self._find_section(mermaid_div),
+            })
+
+        return diagrams
 
     def _extract_caption(self, img_tag) -> str:
         """Extract caption from figure or nearby elements."""
@@ -175,6 +212,67 @@ class ImageEditor:
 
         return image_list
 
+    def list_elements(self) -> List[Dict]:
+        """Return images and diagrams unified in HTML document order.
+
+        Each element dict contains:
+            display_index  - unified 1-based display number
+            kind           - "image" or "diagram"
+            img_index      - image index (kind=="image"), else None
+            dgm_index      - diagram index (kind=="diagram"), else None
+            title          - display title / alt text
+            section        - section heading the element belongs to
+            extra          - page number (images) or diagram type (diagrams)
+            status         - "keep" / "delete" / "replace"
+        """
+        img_by_id = {id(img["tag"]): img for img in self.images}
+        dgm_by_id = {id(dgm["mermaid_div"]): dgm for dgm in self.diagrams}
+
+        elements = []
+        seen_dgm_ids: set = set()
+
+        for tag in self.soup.descendants:
+            if not hasattr(tag, "name") or tag.name is None:
+                continue
+
+            if tag.name == "img" and id(tag) in img_by_id:
+                img = img_by_id[id(tag)]
+                status = (
+                    "delete" if img["index"] in self.changes["delete"]
+                    else "replace" if img["index"] in self.changes["replace"]
+                    else "keep"
+                )
+                elements.append({
+                    "kind": "image",
+                    "img_index": img["index"],
+                    "dgm_index": None,
+                    "title": (img["alt"] or img["caption"] or "설명 없음")[:50],
+                    "section": img["section"],
+                    "extra": f"p.{img['page']}" if img["page"] else "-",
+                    "status": status,
+                })
+
+            elif tag.name == "div" and "mermaid" in (tag.get("class") or []):
+                tag_id = id(tag)
+                if tag_id in dgm_by_id and tag_id not in seen_dgm_ids:
+                    seen_dgm_ids.add(tag_id)
+                    dgm = dgm_by_id[tag_id]
+                    status = "delete" if dgm["index"] in self.changes["diagram_delete"] else "keep"
+                    elements.append({
+                        "kind": "diagram",
+                        "img_index": None,
+                        "dgm_index": dgm["index"],
+                        "title": dgm["title"][:50],
+                        "section": dgm["section"],
+                        "extra": dgm["diagram_type"],
+                        "status": status,
+                    })
+
+        for i, el in enumerate(elements, 1):
+            el["display_index"] = i
+
+        return elements
+
     def mark_delete(self, image_index: int) -> bool:
         """
         Mark an image for deletion.
@@ -206,6 +304,37 @@ class ImageEditor:
         if image_index in self.changes["delete"]:
             self.changes["delete"].remove(image_index)
             logger.info(f"Unmarked image {image_index} for deletion")
+            return True
+        return False
+
+    def mark_delete_diagram(self, dgm_index: int) -> bool:
+        """Mark a diagram for deletion.
+
+        Args:
+            dgm_index: Diagram index (1-based)
+
+        Returns:
+            True if successful
+        """
+        if not (1 <= dgm_index <= len(self.diagrams)):
+            logger.error(f"Invalid diagram index: {dgm_index}")
+            return False
+        self.changes["diagram_delete"].add(dgm_index)
+        logger.info(f"Marked diagram {dgm_index} for deletion")
+        return True
+
+    def unmark_delete_diagram(self, dgm_index: int) -> bool:
+        """Unmark a diagram for deletion.
+
+        Args:
+            dgm_index: Diagram index (1-based)
+
+        Returns:
+            True if the diagram was in the delete set
+        """
+        if dgm_index in self.changes["diagram_delete"]:
+            self.changes["diagram_delete"].discard(dgm_index)
+            logger.info(f"Unmarked diagram {dgm_index} for deletion")
             return True
         return False
 
@@ -497,6 +626,26 @@ class ImageEditor:
             changes_made += 1
             logger.debug(f"Replaced image {img_index}")
 
+        # 3. Delete diagrams
+        for dgm_index in sorted(self.changes["diagram_delete"], reverse=True):
+            dgm = self.diagrams[dgm_index - 1]
+            dgm["container"].decompose()
+            changes_made += 1
+            logger.debug(f"Deleted diagram {dgm_index}")
+
+        # 4. Update image/diagram counts in sidebar/header stats
+        remaining_images = len(self.soup.find_all("img"))
+        for text_node in self.soup.find_all(string=re.compile(r"이미지\s*\d+개")):
+            new_text = re.sub(r"(이미지\s*)\d+(개)", rf"\g<1>{remaining_images}\g<2>", str(text_node))
+            text_node.replace_with(new_text)
+        logger.debug(f"Updated image count to {remaining_images} in HTML stats")
+
+        remaining_diagrams = len(self.soup.find_all("div", class_="mermaid"))
+        for text_node in self.soup.find_all(string=re.compile(r"다이어그램\s*\d+개")):
+            new_text = re.sub(r"(다이어그램\s*)\d+(개)", rf"\g<1>{remaining_diagrams}\g<2>", str(text_node))
+            text_node.replace_with(new_text)
+        logger.debug(f"Updated diagram count to {remaining_diagrams} in HTML stats")
+
         # Save modified HTML
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(str(self.soup))
@@ -516,4 +665,6 @@ class ImageEditor:
             "to_delete": len(self.changes["delete"]),
             "to_replace": len(self.changes["replace"]),
             "to_add": len(self.changes["add"]),
+            "total_diagrams": len(self.diagrams),
+            "diagrams_to_delete": len(self.changes["diagram_delete"]),
         }

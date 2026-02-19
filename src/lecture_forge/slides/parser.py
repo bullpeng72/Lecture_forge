@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Dict, List
 
+_LEVEL_SUFFIX_RE = re.compile(r"\s*-\s*\w+\s+Level\s*$", re.IGNORECASE)
+
 from bs4 import BeautifulSoup
 
 from lecture_forge.slides.utils import batch_convert_to_bullet_points, convert_to_bullet_points
@@ -51,7 +53,12 @@ class HTMLLectureParser:
         }
 
     def _extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract lecture title from HTML."""
+        """Extract lecture title from HTML, stripping the '- Level' suffix added by create.py."""
+        raw = self._extract_raw_title(soup)
+        return _LEVEL_SUFFIX_RE.sub("", raw).strip() or raw
+
+    def _extract_raw_title(self, soup: BeautifulSoup) -> str:
+        """Extract raw title string (before level-suffix stripping)."""
         # 1. Legacy class (never matched by current template, kept for compatibility)
         title_tag = soup.find("h1", class_="lecture-title")
         if title_tag:
@@ -174,10 +181,11 @@ class HTMLLectureParser:
         # Remove any remaining None placeholders (should not occur in normal flow)
         content_blocks = [b for b in content_blocks if b is not None]
 
-        # Extract images
+        # Extract images — with P3: attach the nearest preceding heading as title
         for figure in section_elem.find_all("figure"):
             block = self._process_image(figure)
             if block:
+                block["title"] = self._get_preceding_heading(figure)
                 content_blocks.append(block)
 
         # Extract diagrams
@@ -257,10 +265,12 @@ class HTMLLectureParser:
             Content block dictionary or None
         """
         code_elem = elem.find("code")
-        if not code_elem:
-            return None
+        # P4: Fallback — use <pre> text directly if no <code> child
+        if code_elem:
+            code = code_elem.text.strip()
+        else:
+            code = elem.get_text().strip()
 
-        code = code_elem.text.strip()
         if not code:
             return None
 
@@ -270,14 +280,30 @@ class HTMLLectureParser:
         parent = elem.parent
         if parent and parent.get("data-lang"):
             language = parent["data-lang"]
-        elif "class" in code_elem.attrs:
+        elif code_elem and "class" in code_elem.attrs:
             # Priority 2: language-* class on <code> (set by Prism.js / raw fenced blocks)
             for cls in code_elem["class"]:
                 if cls.startswith("language-"):
                     language = cls.replace("language-", "")
                     break
+        elif "class" in elem.attrs:
+            # Priority 3: language-* class on <pre> itself
+            for cls in elem.get("class", []):
+                if cls.startswith("language-"):
+                    language = cls.replace("language-", "")
+                    break
 
         return {"type": "code", "content": code, "language": language}
+
+    def _get_preceding_heading(self, elem) -> str:
+        """Return the nearest h2/h3/h4 sibling that precedes *elem* in the DOM.
+
+        Used to capture the contextual heading for an image slide (P3).
+        """
+        for sibling in elem.previous_siblings:
+            if hasattr(sibling, "name") and sibling.name in ("h2", "h3", "h4"):
+                return sibling.get_text(strip=True)
+        return ""
 
     def _process_image(self, figure) -> Dict:
         """Process image element.

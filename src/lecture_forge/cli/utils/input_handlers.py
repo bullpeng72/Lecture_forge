@@ -155,6 +155,43 @@ def collect_inputs_interactive() -> Dict[str, Any]:
         default="intermediate",
     )
 
+    # Knowledge Base Source selection
+    console.print("\n[bold cyan]🗄️  Knowledge Base Source[/bold cyan]")
+    console.print("━" * 50 + "\n")
+    console.print("  [bold][1][/bold] Create new knowledge base  [dim](default)[/dim]")
+    console.print("  [bold][2][/bold] Reuse existing KB only     [dim](no new sources)[/dim]")
+    console.print("  [bold][3][/bold] Extend existing KB with new sources")
+    console.print()
+
+    kb_choice = Prompt.ask(
+        "[bold]Knowledge base option[/bold]",
+        choices=["1", "2", "3"],
+        default="1",
+    )
+
+    if kb_choice in ["2", "3"]:
+        from lecture_forge.cli.utils.helpers import select_knowledge_base
+        kb_path = select_knowledge_base()
+        if not kb_path:
+            console.print("[yellow]⚠️  No KB selected. Creating new KB.[/yellow]")
+            inputs["existing_kb_path"] = None
+            inputs["kb_mode"] = "new"
+        else:
+            inputs["existing_kb_path"] = kb_path
+            inputs["kb_mode"] = "reuse_only" if kb_choice == "2" else "extend"
+    else:
+        inputs["existing_kb_path"] = None
+        inputs["kb_mode"] = "new"
+
+    if inputs.get("kb_mode") == "reuse_only":
+        # Skip all source collection for reuse-only mode
+        inputs["pdfs"] = []
+        inputs["urls"] = []
+        inputs["keywords"] = []
+        inputs["hada_keywords"] = []
+        inputs["image_keywords"] = []
+        return inputs
+
     console.print("\n[bold cyan]📂 Content Sources[/bold cyan]")
     console.print("━" * 50 + "\n")
 

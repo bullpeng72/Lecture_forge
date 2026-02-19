@@ -7,6 +7,7 @@ from typing import Optional
 
 from rich.console import Console
 
+from lecture_forge.slides.notes import SlideNotesGenerator
 from lecture_forge.slides.parser import HTMLLectureParser
 from lecture_forge.slides.templates import RevealJsTemplate
 from lecture_forge.utils import logger
@@ -25,12 +26,13 @@ class SlideConverter:
         self.template = RevealJsTemplate()
         self.console = console or Console()
 
-    def convert(self, lecture_html_path: Path, output_path: Path) -> bool:
+    def convert(self, lecture_html_path: Path, output_path: Path, with_notes: bool = False) -> bool:
         """Convert lecture HTML to Reveal.js presentation slides.
 
         Args:
             lecture_html_path: Path to the lecture HTML file
             output_path: Path for the output slides HTML
+            with_notes: If True, auto-generate LLM presenter notes for each slide
 
         Returns:
             True if successful, False otherwise
@@ -54,6 +56,13 @@ class SlideConverter:
             # Generate Reveal.js HTML
             self.console.print("   • 슬라이드 HTML 생성 중...")
             slides_html = self.template.generate(title, subtitle, sections)
+
+            # Optionally inject auto-generated presenter notes
+            if with_notes:
+                self.console.print("   • 발표자 노트 자동 생성 중... (LLM 사용)")
+                notes_gen = SlideNotesGenerator()
+                slides_html = notes_gen.generate(slides_html)
+                self.console.print("   ✅ 발표자 노트 생성 완료 (브라우저에서 S키로 확인)")
 
             # Write to output file
             with open(output_path, "w", encoding="utf-8") as f:

@@ -28,19 +28,231 @@ from lecture_forge.utils.language_utils import detect_language
 from lecture_forge.utils.prompt_manager import load_prompt
 
 
+def _build_code_fail_condition(with_code: bool) -> str:
+    if with_code:
+        return "2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED"
+    return "2. ℹ️ Code examples are not required for this lecture."
+
+
+def _build_code_requirement_section(with_code: bool, target_code_examples: int) -> str:
+    if with_code:
+        return f"""3. **🚨 Code Examples: MINIMUM {target_code_examples} examples 🚨**
+   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
+   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
+   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
+   - Show complete, runnable, real-world examples
+   - Include setup, execution, and output
+   - Both basic AND advanced examples
+
+   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
+   ```python
+   # ========================================
+   # 예제 #N: [예제 제목]
+   # ========================================
+   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
+   # 난이도: [쉬움/보통/어려움]
+   # ========================================
+
+   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
+   variable1 = "example"
+
+   # Step 2: [두 번째 단계 설명]
+   variable2 = process(variable1)
+
+   # Step 3: [세 번째 단계 설명]
+   result = finalize(variable2)
+
+   # ... (continue for 30-80 lines)
+
+   # 예상 출력:
+   # 결과: ...
+   ```
+
+   **After EACH code block, add 100-150 words explaining:**
+   - 코드가 무엇을 하는가
+   - 각 단계의 의미
+   - 실무에서 어떻게 활용하는가
+   - 주의할 점"""
+    return "3. **Code Examples**: Not required for this lecture. Do NOT include code blocks."
+
+
+def _build_code_template_section(with_code: bool) -> str:
+    if with_code:
+        return """**💻 CODE EXAMPLE TEMPLATE (MANDATORY - COPY THIS STRUCTURE):**
+
+### 코드 예제 1: [기본 사용법]
+
+다음은 [개념]의 기본적인 사용 예제입니다.
+
+```python
+# 예제 설명: [이 예제가 무엇을 보여주는가]
+
+# 1단계: [무엇을 하는가]
+code_here = "example"
+
+# 2단계: [다음 단계 설명]
+result = process(code_here)
+
+# 3단계: [최종 단계]
+print(f"결과: {result}")
+
+# 예상 출력:
+# 결과: example processed
+```
+
+**설명:**
+- 첫 번째 단계에서는...
+- 두 번째 단계에서는...
+- 최종적으로..."""
+    return ""
+
+
+def _build_practice_fail_condition(require_practice: bool) -> str:
+    if require_practice:
+        return "3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED"
+    return "3. ℹ️ Practice problems are not required for this section."
+
+
+def _build_practice_requirement_section(require_practice: bool, target_practice_problems: int) -> str:
+    if require_practice:
+        return f"""4. **Practice Problems: {target_practice_problems}+ detailed exercises**
+   - **Each problem: 100-150 words description**
+   - Clear problem statement (what needs to be solved)
+   - Requirements specification (3-5 requirements)
+   - Difficulty level indicator (쉬움/보통/어려움)
+   - 2-3 hints or guidance points
+   - Expected outcome and success criteria
+   - Bonus challenges for advanced learners"""
+    return "4. **Practice Problems**: Not required for this section."
+
+
+def _build_practice_checklist_item(require_practice: bool, target_practice_problems: int) -> str:
+    if require_practice:
+        return (
+            f"✅ **Practice Problems**: I included {target_practice_problems}+ detailed problems\n"
+            "   - Each 100-150 words with hints and requirements"
+        )
+    return "✅ **Practice Problems**: N/A (not required for this section)"
+
+
+def _build_code_checklist_item(with_code: bool, target_code_examples: int) -> str:
+    if with_code:
+        return (
+            f"✅ **Code Examples**: I included {target_code_examples}+ code blocks\n"
+            "   - Each 30-80 lines with detailed Korean comments\n"
+            "   - Followed by 100-150 word explanation"
+        )
+    return "✅ **Code Examples**: N/A (not required for this lecture)"
+
+
+# LLM refusal patterns (case-insensitive prefix match)
+_LLM_REFUSAL_PREFIXES = (
+    "i'm sorry, but i can't",
+    "i'm sorry, i can't",
+    "i cannot assist with",
+    "i apologize, but i cannot",
+    "i'm unable to assist",
+    "죄송합니다, 저는",
+    "죄송하지만 저는",
+)
+
+
+def _build_structural_section_prompt(
+    section_title: str,
+    section_type: str,
+    topic: str,
+    audience_level: str,
+    estimated_time: int,
+    topics_list: str,
+    learning_outcomes_list: str,
+    min_words: int,
+    target_words: int,
+    context_text: str,
+    language_instruction: str,
+) -> str:
+    """Build a safe, non-threatening prompt for structural sections (intro/conclusion)."""
+
+    if section_type == "conclusion":
+        structure_guide = """
+### Structure to follow:
+
+## 핵심 내용 요약 / Key Takeaways
+(Bullet list summarizing the main points covered in the lecture)
+
+## 학습 목표 달성 / Learning Objectives Review
+(Brief review of how each learning objective was addressed)
+
+## 실무 적용 / Practical Application
+(2-3 concrete ways learners can apply what they learned)
+
+## 다음 단계 / Next Steps
+(3-5 recommended resources, topics, or actions for further learning)
+
+## 마무리 / Closing Remarks
+(2-3 sentences wrapping up the lecture warmly and encouragingly)"""
+    else:
+        structure_guide = """
+### Structure to follow:
+
+## 강의 개요 / Lecture Overview
+(Brief overview of what this lecture covers and why it matters)
+
+## 학습 목표 / Learning Objectives
+(Clear list of what learners will be able to do after this lecture)
+
+## 사전 지식 / Prerequisites
+(What learners should already know before starting)
+
+## 강의 구성 / Structure Preview
+(Brief preview of the sections and topics to be covered)"""
+
+    return f"""You are an expert educator writing a lecture section in {language_instruction}.
+
+## Task
+Write the {section_type} section for a lecture on: **{topic}**
+
+## Section Information
+- Section Title: {section_title}
+- Section Type: {section_type.capitalize()}
+- Target Audience: {audience_level}
+- Estimated Time: {estimated_time} minutes
+- Topics: {topics_list}
+
+## Learning Outcomes
+{learning_outcomes_list}
+
+## Reference Material (from lecture knowledge base)
+{context_text}
+
+## Word Count Requirements
+- Minimum: {min_words} words
+- Target: {target_words} words
+{structure_guide}
+
+## Formatting Rules
+- Use ## for main headings, ### for sub-headings (never use # H1)
+- Write in {language_instruction}
+- Be clear, engaging, and appropriate for {audience_level}-level learners
+- Do not include code examples in this section
+
+Write the complete {section_type} section now:"""
+
+
 class ContentWriterAgent(BaseAgent):
     """Agent for writing lecture content with RAG."""
 
-    def __init__(self, vector_store: VectorStore = None) -> None:
+    def __init__(self, vector_store: VectorStore = None, with_code: bool = False) -> None:
         """
         Initialize Content Writer Agent.
 
         Args:
             vector_store: Vector store for RAG queries
+            with_code: Whether to include code examples in generated content
         """
         super().__init__()
         logger.info("Initializing Content Writer Agent")
         self.vector_store = vector_store
+        self.with_code = with_code
 
         # Global image tracking for deduplication across sections
         self.used_image_ids = set()
@@ -52,7 +264,7 @@ class ContentWriterAgent(BaseAgent):
             keyword_translator=self._get_keyword_translations
         )
         self.code_generator = CodeGenerator(vector_store=vector_store)
-        self.content_expander = ContentExpander(vector_store=vector_store)
+        self.content_expander = ContentExpander(vector_store=vector_store, with_code=with_code)
 
     def extract_code_blocks(self, markdown: str) -> List:
         """Delegate to CodeGenerator.extract_code_blocks()."""
@@ -140,7 +352,7 @@ class ContentWriterAgent(BaseAgent):
             Section content
         """
         # 1. RAG query to get relevant context
-        contexts, context_metadatas = self._query_knowledge(section)
+        contexts, context_metadatas = self._query_knowledge(section, curriculum)
 
         # 2. Select relevant images FIRST (for accurate quality evaluation)
         images = self.image_selector.select_images(section, available_images or [], context_metadatas)
@@ -177,7 +389,7 @@ class ContentWriterAgent(BaseAgent):
         return content
 
 
-    def _query_knowledge(self, section: Section) -> tuple:
+    def _query_knowledge(self, section: Section, curriculum: "Curriculum | None" = None) -> tuple:
         """Query vector DB for relevant context with increased retrieval.
 
         Returns:
@@ -187,7 +399,20 @@ class ContentWriterAgent(BaseAgent):
             return [], []
 
         # Build comprehensive query from section topics
-        query = " ".join(section.topics)
+        _sid = section.id.lower()
+        is_structural = _sid.endswith("_intro") or _sid.endswith("_conclusion")
+
+        if is_structural and curriculum:
+            # Use topic + main section titles for better semantic matching
+            content_titles = [
+                s.title for s in curriculum.sections
+                if not s.id.lower().endswith("_intro")
+                and not s.id.lower().endswith("_conclusion")
+            ]
+            query = curriculum.topic + " " + " ".join(content_titles[:4])
+            logger.info(f"   🔍 Structural section RAG query (enriched): '{query[:80]}'")
+        else:
+            query = " ".join(section.topics)
 
         try:
             # Increase from 5 to 10 for more comprehensive context
@@ -222,6 +447,17 @@ class ContentWriterAgent(BaseAgent):
         """
         # Calculate target metrics
         targets = calculate_target_metrics(section.estimated_time, section.difficulty_level)
+
+        # Override code targets when --with-code is not set
+        if not self.with_code:
+            targets["target_code_examples"] = 0
+            targets["min_code_examples"] = 0
+
+        # Structural sections (intro/conclusion) should not require practice problems
+        _section_id = section.id.lower()
+        is_structural_section = _section_id.endswith("_intro") or _section_id.endswith("_conclusion")
+        if is_structural_section:
+            targets["target_practice_problems"] = 0
 
         # Use more contexts (increase from 8 to 10 for better content)
         context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
@@ -259,20 +495,88 @@ class ContentWriterAgent(BaseAgent):
             "summary_label": summary_label,
             # Context
             "context_text": context_text,
+            # Code section variables (controlled by --with-code flag)
+            "code_fail_condition": _build_code_fail_condition(self.with_code),
+            "code_requirement_section": _build_code_requirement_section(
+                self.with_code, targets['target_code_examples']
+            ),
+            "code_template_section": _build_code_template_section(self.with_code),
+            "code_checklist_item": _build_code_checklist_item(
+                self.with_code, targets['target_code_examples']
+            ),
+            # Practice problems variables (disabled for intro/conclusion sections)
+            "practice_fail_condition": _build_practice_fail_condition(
+                targets['target_practice_problems'] > 0
+            ),
+            "practice_requirement_section": _build_practice_requirement_section(
+                targets['target_practice_problems'] > 0, targets['target_practice_problems']
+            ),
+            "practice_checklist_item": _build_practice_checklist_item(
+                targets['target_practice_problems'] > 0, targets['target_practice_problems']
+            ),
         }
 
-        # Load prompt from template
-        prompt = load_prompt("content_generation", **template_vars)
+        # Load prompt from template (structural sections use a safer, focused prompt)
+        if is_structural_section:
+            section_type = "conclusion" if _section_id.endswith("_conclusion") else "introduction"
+            language_instruction = "KOREAN (한국어)" if is_korean else "ENGLISH"
+            prompt = _build_structural_section_prompt(
+                section_title=section.title,
+                section_type=section_type,
+                topic=curriculum.topic,
+                audience_level=curriculum.audience_level,
+                estimated_time=section.estimated_time,
+                topics_list=', '.join(section.topics),
+                learning_outcomes_list='\n'.join(f'- {o}' for o in section.learning_outcomes),
+                min_words=targets['min_words'],
+                target_words=targets['target_words'],
+                context_text=context_text,
+                language_instruction=language_instruction,
+            )
+            logger.info(f"   📝 Using structural prompt for '{section.title}'")
+        else:
+            prompt = load_prompt("content_generation", **template_vars)
 
         try:
             response = self.invoke_llm(prompt, phase="content_writing")
             content = response.content.strip()
+
+            # --- LLM refusal detection ---
+            _content_lower = content.lower()
+            if any(_content_lower.startswith(p) for p in _LLM_REFUSAL_PREFIXES):
+                logger.warning(
+                    f"  ⚠️ LLM refused prompt for '{section.title}'. Retrying with structural prompt..."
+                )
+                _stype = "conclusion" if _section_id.endswith("_conclusion") else (
+                    "introduction" if _section_id.endswith("_intro") else "content"
+                )
+                _lang = "KOREAN (한국어)" if is_korean else "ENGLISH"
+                _fallback = _build_structural_section_prompt(
+                    section_title=section.title,
+                    section_type=_stype,
+                    topic=curriculum.topic,
+                    audience_level=curriculum.audience_level,
+                    estimated_time=section.estimated_time,
+                    topics_list=', '.join(section.topics),
+                    learning_outcomes_list='\n'.join(f'- {o}' for o in section.learning_outcomes),
+                    min_words=targets['min_words'],
+                    target_words=targets['target_words'],
+                    context_text=context_text,
+                    language_instruction=_lang,
+                )
+                response = self.invoke_llm(_fallback, phase="content_writing_fallback")
+                content = response.content.strip()
+                logger.info(f"  ✅ Fallback content generated for '{section.title}'")
+            # --- LLM refusal detection end ---
 
             # Clean up markdown fences
             if content.startswith("```markdown"):
                 content = content.split("```markdown")[1].split("```")[0].strip()
             elif content.startswith("```"):
                 content = content.split("```")[1].split("```")[0].strip()
+
+            # RMC: Self-review of generated content
+            content = self._review_content_with_rmc(content, section, curriculum, targets)
 
             # Validate content quality (use actual image count from selected images)
             code_blocks = self.code_generator.extract_code_blocks(content)
@@ -372,6 +676,12 @@ class ContentWriterAgent(BaseAgent):
                     except Exception as e:
                         logger.error(f"  ❌ Expansion {iteration + 1} failed: {e}")
                         break
+
+            # Post-process: strip fenced code blocks if --with-code is not set
+            if not self.with_code and "```" in content:
+                import re
+                content = re.sub(r"```[\s\S]*?```", "", content)
+                content = re.sub(r"\n{3,}", "\n\n", content).strip()
 
             return content
 
@@ -514,6 +824,86 @@ class ContentWriterAgent(BaseAgent):
             "라이브러리": ["library", "libraries"],
         }
 
+
+    def _review_content_with_rmc(
+        self,
+        content: str,
+        section: "Section",
+        curriculum: "Curriculum",
+        targets: dict,
+    ) -> str:
+        """
+        RMC (Reflective Meta-Cognition) self-review of generated section content.
+
+        Layer 1: Check for conceptual leaps, unclear explanations, code-text gaps, flow breaks, repetition.
+        Layer 2: Re-examine review to avoid over-correction of good content.
+        Returns revised content, or original if review fails or produces something shorter.
+        """
+        original_word_count = len(content.split())
+        # Slice content to avoid token overload while keeping enough for review
+        content_slice = content[:4000] if len(content) > 4000 else content
+        truncated_note = f"\n[Note: content truncated to 4000 chars for review; full word count: {original_word_count}]" if len(content) > 4000 else ""
+
+        prompt = f"""You are an expert educational content reviewer. Review the following lecture section content and improve it if needed.
+
+## Section Context
+- Lecture Topic: {curriculum.topic}
+- Section Title: {section.title}
+- Audience Level: {curriculum.audience_level}
+- Target Word Count: {targets['target_words']} words (current: {original_word_count} words)
+
+## Content to Review
+{content_slice}{truncated_note}
+
+---
+
+## Layer 1 — Educational Quality Review (check each item):
+1. **Conceptual leaps**: Are there concepts introduced without sufficient prior explanation for a {curriculum.audience_level}-level learner?
+2. **Unclear explanations**: Are there sentences or paragraphs that would confuse the target audience?
+3. **Code-text connection**: If code examples are present, do they have adequate before/after explanation?
+4. **Flow breaks**: Are there abrupt transitions between subsections that disrupt logical flow?
+5. **Repetition**: Is the same explanation given more than once without adding new insight?
+
+## Layer 2 — Review of the Review:
+- Are your judgments calibrated for a {curriculum.audience_level}-level audience (not too strict, not too lenient)?
+- Is the content actually problematic, or are you flagging things that are fine?
+- Would fixing the flagged items genuinely help learners, or would it just change the style?
+
+---
+
+## Instructions:
+- Output the COMPLETE revised content with only the necessary corrections applied.
+- If the content is already high quality, output it UNCHANGED.
+- Do NOT add a preamble, explanation, or meta-commentary — just output the content itself.
+- Do NOT shorten the content; maintain or slightly increase word count.
+- Preserve all code blocks exactly as they are.
+
+## Revised Content:"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="content_rmc_review")
+            revised = response.content.strip()
+
+            # Validate: revised must be at least 80% of original word count
+            revised_word_count = len(revised.split())
+            min_words = int(original_word_count * 0.8)
+
+            if revised_word_count < min_words:
+                logger.warning(
+                    f"RMC content review returned too-short result "
+                    f"({revised_word_count} < {min_words} words) — using original"
+                )
+                return content
+
+            logger.info(
+                f"RMC content review applied: {original_word_count} → {revised_word_count} words "
+                f"for section '{section.title}'"
+            )
+            return revised
+
+        except Exception as e:
+            logger.warning(f"RMC content review failed (returning original): {e}")
+            return content
 
     def _expand_keywords(self, topic: str, keyword_map: dict) -> List[str]:
         """Expand topic with English translations and variations."""

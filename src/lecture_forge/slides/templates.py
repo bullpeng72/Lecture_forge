@@ -2,9 +2,45 @@
 Reveal.js HTML template generator for lecture slides.
 """
 
+import re
 from typing import Dict, List
 
 from lecture_forge.config import Config
+
+_MAX_ITEM_CHARS = 60  # hard limit for a rendered list item (plain-text length)
+
+
+def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
+    """Clean and truncate a list item for on-slide display.
+
+    P1 (template-side): original HTML list items from the lecture source are
+    not processed by the LLM bullet-converter, so they may be very long or
+    multi-line.  This helper:
+      1. Strips embedded newlines (sub-list noise) — take first line only.
+      2. Truncates long plain text at a natural boundary (colon, comma, space).
+    Inline HTML formatting (<strong>, <em>, <code>) is preserved when the item
+    is already within the limit.
+    """
+    plain = re.sub(r"<[^>]+>", "", item)
+    # For multi-line items keep only the first meaningful line
+    first_plain = plain.split("\n")[0].strip()
+    first_html = item.split("\n")[0].strip()
+
+    if len(first_plain) <= max_chars:
+        return first_html
+
+    # Truncate at a natural boundary within the plain text
+    window = first_plain[:max_chars]
+    for sep in (":", "：", ",", "，", " —", " -"):
+        pos = window.find(sep)
+        if 10 <= pos < max_chars:
+            return first_html[: pos + 1].rstrip() + "…"
+
+    last_space = window.rfind(" ")
+    if last_space > max_chars // 2:
+        return first_html[:last_space] + "…"
+
+    return first_html[:max_chars] + "…"
 
 
 class RevealJsTemplate:
@@ -92,59 +128,69 @@ class RevealJsTemplate:
         current_slide_content = []
         slide_item_count = 0
         current_title = section_title  # tracks the most recent section/subsection title
+        _continuation = False  # True after a slide break within a subsection
 
         for idx, block in enumerate(blocks):
             block_type = block["type"]
 
             if block_type == "subsection":
-                # Subsection starts a new slide
+                # P1: Save current slide only if it has real content beyond a lone heading
                 if current_slide_content:
-                    slides.append(self._create_content_slide(current_slide_content))
+                    if any(not item.startswith("<h") for item in current_slide_content):
+                        slides.append(self._create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
 
                 current_title = block["content"]
+                _continuation = False  # new subsection resets continuation marker
 
-                # Create dedicated title slide for subsection
-                slides.append(
-                    f"""
-    <section data-transition="slide">
-        <h2>{block['content']}</h2>
-    </section>
-                    """
-                )
+                # P1: No standalone title slide — pre-inject h3 heading (NOT counted)
+                current_slide_content.append(f"<h3>{block['content']}</h3>")
 
             elif block_type == "subsubsection":
                 # h4 acts as slide title - start new slide
                 if current_slide_content:
-                    slides.append(self._create_content_slide(current_slide_content))
+                    if any(not item.startswith("<h") for item in current_slide_content):
+                        slides.append(self._create_content_slide(current_slide_content))
                     current_slide_content = []
                     slide_item_count = 0
 
                 current_title = block["content"]
+                _continuation = False
 
-                # Add h4 as slide title
+                # P3: heading pre-injected, NOT counted toward slide_item_count
                 current_slide_content.append(f"<h3>{block['content']}</h3>")
-                slide_item_count += 1
 
             elif block_type == "paragraph":
                 # Inject title if slide would otherwise have no heading
                 if not current_slide_content and current_title:
-                    current_slide_content.append(f"<h3>{current_title}</h3>")
-                    slide_item_count += 1
+                    # P2: show "(계속)" on continuation slides
+                    heading = (
+                        f"<h3>{current_title} <span class='slide-cont'>(계속)</span></h3>"
+                        if _continuation
+                        else f"<h3>{current_title}</h3>"
+                    )
+                    current_slide_content.append(heading)
+                    # P3: heading NOT counted
                 current_slide_content.append(f"<p>{block['content']}</p>")
                 slide_item_count += 1
 
             elif block_type == "list":
                 # Inject title if slide would otherwise have no heading
                 if not current_slide_content and current_title:
-                    current_slide_content.append(f"<h3>{current_title}</h3>")
-                    slide_item_count += 1
+                    heading = (
+                        f"<h3>{current_title} <span class='slide-cont'>(계속)</span></h3>"
+                        if _continuation
+                        else f"<h3>{current_title}</h3>"
+                    )
+                    current_slide_content.append(heading)
+                    # P3: heading NOT counted
                 list_slides = self._process_list_block(block, current_slide_content, slide_item_count, current_title)
                 if list_slides:
                     slides.extend(list_slides)
                     current_slide_content = []
                     slide_item_count = 0
+                    _continuation = True
                 else:
                     # List added to current slide; count actual items to detect overflow
                     slide_item_count += len(block["items"])
@@ -165,6 +211,10 @@ class RevealJsTemplate:
                     current_slide_content = []
                     slide_item_count = 0
 
+                # P3: fall back to section heading if parser didn't capture a title
+                if not block.get("title") and current_title:
+                    block = dict(block)
+                    block["title"] = current_title
                 slides.append(self._create_image_slide(block))
 
             elif block_type == "diagram":
@@ -189,6 +239,7 @@ class RevealJsTemplate:
                 slides.append(self._create_content_slide(current_slide_content))
                 current_slide_content = []
                 slide_item_count = 0
+                _continuation = True  # P2: next slide is a continuation
 
         # Add remaining content
         if current_slide_content:
@@ -205,56 +256,75 @@ class RevealJsTemplate:
     ) -> List[str]:
         """Process list block, potentially splitting into multiple slides.
 
+        P2 fix: pre-check remaining capacity BEFORE adding items, so slides
+        never exceed max_items_per_slide regardless of list length.
+
         Returns:
-            List of slide HTML strings if list was split, empty list otherwise
+            List of slide HTML strings if list was split, empty list otherwise.
+            When empty, items have already been appended to current_slide_content.
         """
         list_items = block["items"]
         list_tag = "ol" if block.get("ordered", False) else "ul"
+        max_items = self.max_items_per_slide
 
-        # If list is too long, split it
-        if len(list_items) > self.max_bullet_points:
-            slides = []
+        # Remaining capacity on the current slide
+        remaining_capacity = max(0, max_items - slide_item_count)
 
-            # If current slide has content, finish it first
-            if current_slide_content:
-                slides.append(self._create_content_slide(current_slide_content))
-
-            # Split list into chunks; each chunk gets a heading for context
-            for i in range(0, len(list_items), self.max_bullet_points):
-                chunk = list_items[i : i + self.max_bullet_points]
-                items_html = "".join(f"<li>{item}</li>" for item in chunk)
-
-                chunk_content = []
-                if current_title:
-                    heading = current_title if i == 0 else f"{current_title} (계속...)"
-                    chunk_content.append(f"<h3>{heading}</h3>")
-                chunk_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
-
-                # Add continuation indicator for non-final chunks
-                if i + self.max_bullet_points < len(list_items):
-                    chunk_content.append("<p><em>(계속...)</em></p>")
-
-                slides.append(self._create_content_slide(chunk_content))
-
-            return slides
-        else:
-            # Short list - add to current slide
-            items_html = "".join(f"<li>{item}</li>" for item in list_items)
+        # Fits entirely on the current slide — add in-place, no new slide needed
+        if len(list_items) <= remaining_capacity:
+            items_html = "".join(f"<li>{_render_slide_item(item)}</li>" for item in list_items)
             current_slide_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
             return []
+
+        # Needs split — gather any real (non-heading) content first
+        slides = []
+        has_non_heading = any(not item.startswith("<h") for item in current_slide_content)
+        if current_slide_content and has_non_heading:
+            # Commit the existing slide with whatever it has
+            slides.append(self._create_content_slide(current_slide_content))
+            prefix_headings: List[str] = []
+        else:
+            # Only headings in current_slide_content — reuse them as the
+            # first chunk's heading instead of creating a heading-only slide
+            prefix_headings = list(current_slide_content)
+
+        # Split into chunks of max_items each
+        for i in range(0, len(list_items), max_items):
+            chunk = list_items[i : i + max_items]
+            items_html = "".join(f"<li>{_render_slide_item(item)}</li>" for item in chunk)
+
+            chunk_content: List[str] = []
+            if i == 0 and prefix_headings:
+                # Use the pre-injected heading(s) for the first chunk
+                chunk_content.extend(prefix_headings)
+            elif current_title:
+                # Continuation chunk — add (계속) marker
+                chunk_content.append(
+                    f"<h3>{current_title} <span class='slide-cont'>(계속)</span></h3>"
+                )
+            chunk_content.append(f"<{list_tag}>{items_html}</{list_tag}>")
+            slides.append(self._create_content_slide(chunk_content))
+
+        return slides
 
     def _create_content_slide(self, content_items: List[str]) -> str:
         """Create a content slide from HTML elements.
 
-        Args:
-            content_items: List of HTML strings
-
-        Returns:
-            Complete section HTML
+        P5: Automatically adds a density CSS class based on bullet count.
+        - slide-dense  (4+ items) → smaller font / tighter line-height
+        - slide-sparse (0 items)  → larger font
         """
+        combined = "".join(content_items)
+        li_count = combined.count("<li>")
+        if li_count >= 4:
+            density_class = ' class="slide-dense"'
+        elif li_count == 0 and "<ul>" not in combined and "<ol>" not in combined:
+            density_class = ' class="slide-sparse"'
+        else:
+            density_class = ""
         return f"""
-    <section>
-{''.join(content_items)}
+    <section{density_class}>
+{combined}
     </section>
     """
 
@@ -272,14 +342,19 @@ class RevealJsTemplate:
                 """
 
     def _create_image_slide(self, block: Dict) -> str:
-        """Create image slide."""
+        """Create image slide.
+
+        P3: Renders the block's 'title' field (preceding heading from parser)
+        above the image so the audience sees context.
+        """
+        title = block.get("title", "")
         caption = block.get("caption", "")
-        caption_html = f'<p><small>{caption}</small></p>' if caption else ''
+        title_html = f"        <h3>{title}</h3>\n" if title else ""
+        caption_html = f"        <p><small>{caption}</small></p>\n" if caption else ""
         return f"""
     <section>
-        <img src="{block['src']}" alt="{block['alt']}" style="max-height: 500px; max-width: 90%;">
-        {caption_html}
-    </section>
+{title_html}        <img src="{block['src']}" alt="{block['alt']}" style="max-height: 450px; max-width: 90%;">
+{caption_html}    </section>
                 """
 
     def _create_diagram_slide(self, block: Dict) -> str:
@@ -322,6 +397,13 @@ class RevealJsTemplate:
         <div class="slides">
 {''.join(slides_content)}
         </div>
+    </div>
+
+    <!-- 라이트박스 모달 -->
+    <div id="slide-lightbox" role="dialog" aria-modal="true" aria-label="이미지 확대 보기">
+        <button id="slide-lightbox-close" aria-label="닫기">✕</button>
+        <div id="slide-lightbox-inner"></div>
+        <p id="slide-lightbox-caption"></p>
     </div>
 
 {self._get_javascript()}
@@ -394,17 +476,19 @@ class RevealJsTemplate:
             padding: 1.5em;
         }
         .reveal .slides section {
+            display: none;
             text-align: left;
-            height: auto !important;
             max-height: 700px;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 40px 50px;
             box-sizing: border-box;
-            display: flex !important;
             flex-direction: column;
             justify-content: flex-start;
             align-items: flex-start;
+        }
+        .reveal .slides section.present {
+            display: flex !important;
         }
         /* Center-aligned slides (title, subsection) */
         .reveal .slides section[data-transition="zoom"],
@@ -436,6 +520,34 @@ class RevealJsTemplate:
             scrollbar-width: thin;
             scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
         }
+        /* 계속 슬라이드 표시 (P4: 눈에 띄는 스타일) */
+        .reveal .slide-cont {
+            font-size: 0.7em;
+            color: #e74c3c;
+            font-weight: bold;
+            font-style: normal;
+            margin-left: 0.5em;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 0.15em 0.45em;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+        /* 슬라이드 밀도 조정 (P5) */
+        .reveal .slides section.slide-dense {
+            font-size: 0.85em;
+        }
+        .reveal .slides section.slide-dense ul,
+        .reveal .slides section.slide-dense ol {
+            line-height: 2.0;
+            margin: 0.5em 0;
+        }
+        .reveal .slides section.slide-dense li {
+            margin: 0.4em 0;
+        }
+        .reveal .slides section.slide-sparse p {
+            font-size: 1.0em;
+            line-height: 2.0;
+        }
         /* Mermaid 다이어그램 */
         .reveal .mermaid {
             background-color: white;
@@ -455,6 +567,73 @@ class RevealJsTemplate:
         .reveal pre::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.3);
             border-radius: 3px;
+        }
+        /* 클릭 가능한 이미지·다이어그램 커서 */
+        .reveal .slides img.zoomable,
+        .reveal .mermaid.zoomable {
+            cursor: zoom-in;
+        }
+        /* 라이트박스 모달 */
+        #slide-lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #slide-lightbox.open {
+            display: flex;
+        }
+        #slide-lightbox-close {
+            position: fixed;
+            top: 18px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+            z-index: 10000;
+        }
+        #slide-lightbox-inner {
+            max-width: min(92vw, 1400px);
+            max-height: 88vh;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #slide-lightbox-inner img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 4px;
+            cursor: default;
+        }
+        #slide-lightbox-inner .lightbox-svg {
+            background: #ffffff;
+            padding: 28px 32px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            max-width: min(88vw, 1300px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #slide-lightbox-inner .lightbox-svg svg {
+            width: min(82vw, 1240px) !important;
+            height: auto !important;
+        }
+        #slide-lightbox-caption {
+            color: #ccc;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            max-width: 80vw;
+            text-align: center;
         }"""
 
     def _get_javascript(self) -> str:
@@ -496,6 +675,82 @@ class RevealJsTemplate:
                 stateDiagram: { useMaxWidth: true },
             });
             mermaid.run();  // contentLoaded()는 Mermaid 10에서 제거됨
+
+            // ── 라이트박스 ────────────────────────────────────────────
+            const lb        = document.getElementById('slide-lightbox');
+            const lbInner   = document.getElementById('slide-lightbox-inner');
+            const lbCaption = document.getElementById('slide-lightbox-caption');
+            const lbClose   = document.getElementById('slide-lightbox-close');
+
+            function openSlideLightbox(innerHtml, caption) {
+                lbInner.innerHTML = '';
+                lbInner.insertAdjacentHTML('beforeend', innerHtml);
+                lbCaption.textContent = caption || '';
+                lb.classList.add('open');
+                document.body.style.overflow = 'hidden';
+                // Reveal.js 키보드 탐색 일시 중지
+                Reveal.configure({ keyboard: false });
+            }
+
+            function closeSlideLightbox() {
+                lb.classList.remove('open');
+                lbInner.innerHTML = '';
+                document.body.style.overflow = '';
+                // Reveal.js 키보드 탐색 복원
+                Reveal.configure({ keyboard: true });
+            }
+
+            lbClose.addEventListener('click', closeSlideLightbox);
+            lb.addEventListener('click', function(e) { if (e.target === lb) closeSlideLightbox(); });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && lb.classList.contains('open')) {
+                    e.stopImmediatePropagation();
+                    closeSlideLightbox();
+                }
+            }, true); // capture phase - ESC 먼저 가로채서 Reveal.js 슬라이드 전환 방지
+
+            // 이미지 클릭 핸들러 (section > img - figure 없음)
+            document.querySelectorAll('.reveal .slides img').forEach(function(img) {
+                img.classList.add('zoomable');
+                img.addEventListener('click', function() {
+                    var caption = img.alt || img.closest('section')?.querySelector('p small')?.innerText || '';
+                    openSlideLightbox('<img src="' + img.src + '" alt="' + (img.alt || '') + '">', caption);
+                });
+            });
+
+            // Mermaid 다이어그램 클릭 핸들러 (비동기 렌더링 대응)
+            function attachDiagramClicks() {
+                document.querySelectorAll('.reveal .mermaid').forEach(function(div) {
+                    var svgEl = div.querySelector('svg');
+                    if (svgEl && !div.dataset.lightboxReady) {
+                        div.dataset.lightboxReady = '1';
+                        div.classList.add('zoomable');
+                        div.addEventListener('click', function() {
+                            var svg = div.querySelector('svg');
+                            if (!svg) return;
+                            var cloned = svg.cloneNode(true);
+                            cloned.style.maxWidth = '';
+                            cloned.setAttribute('width', '100%');
+                            cloned.removeAttribute('height');
+                            var wrapper = document.createElement('div');
+                            wrapper.className = 'lightbox-svg';
+                            wrapper.appendChild(cloned);
+                            lbInner.innerHTML = '';
+                            lbInner.appendChild(wrapper);
+                            lbCaption.textContent = '';
+                            lb.classList.add('open');
+                            document.body.style.overflow = 'hidden';
+                            Reveal.configure({ keyboard: false });
+                        });
+                    }
+                });
+            }
+            attachDiagramClicks();
+            [500, 1200, 2500].forEach(function(ms) { setTimeout(attachDiagramClicks, ms); });
+
+            // 슬라이드 전환 시 다이어그램 클릭 핸들러 재부착 (지연 렌더링 대응)
+            Reveal.on('slidechanged', function() { setTimeout(attachDiagramClicks, 400); });
+            // ─────────────────────────────────────────────────────────
 
             // 스크롤 인디케이터 관리
             const updateScrollIndicator = (section) => {

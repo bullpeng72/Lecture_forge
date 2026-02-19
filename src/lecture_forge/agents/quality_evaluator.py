@@ -11,8 +11,9 @@ from lecture_forge.utils import logger
 class QualityEvaluatorAgent(BaseAgent):
     """Agent for evaluating lecture quality."""
 
-    def __init__(self):
+    def __init__(self, with_code: bool = True):
         super().__init__()
+        self.with_code = with_code
         logger.info("Initializing Quality Evaluator Agent")
 
     def evaluate(self, lecture: Lecture, threshold: int = 80) -> EvaluationResult:
@@ -31,7 +32,7 @@ class QualityEvaluatorAgent(BaseAgent):
         # Use the actual quality evaluator
         from lecture_forge.quality.evaluator import QualityEvaluator
 
-        evaluator = QualityEvaluator()
+        evaluator = QualityEvaluator(with_code=self.with_code)
         result = evaluator.evaluate(lecture, threshold)
 
         logger.info(

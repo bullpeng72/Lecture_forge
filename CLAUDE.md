@@ -1,8 +1,8 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
-> **프로젝트 상태**: 🌟 **Production Ready+** (UI & Slides Enhancement) (2026-02-18)
-> **버전**: 0.3.7 (Beta Release)
-> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡ | UI 개선 🖼️
+> **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review) (2026-02-19)
+> **버전**: 0.3.8 (Beta Release)
+> **진행률**: Phase 1-8 완료 ✅ | 다국어 지원 🌐 | RAG 품질 강화 🎯 | 입력 시스템 개선 ⌨️ | Async I/O 지원 ⚡ | UI 개선 🖼️ | RMC 자기검토 🧠
 
 ## 📚 프로젝트 개요
 
@@ -26,6 +26,7 @@
 14. **예외 처리 시스템**: 구조화된 예외 계층으로 오류 추적 및 디버깅 향상
 15. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿으로 일관성 및 품질 보장
 16. **Async I/O 지원 (v0.3.4)**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
+17. **RMC 자기검토 (v0.3.8)**: 에이전트 내부 2단계 자기반성 - 커리큘럼 논리 검토, 콘텐츠 의미론적 품질, Q&A 할루시네이션 검출
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -560,6 +561,27 @@ xychart-beta
 
 ### ✅ 최근 추가된 기능
 
+#### v0.3.8 (2026-02-19) - RMC 자기검토 (Reflective Meta-Cognition)
+- **🧠 CurriculumDesignerAgent `_review_with_rmc()`**: 커리큘럼 생성 직후 2단계 자기검토
+  - Layer 1: 섹션 순서 난이도 계단식, 시간 일치, 학습목표 커버리지, 중복, 선수 내용 순서
+  - Layer 2: 대상 수준 적합성, 불필요한 수정 방지
+  - JSON 응답 기반 `section_reorder` / `revised_objectives` 자동 적용
+- **🧠 ContentWriterAgent `_review_content_with_rmc()`**: 콘텐츠 생성 직후 의미론적 검토
+  - Layer 1: 개념 비약, 설명 모호성, 코드-설명 연결, 흐름 단절, 중복 내용
+  - Layer 2: 대상 수준 재검토, 심각도 재평가, 좋은 콘텐츠 보호
+  - 단어 수 검증: 수정본 ≥ 원본×80% → 미달 시 원본 사용
+- **🧠 QAAgent `_review_answer_with_rmc()`**: 답변 최종 반환 전 할루시네이션 검출
+  - Layer 1: 각 주장 ✓(소스 지원)/~(추론 가능)/✗(할루시네이션) 분류
+  - Layer 2: 상식적 사실 오분류 방지, 실제 미지원 내용 과소평가 방지
+  - ✗ 항목 제거 또는 언어별 면책 표시 추가
+  - 단어 수 검증: 수정본 ≥ 원본×50% → 미달 시 원본 사용
+- **공통**: 모든 RMC 메서드 try/except 감싸기 → 파이프라인 영향 없음, phase 파라미터로 토큰 추적
+- **🐛 LLM 거부 응답 수정**: 결론/도입 섹션이 "I'm sorry..." 로 생성되던 버그 수정
+  - `_build_structural_section_prompt()` 안전 프롬프트, `_LLM_REFUSAL_PREFIXES` 감지 후 재시도
+  - 구조 섹션 RAG 쿼리: `topic + 본문 섹션 제목[:4]`로 컨텍스트 품질 향상
+- **🖼️ 이미지 선택 개선**: y0 공간적 근접성 + P1(섹션 내 중복) + P2(타입별 가중치) 버그 수정
+  - `page.get_image_rects(xref)` → y0 추출 → 페이지 내 위→아래 순 정렬
+
 #### v0.3.7 (2026-02-18) - UI & 슬라이드 개선
 - **🖼️ Lightbox (클릭 확대)**: 강의 HTML에서 이미지·Mermaid 다이어그램 클릭시 전체화면 모달로 확대
 - **🔍 검색 개선**: Lunr.js → 서브스트링 검색 (한국어·영어 혼합 완벽 지원)
@@ -713,9 +735,61 @@ lecture-forge chat
 lecture-forge --help
 ```
 
-**현재 상태**: 🌟 **Production Ready+ (UI & Slides Enhancement)** 🌟
+**현재 상태**: 🌟 **Production Ready+ (RMC Self-Review)** 🌟
 
 ## 📝 변경 이력
+
+### v0.3.8 (2026-02-19) - 🧠 RMC Self-Review (Reflective Meta-Cognition)
+
+**에이전트 내부 자기검토 시스템 추가**:
+
+RMC(반성적 메타인지) 패턴을 3개 에이전트에 적용하여 LLM 생성 직후 자체 반성 → 수정을 수행한다.
+기존 외부 품질 루프(QualityEvaluator)와 달리 각 에이전트 내부에서 즉시 수정된다.
+
+**CurriculumDesignerAgent** (`curriculum_designer.py`):
+- 🆕 `_review_with_rmc(curriculum, analysis_result) -> Curriculum`
+- `design()` 말미, `Curriculum` 객체 생성 직후 자동 호출
+- Layer 1: 섹션 순서 난이도, 시간 일치, 학습목표 커버리지, 중복, 선수 순서 (5개 항목)
+- Layer 2: 대상 수준 적합성, 교육적 관점 누락, 불필요한 수정 여부
+- JSON 반환 → `section_reorder` 적용 및 `revised_objectives` 업데이트
+
+**ContentWriterAgent** (`content_writer/agent.py`):
+- 🆕 `_review_content_with_rmc(content, section, curriculum, targets) -> str`
+- `_generate_content()` 내 마크다운 펜스 제거 직후, `evaluate_content_quality()` 직전 자동 호출
+- Layer 1: 개념 비약, 설명 모호성, 코드-설명 연결, 흐름 단절, 중복 (5개 항목)
+- Layer 2: 대상 수준 재검토, 실제 혼란 유발 심각도, 좋은 콘텐츠 보호
+- 검증: `revised_word_count ≥ original_word_count × 0.8` 미달 시 원본 반환
+
+**QAAgent** (`qa_agent.py`):
+- 🆕 `_review_answer_with_rmc(answer, question, contexts, query_language) -> str`
+- `_post_process_answer()` 말미, return 직전 자동 호출
+- Layer 1: 각 주장 ✓/~/✗ 분류, ✗ 항목 열거
+- Layer 2: 상식적 사실 오분류 방지, 실제 미지원 내용 과소평가 방지
+- ✗ 항목 제거 또는 언어별 면책 표시 (한: "강의 자료에서 직접 확인되지 않은 내용입니다")
+- 검증: `revised_word_count ≥ original_word_count × 0.5` 미달 시 원본 반환
+
+**공통 패턴**:
+- `self.invoke_llm(prompt, phase="[agent]_rmc_review")` → 자동 토큰 추적
+- try/except 감싸기 → 실패 시 원본 반환, 기존 파이프라인 영향 없음
+- 토큰 효율: 콘텐츠 앞 4000자, 답변 앞 2000자만 검토 (단어 수는 전체 기준)
+
+**테스트**: 기존 450개 테스트 모두 통과 (회귀 없음)
+
+**LLM 거부 응답 수정** (`content_writer/agent.py`):
+- 🆕 모듈 레벨 `_LLM_REFUSAL_PREFIXES` 튜플 — "I'm sorry, but I can't" 등 6개 패턴 (대소문자 무시)
+- 🆕 `_build_structural_section_prompt(section_type, ...)` — 결론/도입 전용 안전 프롬프트 (위협적 언어 없음, 5개 서브섹션 구조 가이드)
+- `_query_knowledge()` 시그니처: `curriculum` 파라미터 추가 — 구조 섹션(intro/conclusion)은 `topic + 본문 섹션 제목[:4]`로 RAG 쿼리 강화
+- `_generate_content()`: 구조 섹션에 안전 프롬프트 분기, 생성 직후 거부 패턴 감지 → 안전 프롬프트로 자동 재시도
+
+**이미지 선택 버그 수정 + 공간적 근접성**:
+- 🐛 **P1 intra-section 중복**: `_select_images()`의 PDF/웹/키워드 3개 Phase를 단일 `selected_ids: set`으로 묶어 섹션 내 중복 선택 방지; `_smart_select_images()`의 dead `used_image_ids` 코드 제거
+- 🐛 **P2 타입별 가중치**: `Config`에 `IMAGE_WEIGHT_QUALITY_SCREENSHOT`, `IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT`, `IMAGE_WEIGHT_QUALITY_PHOTO`, `IMAGE_WEIGHT_IMPORTANCE_PHOTO`, `IMAGE_WEIGHT_POSITION` 상수 추가; `_evaluate_image_quality_simple()`에서 임계값 검사를 보너스 계산 이전에 수행; `Config.validate()`에 3개 가중치 그룹 합계 검증 추가
+- ✨ **y0 공간적 근접성**: `image_extractor.py`에서 `page.get_image_rects(xref)` (PyMuPDF)로 `page_y0` 추출; `image_collector.py _build_image_page_map()`에서 `y0` 필드 저장 후 페이지 내 이미지를 y0 오름차순 정렬 (위→아래 시각적 순서); `_expand_to_adjacent_pages()`의 dead `used_image_ids` 체크 제거
+- None y0 이미지는 `float("inf")`로 정렬 → 페이지 하단으로 배치
+
+**테스트**: `test_image_selector.py` — `test_skips_used_image_ids` → `test_selects_quality_image_from_adjacent_page`로 개명 (dead 코드 제거 반영), 84개 테스트 모두 통과
+
+---
 
 ### v0.3.7 (2026-02-18) - 🖼️ UI Enhancement & Slides Fixes
 

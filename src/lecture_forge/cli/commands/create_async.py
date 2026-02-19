@@ -66,26 +66,81 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
             "[cyan]📚 Phase 1: Collecting content (async)...", total=None
         )
 
-        # Use async collector
-        content_agent = AsyncContentCollectorAgent(collection_name=collection_name)
-        content_result = await content_agent.collect(
-            {
-                "pdfs": inputs.get("pdfs", []),
-                "urls": inputs.get("urls", []),
-                "keywords": inputs.get("keywords", []),
-                "hada_keywords": inputs.get("hada_keywords", []),
-            }
-        )
+        existing_kb_path = inputs.get("existing_kb_path")
+        kb_mode = inputs.get("kb_mode", "new")
 
-        progress.update(task1, completed=True)
+        if existing_kb_path:
+            collection_name = Path(existing_kb_path).name
+            content_agent = AsyncContentCollectorAgent(collection_name=collection_name)
 
-        # Show speedup info
-        elapsed = content_result["metadata"].get("elapsed_seconds", 0)
-        console.print(
-            f"   ✅ Content collected in {elapsed:.1f}s (async): "
-            f"{content_result['metadata']['total_docs']} docs, "
-            f"{content_result['metadata']['total_chunks']} chunks"
-        )
+            if kb_mode == "reuse_only":
+                stats = content_agent.vector_store.get_stats()
+                sample_results = content_agent.vector_store.query(inputs["topic"], n_results=20)
+                sample_texts = (sample_results.get("documents") or [[]])[0]
+                synthetic_docs = [
+                    {
+                        "text": t,
+                        "source": "existing_kb",
+                        "source_type": "vector_db",
+                        "metadata": {},
+                        "pages": [],
+                    }
+                    for t in sample_texts
+                ]
+                content_result = {
+                    "success": True,
+                    "documents": synthetic_docs,
+                    "chunks": [],
+                    "chunk_ids": [],
+                    "metadata": {
+                        "total_docs": stats["document_count"],
+                        "total_chunks": stats["document_count"],
+                        "sources": {"existing_kb": collection_name},
+                        "vector_db": stats,
+                        "elapsed_seconds": 0,
+                    },
+                }
+                progress.update(task1, completed=True)
+                console.print(
+                    f"   ✅ Reusing KB '{collection_name}': {stats['document_count']} chunks"
+                )
+
+            else:  # extend
+                content_result = await content_agent.collect(
+                    {
+                        "pdfs": inputs.get("pdfs", []),
+                        "urls": inputs.get("urls", []),
+                        "keywords": inputs.get("keywords", []),
+                        "hada_keywords": inputs.get("hada_keywords", []),
+                    }
+                )
+                progress.update(task1, completed=True)
+                total_after = content_agent.vector_store.get_stats()["document_count"]
+                elapsed = content_result["metadata"].get("elapsed_seconds", 0)
+                console.print(
+                    f"   ✅ Extended KB '{collection_name}' in {elapsed:.1f}s (async): "
+                    f"+{content_result['metadata']['total_chunks']} new chunks "
+                    f"(total: {total_after})"
+                )
+
+        else:
+            # New KB (existing behaviour)
+            content_agent = AsyncContentCollectorAgent(collection_name=collection_name)
+            content_result = await content_agent.collect(
+                {
+                    "pdfs": inputs.get("pdfs", []),
+                    "urls": inputs.get("urls", []),
+                    "keywords": inputs.get("keywords", []),
+                    "hada_keywords": inputs.get("hada_keywords", []),
+                }
+            )
+            progress.update(task1, completed=True)
+            elapsed = content_result["metadata"].get("elapsed_seconds", 0)
+            console.print(
+                f"   ✅ Content collected in {elapsed:.1f}s (async): "
+                f"{content_result['metadata']['total_docs']} docs, "
+                f"{content_result['metadata']['total_chunks']} chunks"
+            )
 
         # Phase 2: Image Collection (still sync for now)
         task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=None)
@@ -113,6 +168,18 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
             },
             auto_describe_images=inputs.get("auto_describe_images", True),
         )
+
+        # When reusing/extending an existing KB, load images previously stored in vector store
+        if existing_kb_path:
+            stored_images = image_agent.load_images_from_vector_store()
+            if stored_images:
+                existing_ids = {img["id"] for img in image_result.get("images", [])}
+                new_from_store = [img for img in stored_images if img["id"] not in existing_ids]
+                image_result["images"] = image_result.get("images", []) + new_from_store
+                image_result["total_collected"] = len(image_result["images"])
+                if new_from_store:
+                    console.print(f"   📸 Loaded {len(new_from_store)} existing images from KB")
+
         progress.update(task2, completed=True)
         console.print(f"   ✅ Images collected: {image_result['total_collected']}")
 
@@ -147,7 +214,10 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
 
         # Phase 4a: Content Writing
         task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
-        writer = ContentWriterAgent(vector_store=content_agent.vector_store)
+        writer = ContentWriterAgent(
+            vector_store=content_agent.vector_store,
+            with_code=inputs.get("with_code", False),
+        )
         section_contents = writer.write_all_sections(
             curriculum=curriculum,
             available_images=image_result.get("images", []),
@@ -187,8 +257,9 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         )
         max_iterations = Config.MAX_ITERATIONS
 
-        evaluator = QualityEvaluatorAgent()
-        revision_agent = RevisionAgent()
+        with_code = inputs.get("with_code", False)
+        evaluator = QualityEvaluatorAgent(with_code=with_code)
+        revision_agent = RevisionAgent(with_code=with_code)
 
         task5 = progress.add_task(
             f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None
@@ -316,6 +387,9 @@ async def _create_async(
     output,
     include_pdf_images,
     auto_describe_images,
+    with_code: bool = False,
+    existing_kb=None,
+    kb_mode: str = "new",
 ):
     """
     Async implementation of create command.
@@ -344,6 +418,9 @@ async def _create_async(
     inputs["output_name"] = output
     inputs["include_pdf_images"] = include_pdf_images
     inputs["auto_describe_images"] = auto_describe_images
+    inputs["with_code"] = with_code
+    inputs["existing_kb_path"] = existing_kb if existing_kb else inputs.get("existing_kb_path")
+    inputs["kb_mode"] = kb_mode if existing_kb else inputs.get("kb_mode", "new")
 
     # Generate lecture (async)
     try:

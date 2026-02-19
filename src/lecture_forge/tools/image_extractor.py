@@ -105,6 +105,15 @@ class PDFImageExtractorTool:
                         # Get image XREF (reference)
                         xref = img[0]
 
+                        # Get vertical position on page (y0 = distance from top)
+                        page_y0 = None
+                        try:
+                            rects = page.get_image_rects(xref)
+                            if rects:
+                                page_y0 = float(rects[0].y0)
+                        except Exception:
+                            pass  # y0 unavailable for some embedded images
+
                         # Extract image
                         base_image = doc.extract_image(xref)
                         image_bytes = base_image["image"]
@@ -188,6 +197,7 @@ class PDFImageExtractorTool:
                                 "hash": image_hash,
                                 "extraction_quality": quality_score,  # Store quality score
                                 "content_type": content_type,  # Store content type (diagram, chart, etc.)
+                                "page_y0": page_y0,  # Vertical position from top of page (None if unavailable)
                             }
                         )
 

@@ -113,6 +113,29 @@ class TestEvaluateImageQualitySimple:
         result = selector._evaluate_image_quality_simple(image)
         assert isinstance(result, float)
 
+    def test_below_threshold_returns_raw_quality_without_bonus(self, selector):
+        """Type bonus is NOT added when raw extraction_quality is below selection threshold.
+
+        This ensures the threshold applies consistently across all content types.
+        Previously a diagram with extraction_quality=0.25 could pass (0.25+0.15=0.40)
+        while a photo with the same raw score would fail (0.25+0.03=0.28). Now both fail.
+        """
+        from lecture_forge.config import Config
+        below = Config.IMAGE_SELECTION_QUALITY_THRESHOLD - 0.10  # e.g. 0.30
+        image = {"extraction_quality": below, "content_type": "diagram"}
+        result = selector._evaluate_image_quality_simple(image)
+        assert result == pytest.approx(below, abs=0.001)
+        assert result < Config.IMAGE_SELECTION_QUALITY_THRESHOLD
+
+    def test_at_threshold_applies_bonus(self, selector):
+        """Type bonus IS added when extraction_quality meets the threshold exactly."""
+        from lecture_forge.config import Config
+        at_threshold = Config.IMAGE_SELECTION_QUALITY_THRESHOLD  # 0.40
+        image = {"extraction_quality": at_threshold, "content_type": "diagram"}
+        result = selector._evaluate_image_quality_simple(image)
+        # diagram bonus = 0.15 → 0.40 + 0.15 = 0.55
+        assert result == pytest.approx(at_threshold + 0.15, abs=0.001)
+
 
 # ===== _calculate_page_importance() =====
 
@@ -371,14 +394,17 @@ class TestSmartSelectImages:
         assert len(result) == 1
         assert isinstance(result[0], ImageReference)
 
-    def test_skips_already_used_images(self, selector):
-        selector.used_image_ids = {"img_1"}
+    def test_selects_all_candidates_from_different_pages(self, selector):
+        # Cross-section deduplication is handled upstream in write_all_sections()
+        # by filtering available_images before each section call.
+        # _smart_select_images() only enforces the page-per-section constraint.
         candidates = [
             self._make_candidate("img_1", page=1),
             self._make_candidate("img_2", page=2),
         ]
         result = selector._smart_select_images(candidates, 2)
-        assert all(ref.image_id != "img_1" for ref in result)
+        assert len(result) == 2
+        assert {ref.image_id for ref in result} == {"img_1", "img_2"}
 
     def test_returns_all_when_less_than_max(self, selector):
         candidates = [self._make_candidate("img_1", page=1)]
@@ -778,12 +804,12 @@ class TestExpandToAdjacentPages:
             )
         assert len(result) >= 1
 
-    def test_skips_used_image_ids(self, selector):
+    def test_selects_quality_image_from_adjacent_page(self, selector):
+        """Cross-section dedup is handled upstream; _expand_to_adjacent_pages selects any quality image."""
         selected = []
         page_importance = {"doc.pdf": [(3, 0.9)]}
-        image_page_map = {"doc.pdf": {"4": [{"id": "already_used"}]}}
-        pdf_images = [self._make_pdf_image("already_used", page=4)]
-        selector.used_image_ids = {"already_used"}
+        image_page_map = {"doc.pdf": {"4": [{"id": "img_adj"}]}}
+        pdf_images = [self._make_pdf_image("img_adj", page=4)]
 
         with patch.object(selector, "_evaluate_image_quality_simple", return_value=0.9):
             result = selector._expand_to_adjacent_pages(
@@ -792,8 +818,8 @@ class TestExpandToAdjacentPages:
                 image_page_map=image_page_map,
                 pdf_images=pdf_images
             )
-        # already_used image is skipped
-        assert all(ref.image_id != "already_used" for ref in result)
+        # Quality image from adjacent page is selected
+        assert any(ref.image_id == "img_adj" for ref in result)
 
     def test_does_not_reuse_already_selected_page(self, selector):
         selected = [self._make_image_ref("img_1", page=1, source="doc.pdf")]

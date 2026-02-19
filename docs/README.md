@@ -58,11 +58,12 @@ Looking for something specific?
 
 ## 📊 Project Status
 
-**Version**: 0.3.7 (Beta Release)
-**Status**: Production Ready+ (UI & Slides Enhancement)
+**Version**: 0.3.8 (Beta Release)
+**Status**: Production Ready+ (RMC Self-Review)
 **Test Coverage**: ~48% with 827+ test functions
 
 **Recent Updates:**
+- ✅ **RMC Self-Review (v0.3.8)** - 2-layer self-review in CurriculumDesigner, ContentWriter, QAAgent (hallucination detection, curriculum logic, content quality)
 - ✅ **UI & Slides Enhancement (v0.3.7)** - Lightbox zoom, substring search, diagram full-width, Mermaid 10 API fix
 - ✅ **Code Quality & Reliability (v0.3.6)** - retry utility, base classes, config validation, async tests
 - ✅ **RAG quality boost (v0.3.5)** - 400-word answers, 15+15 retrieval, confidence fix, Markdown rendering
@@ -88,5 +89,5 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for:
 
 ---
 
-**Last Updated**: 2026-02-18 (v0.3.7)
+**Last Updated**: 2026-02-19 (v0.3.8)
 **Maintained by**: Sungwoo Kim

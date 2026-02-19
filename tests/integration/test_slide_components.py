@@ -123,8 +123,8 @@ class TestRevealJsTemplateIntegration:
             'sections': [
                 {
                     'title': 'Introduction',
-                    'content_blocks': [
-                        {'type': 'text', 'content': 'Welcome to the lecture'}
+                    'blocks': [
+                        {'type': 'paragraph', 'content': 'Welcome to the lecture'}
                     ]
                 }
             ]
@@ -148,7 +148,7 @@ class TestRevealJsTemplateIntegration:
         sections = [
             {
                 'title': 'Code Example',
-                'content_blocks': [
+                'blocks': [
                     {
                         'type': 'code',
                         'language': 'python',
@@ -174,10 +174,11 @@ class TestRevealJsTemplateIntegration:
         sections = [
             {
                 'title': 'Key Points',
-                'content_blocks': [
+                'blocks': [
                     {
                         'type': 'list',
-                        'items': ['Point 1', 'Point 2', 'Point 3']
+                        'items': ['Point 1', 'Point 2', 'Point 3'],
+                        'ordered': False,
                     }
                 ]
             }
@@ -212,20 +213,23 @@ class TestSlideConverterIntegration:
         console = Console()
         converter = SlideConverter(console=console)
 
-        # Create test lecture HTML
+        # Create test lecture HTML using the parser's expected <section id="..."> structure
         lecture_html = """
         <html>
-        <head><title>Test Lecture</title></head>
+        <head><title>Machine Learning</title></head>
         <body>
-            <h1>Machine Learning</h1>
-            <h2>Introduction</h2>
-            <p>Machine learning is a field of AI.</p>
-            <ul>
-                <li>Supervised learning</li>
-                <li>Unsupervised learning</li>
-            </ul>
-            <h2>Applications</h2>
-            <p>ML has many applications.</p>
+            <section id="intro">
+                <h2>Introduction</h2>
+                <p>Machine learning is a field of AI.</p>
+                <ul>
+                    <li>Supervised learning</li>
+                    <li>Unsupervised learning</li>
+                </ul>
+            </section>
+            <section id="applications">
+                <h2>Applications</h2>
+                <p>ML has many applications.</p>
+            </section>
         </body>
         </html>
         """
@@ -360,7 +364,7 @@ class TestSlideInteraction:
         html = template.generate(
             title='Test',
             subtitle='Shortcuts',
-            sections=[{'title': 'Section 1', 'content_blocks': []}]
+            sections=[{'title': 'Section 1', 'blocks': []}]
         )
 
         # Should include Reveal.js which provides keyboard shortcuts

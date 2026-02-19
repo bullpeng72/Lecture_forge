@@ -48,9 +48,9 @@ def edit_images(html_path: str, output: str) -> None:
 
     \b
     Interactive Commands:
-      d <number>    - Delete image (e.g., d 3)
+      d <number>    - Delete image or diagram (e.g., d 3)
       u <number>    - Undo deletion (e.g., u 3)
-      r <number>    - Replace image (search alternatives)
+      r <number>    - Replace image (images only; search alternatives)
       s             - Save changes
       /exit, /quit  - Exit without saving (or use: q)
       h             - Show help
@@ -61,9 +61,19 @@ def edit_images(html_path: str, output: str) -> None:
 
     console = Console()
 
+    # Detect Reveal.js slides file before entering the main try block
+    with open(html_path, "r", encoding="utf-8", errors="replace") as _f:
+        _head = _f.read(4096)
+    if 'class="reveal"' in _head or "reveal.min.js" in _head:
+        console.print("\n[bold red]❌ 슬라이드 파일은 지원되지 않습니다[/bold red]")
+        console.print("[yellow]💡 edit-images 명령어는 강의 HTML 파일 전용입니다.[/yellow]")
+        console.print("[dim]   슬라이드 파일이 아닌 강의 HTML 파일을 지정하세요.[/dim]")
+        console.print("[dim]   예: lecture-forge edit-images outputs/강의명.html[/dim]")
+        return
+
     try:
         # Initialize editor
-        console.print("\n[bold cyan]📸 강의 이미지 편집 모드[/bold cyan]")
+        console.print("\n[bold cyan]📸 강의 시각 요소 편집 모드[/bold cyan]")
         console.print("━" * 60)
 
         with console.status("[bold green]HTML 로딩 중..."):
@@ -71,18 +81,25 @@ def edit_images(html_path: str, output: str) -> None:
 
         # Display summary
         console.print(f"\n[bold]HTML:[/bold] {Path(html_path).name}")
-        console.print(f"[bold]총 이미지:[/bold] {len(editor.images)}개\n")
+        console.print(
+            f"[bold]이미지:[/bold] {len(editor.images)}개  |  "
+            f"[bold]다이어그램:[/bold] {len(editor.diagrams)}개\n"
+        )
 
         # Main loop
         while True:
-            # Display current images
-            _display_image_table(console, editor)
+            # Build unified element list (refreshes status each iteration)
+            elements = editor.list_elements()
+            index_map = {el["display_index"]: el for el in elements}
 
-            # Display help
+            # Display unified table
+            _display_elements_table(console, elements)
+
+            # Display compact command hint
             console.print("\n[bold cyan]명령어:[/bold cyan]")
-            console.print("  [bold]d <번호>[/bold]     - 이미지 삭제 (예: d 3)")
+            console.print("  [bold]d <번호>[/bold]     - 삭제 (이미지·다이어그램 공통, 예: d 3)")
             console.print("  [bold]u <번호>[/bold]     - 삭제 취소 (예: u 3)")
-            console.print("  [bold]r <번호>[/bold]     - 이미지 교체 (대안 검색)")
+            console.print("  [bold]r <번호>[/bold]     - 이미지 교체 (이미지만 지원)")
             console.print("  [bold]s[/bold]            - 변경사항 저장")
             console.print("  [bold]/exit, /quit[/bold] - 취소 및 종료 (단축키: q)")
             console.print("  [bold]h[/bold]            - 도움말 표시\n")
@@ -100,57 +117,85 @@ def edit_images(html_path: str, output: str) -> None:
 
             # Handle commands
             if cmd in ["/exit", "/quit", "q"]:
-                if editor.get_summary()["to_delete"] > 0 or editor.get_summary()["to_replace"] > 0:
+                summary = editor.get_summary()
+                has_changes = (
+                    summary["to_delete"] > 0
+                    or summary["to_replace"] > 0
+                    or summary["diagrams_to_delete"] > 0
+                )
+                if has_changes:
                     if Confirm.ask("[yellow]변경사항이 저장되지 않았습니다. 종료하시겠습니까?[/yellow]"):
                         console.print("[red]변경사항 취소됨[/red]")
                         break
                 else:
                     break
 
-            elif cmd == "d" or cmd == "delete":
+            elif cmd in ("d", "delete"):
                 if not args:
-                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: d 3)[/red]")
+                    console.print("[red]❌ 번호를 입력하세요 (예: d 3)[/red]")
                     continue
-
                 try:
-                    img_num = int(args[0])
-                    if editor.mark_delete(img_num):
-                        console.print(f"[green]✅ 이미지 {img_num} 삭제 표시됨[/green]")
+                    num = int(args[0])
+                    el = index_map.get(num)
+                    if el is None:
+                        console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
+                    elif el["kind"] == "image":
+                        if editor.mark_delete(el["img_index"]):
+                            console.print(f"[green]✅ 이미지 {num} 삭제 표시됨[/green]")
+                        else:
+                            console.print(f"[red]❌ 이미지 삭제 표시 실패[/red]")
                     else:
-                        console.print(f"[red]❌ 잘못된 이미지 번호: {img_num}[/red]")
+                        if editor.mark_delete_diagram(el["dgm_index"]):
+                            console.print(f"[green]✅ 다이어그램 {num} 삭제 표시됨[/green]")
+                        else:
+                            console.print(f"[red]❌ 다이어그램 삭제 표시 실패[/red]")
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == "u" or cmd == "undo" or cmd == "undelete":
+            elif cmd in ("u", "undo", "undelete"):
                 if not args:
-                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: u 3)[/red]")
+                    console.print("[red]❌ 번호를 입력하세요 (예: u 3)[/red]")
                     continue
-
                 try:
-                    img_num = int(args[0])
-                    if editor.unmark_delete(img_num):
-                        console.print(f"[green]✅ 이미지 {img_num} 삭제 취소됨[/green]")
+                    num = int(args[0])
+                    el = index_map.get(num)
+                    if el is None:
+                        console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
+                    elif el["kind"] == "image":
+                        if editor.unmark_delete(el["img_index"]):
+                            console.print(f"[green]✅ 이미지 {num} 삭제 취소됨[/green]")
+                        else:
+                            console.print(f"[yellow]⚠️ {num}번 이미지는 삭제 표시되지 않았습니다[/yellow]")
                     else:
-                        console.print(f"[yellow]⚠️ 이미지 {img_num}는 삭제 표시되지 않았습니다[/yellow]")
+                        if editor.unmark_delete_diagram(el["dgm_index"]):
+                            console.print(f"[green]✅ 다이어그램 {num} 삭제 취소됨[/green]")
+                        else:
+                            console.print(f"[yellow]⚠️ {num}번 다이어그램은 삭제 표시되지 않았습니다[/yellow]")
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == "r" or cmd == "replace":
+            elif cmd in ("r", "replace"):
                 if not args:
-                    console.print("[red]❌ 이미지 번호를 입력하세요 (예: r 3)[/red]")
+                    console.print("[red]❌ 번호를 입력하세요 (예: r 3)[/red]")
                     continue
-
                 try:
-                    img_num = int(args[0])
-                    _handle_replace_image(console, editor, img_num)
+                    num = int(args[0])
+                    el = index_map.get(num)
+                    if el is None:
+                        console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
+                    elif el["kind"] == "diagram":
+                        console.print("[yellow]⚠️ 다이어그램 교체는 지원되지 않습니다.[/yellow]")
+                        console.print("[dim]   삭제(d) 후 improve 커맨드로 재생성하세요.[/dim]")
+                    else:
+                        _handle_replace_image(console, editor, el["img_index"])
                 except ValueError:
                     console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
 
-            elif cmd == "s" or cmd == "save":
+            elif cmd in ("s", "save"):
                 _handle_save_changes(console, editor, output)
                 break
 
-            elif cmd == "h" or cmd == "help":
+            elif cmd in ("h", "help"):
                 _display_help(console)
 
             else:
@@ -165,34 +210,37 @@ def edit_images(html_path: str, output: str) -> None:
         raise click.Abort()
 
 
-def _display_image_table(console, editor):
-    """Display image table."""
-    images = editor.list_images()
-
+def _display_elements_table(console, elements: list):
+    """Display unified table of images and diagrams."""
     table = Table(show_header=True, header_style="bold cyan")
-    table.add_column("번호", style="dim", width=6)
-    table.add_column("설명", width=35)
-    table.add_column("섹션", width=25)
-    table.add_column("페이지", width=8)
+    table.add_column("번호", style="dim", width=5)
+    table.add_column("종류", width=7)
+    table.add_column("제목 / 설명", width=34)
+    table.add_column("섹션", width=24)
+    table.add_column("정보", width=10)
     table.add_column("상태", width=10)
 
-    for img in images:
-        status_style = "green"
-        status_text = "유지"
+    for el in elements:
+        if el["kind"] == "image":
+            kind_label = "[blue][IMG][/blue]"
+        else:
+            kind_label = "[magenta][DGM][/magenta]"
 
-        if img["status"] == "delete":
-            status_style = "red"
-            status_text = "🗑️ 삭제"
-        elif img["status"] == "replace":
-            status_style = "yellow"
-            status_text = "🔄 교체"
+        status = el["status"]
+        if status == "delete":
+            status_text = "[red]🗑️ 삭제[/red]"
+        elif status == "replace":
+            status_text = "[yellow]🔄 교체[/yellow]"
+        else:
+            status_text = "[green]유지[/green]"
 
         table.add_row(
-            str(img["index"]),
-            img["description"] or "[dim]설명 없음[/dim]",
-            img["section"],
-            str(img["page"]) if img["page"] else "-",
-            f"[{status_style}]{status_text}[/{status_style}]",
+            str(el["display_index"]),
+            kind_label,
+            el["title"] or "[dim]설명 없음[/dim]",
+            el["section"],
+            el["extra"],
+            status_text,
         )
 
     console.print(table)
@@ -251,16 +299,18 @@ def _handle_save_changes(console, editor, output_path):
     """Handle saving changes."""
     summary = editor.get_summary()
 
-    if summary["to_delete"] == 0 and summary["to_replace"] == 0:
+    if summary["to_delete"] == 0 and summary["to_replace"] == 0 and summary["diagrams_to_delete"] == 0:
         console.print("\n[yellow]⚠️ 변경사항이 없습니다[/yellow]")
         return
 
     # Display summary
     console.print("\n[bold cyan]💾 변경사항 요약:[/bold cyan]")
     if summary["to_delete"] > 0:
-        console.print(f"  • 삭제: [red]{summary['to_delete']}개[/red]")
+        console.print(f"  • 이미지 삭제: [red]{summary['to_delete']}개[/red]")
     if summary["to_replace"] > 0:
-        console.print(f"  • 교체: [yellow]{summary['to_replace']}개[/yellow]")
+        console.print(f"  • 이미지 교체: [yellow]{summary['to_replace']}개[/yellow]")
+    if summary["diagrams_to_delete"] > 0:
+        console.print(f"  • 다이어그램 삭제: [red]{summary['diagrams_to_delete']}개[/red]")
 
     console.print()
 
@@ -277,11 +327,12 @@ def _handle_save_changes(console, editor, output_path):
         console.print(f"\n[bold green]✅ 저장 완료![/bold green]")
         console.print(f"[bold]파일:[/bold] {saved_path}")
 
-        # Display changes
         if summary["to_delete"] > 0:
-            console.print(f"  • [red]삭제됨:[/red] {summary['to_delete']}개 이미지")
+            console.print(f"  • [red]이미지 삭제됨:[/red] {summary['to_delete']}개")
         if summary["to_replace"] > 0:
-            console.print(f"  • [yellow]교체됨:[/yellow] {summary['to_replace']}개 이미지")
+            console.print(f"  • [yellow]이미지 교체됨:[/yellow] {summary['to_replace']}개")
+        if summary["diagrams_to_delete"] > 0:
+            console.print(f"  • [red]다이어그램 삭제됨:[/red] {summary['diagrams_to_delete']}개")
 
     except Exception as e:
         console.print(f"\n[bold red]❌ 저장 실패:[/bold red] {e}")
@@ -291,33 +342,39 @@ def _handle_save_changes(console, editor, output_path):
 def _display_help(console):
     """Display help message."""
     help_text = """
-[bold cyan]📖 이미지 편집 도움말[/bold cyan]
+[bold cyan]📖 시각 요소 편집 도움말[/bold cyan]
+
+[bold]목록 구분:[/bold]
+  • [blue][IMG][/blue]  - 이미지 (삭제·교체 모두 지원)
+  • [magenta][DGM][/magenta]  - Mermaid 다이어그램 (삭제만 지원)
 
 [bold]기본 명령어:[/bold]
-  • [bold]d <번호>[/bold]  - 이미지 삭제 표시
-    예: d 3 → 3번 이미지 삭제 표시
+  • [bold]d <번호>[/bold]  - 삭제 표시 (이미지·다이어그램 공통)
+    예: d 3 → 3번 항목 삭제 표시
 
   • [bold]u <번호>[/bold]  - 삭제 취소
-    예: u 3 → 3번 이미지 삭제 취소
+    예: u 3 → 3번 항목 삭제 취소
 
-  • [bold]r <번호>[/bold]  - 이미지 교체
-    예: r 5 → 5번 이미지를 대안 이미지로 교체
+  • [bold]r <번호>[/bold]  - 이미지 교체 (이미지만 지원)
+    예: r 5 → 5번 이미지를 대안으로 교체
     (Vector DB에서 관련 이미지 자동 검색)
+    다이어그램에 r 적용 시: 안내 메시지 표시
 
   • [bold]s[/bold]         - 변경사항 저장 후 종료
 
   • [bold]/exit, /quit[/bold] - 취소 및 종료 (단축키: q)
 
 [bold yellow]💡 사용 팁:[/bold yellow]
-  1. 먼저 강의를 브라우저에서 열어 이미지를 확인하세요
-  2. 불필요한 이미지는 'd' 명령어로 삭제 표시
+  1. 먼저 강의를 브라우저에서 열어 시각 요소를 확인하세요
+  2. 불필요한 이미지·다이어그램은 'd' 명령어로 삭제 표시
   3. 교체가 필요한 이미지는 'r' 명령어 사용
-  4. 모든 변경사항을 검토한 후 's'로 저장
+  4. 다이어그램을 변경하려면 삭제 후 'improve' 커맨드로 재생성
+  5. 모든 변경사항을 검토한 후 's'로 저장
 
-[bold cyan]📋 이미지 상태:[/bold cyan]
-  • [green]유지[/green]   - 변경 없음
-  • [red]🗑️ 삭제[/red] - 삭제 예정
-  • [yellow]🔄 교체[/yellow] - 교체 예정
+[bold cyan]📋 상태 표시:[/bold cyan]
+  • [green]유지[/green]      - 변경 없음
+  • [red]🗑️ 삭제[/red]  - 삭제 예정
+  • [yellow]🔄 교체[/yellow]  - 교체 예정 (이미지만)
 """
     console.print(Panel(help_text, border_style="cyan"))
 

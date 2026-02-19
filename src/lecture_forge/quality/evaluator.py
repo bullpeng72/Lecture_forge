@@ -21,8 +21,9 @@ class QualityEvaluator:
         "technical_accuracy": 0.10,
     }
 
-    def __init__(self):
+    def __init__(self, with_code: bool = True):
         self.metrics = QualityMetrics()
+        self.with_code = with_code
         logger.info("Initializing quality evaluator")
 
     def evaluate(self, lecture: Lecture, threshold: int = 80) -> EvaluationResult:
@@ -100,24 +101,26 @@ class QualityEvaluator:
             total_code = sum(len(s.code_blocks) for s in lecture.sections)
             expected_code = max(1, lecture.duration // 30)
 
-            # CRITICAL: No code examples at all
-            if total_code == 0:
-                return Issue(
-                    dimension=dimension,
-                    severity="high",  # Force high severity
-                    location="overall",
-                    description=f"🚨 CRITICAL: NO code examples found (0/{expected_code})",
-                    suggestion=f"URGENT: Add {expected_code} code examples immediately. Each example should be 20-50 lines with Korean comments and show practical usage.",
-                )
-            elif total_code < expected_code:
-                return Issue(
-                    dimension=dimension,
-                    severity=severity,
-                    location="overall",
-                    description=f"Insufficient code examples ({total_code} found, {expected_code} expected)",
-                    suggestion=f"Add {expected_code - total_code} more code examples with detailed explanations",
-                )
-            elif lecture.total_word_count < lecture.duration * 150:
+            if self.with_code:
+                # CRITICAL: No code examples at all
+                if total_code == 0:
+                    return Issue(
+                        dimension=dimension,
+                        severity="high",  # Force high severity
+                        location="overall",
+                        description=f"🚨 CRITICAL: NO code examples found (0/{expected_code})",
+                        suggestion=f"URGENT: Add {expected_code} code examples immediately. Each example should be 20-50 lines with Korean comments and show practical usage.",
+                    )
+                elif total_code < expected_code:
+                    return Issue(
+                        dimension=dimension,
+                        severity=severity,
+                        location="overall",
+                        description=f"Insufficient code examples ({total_code} found, {expected_code} expected)",
+                        suggestion=f"Add {expected_code - total_code} more code examples with detailed explanations",
+                    )
+
+            if lecture.total_word_count < lecture.duration * 150:
                 return Issue(
                     dimension=dimension,
                     severity=severity,

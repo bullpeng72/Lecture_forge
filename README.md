@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.7-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.3.8-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.7 Beta Release** | UI & Slides Enhancement 🖼️ (lightbox zoom, diagram full-width, search fix)
+> 🚀 **v0.3.8 Beta Release** | RMC Self-Review 🧠 (hallucination detection, curriculum logic check, content quality review)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -42,6 +42,10 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
 - 🔄 **자동 개선**: 품질 기준 미달 시 최대 3회 자동 수정
+- 🧠 **RMC 자기검토** (v0.3.8+): 에이전트 내부 2단계 자기반성 (Layer 1 검토 + Layer 2 검토의 검토)
+  - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
+  - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
+  - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
 - 🧪 **테스트 커버리지**: 827개+ 테스트 함수 (81개 파일, ~48% 커버리지)
 
 ### 지식 관리
@@ -65,6 +69,30 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ---
 
 ## 🚀 최근 개선사항
+
+### v0.3.8 (2026-02-19) - RMC 자기검토 + 이미지 선택 개선 🧠🖼️
+
+**에이전트 내부 자기반성 시스템 추가**:
+- **RMC (Reflective Meta-Cognition)**: 생성 직후 2단계 자기검토 - Layer 1(검토) + Layer 2(검토의 검토)
+- **CurriculumDesigner**: `_review_with_rmc()` - 섹션 순서 난이도 계단식 여부, 학습목표-섹션 연결, 선수 내용 배치 자동 수정
+- **ContentWriter**: `_review_content_with_rmc()` - 개념 비약, 설명 모호성, 코드-설명 연결, 중복 내용 검토 후 의미론적 수정
+- **QAAgent**: `_review_answer_with_rmc()` - 각 주장 ✓/~/✗ 분류 → 소스 미지원(✗) 항목 제거 또는 경고 표시
+
+**설계 원칙**:
+- Non-critical: try/except로 감싸서 RMC 실패 시 원본 반환 → 기존 파이프라인 영향 없음
+- 단어 수 검증: ContentWriter ≥80%, QAAgent ≥50% (LLM이 메타 평가 반환 시 원본 사용)
+- 토큰 효율: 콘텐츠 앞 4000자만 검토, 답변 앞 2000자만 검토
+
+**LLM 거부 응답 수정** (`content_writer/agent.py`):
+- **`_build_structural_section_prompt()`**: 결론/도입 섹션 전용 안전 프롬프트 (위협적 언어 제거)
+- **거부 응답 감지 + 재시도**: `_LLM_REFUSAL_PREFIXES` 패턴 감지 → 안전 프롬프트로 자동 재시도
+- **구조 섹션 RAG 쿼리 강화**: generic 메타 용어 대신 `topic + 본문 섹션 제목[:4]`로 쿼리해 컨텍스트 품질 향상
+- **결론 섹션 구조**: 핵심 요약, 학습목표 달성, 실무 적용, 다음 단계, 마무리 5개 서브섹션
+
+**이미지 선택 개선**:
+- **공간적 근접성 (y0 정렬)**: `page.get_image_rects(xref)` (PyMuPDF)로 이미지 y0(페이지 상단 거리) 추출 → 페이지 내 이미지를 위→아래 순으로 정렬 → 위치 점수 `(1/(idx+1)) × 0.10`이 페이지 상단 이미지를 정확히 우대
+- **섹션 내 중복 제거 P1 수정**: `selected_ids` 집합으로 PDF/웹/키워드 3개 Phase 전체에서 동일 이미지 중복 선택 방지
+- **타입별 가중치 P2 수정**: 스크린샷 vs 사진 별도 Config 상수 (`IMAGE_WEIGHT_QUALITY_SCREENSHOT` 등), 품질 임계값을 보너스 계산 이전에 적용
 
 ### v0.3.7 (2026-02-18) - UI & 슬라이드 개선 🖼️
 

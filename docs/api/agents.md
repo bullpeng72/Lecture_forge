@@ -381,6 +381,33 @@ curriculum = agent.design(
 - `duration` (int): Total duration in minutes
 - `audience_level` (str): Target audience level
 
+#### RMC Self-Review (v0.3.8)
+
+After generating the `Curriculum`, `design()` automatically calls `_review_with_rmc()`:
+
+```python
+# Internal — called automatically by design()
+curriculum = agent._review_with_rmc(curriculum, analysis_result)
+```
+
+**Layer 1 — Curriculum Review:**
+1. Difficulty progression (simpler → complex)
+2. Time consistency (section sum ≈ total duration)
+3. Objective coverage (each learning objective → at least one section)
+4. Redundancy (overlapping or too-broad sections)
+5. Prerequisite order (foundational topics placed first)
+
+**Layer 2 — Review of the Review:**
+- Calibrated for target audience level?
+- Over-correction? Good curriculum already sound?
+
+**Returned JSON → applied if valid:**
+- `section_reorder`: Re-sorts `curriculum.sections` list
+- `revised_objectives`: Replaces `curriculum.learning_objectives`
+- `no_changes: true`: Skips all modifications
+
+**Failure mode**: try/except — returns original `Curriculum` unmodified.
+
 ---
 
 ## Content Generation
@@ -394,7 +421,7 @@ Writes lecture content using RAG with modular components.
 #### Structure
 
 The ContentWriterAgent has been refactored into:
-- **agent.py**: Main orchestrator (519 lines)
+- **agent.py**: Main orchestrator (~700 lines, includes RMC self-review)
 - **image_selector.py**: Image selection logic (955 lines)
 - **code_generator.py**: Code extraction/generation (127 lines)
 - **content_expander.py**: Quality improvement (139 lines)
@@ -437,8 +464,14 @@ images = selector.select_images(section, available_images, context_metadatas)
 
 **Methods:**
 - `select_images()`: Main selection with location-based matching
-- `_evaluate_image_quality_simple()`: Quality scoring
-- `_match_images_by_location()`: Page-based matching
+- `_evaluate_image_quality_simple()`: Quality scoring (threshold applied before bonuses)
+- `_match_images_by_location()`: Page-based matching with y0 spatial proximity
+- `_expand_to_adjacent_pages()`: Fallback to neighbouring pages
+
+**Image Selection Improvements (v0.3.8)**:
+- **Spatial proximity (y0-based sorting)**: Images within each page are sorted top-to-bottom using `y0` from `page.get_image_rects(xref)` (PyMuPDF). The position score `(1/(idx+1)) × 0.10` now reliably rewards images that appear higher on the page, matching them to the surrounding text content.
+- **Intra-section dedup (P1 fix)**: A `selected_ids` set tracks all images chosen across the PDF, web, and keyword phases of `_select_images()`, preventing the same image from being placed twice within one section.
+- **Per-type scoring weights (P2 fix)**: Separate Config constants for screenshot vs photo quality/importance weights (`IMAGE_WEIGHT_QUALITY_SCREENSHOT`, `IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT`, etc.). Quality threshold is enforced before bonuses are applied.
 
 ##### CodeGenerator
 
@@ -461,6 +494,31 @@ from lecture_forge.agents.content_writer.content_expander import ContentExpander
 expander = ContentExpander(llm_client=llm, vector_store=vs)
 improved = expander.expand_content(section, curriculum, content, contexts)
 ```
+
+#### RMC Self-Review (v0.3.8)
+
+After the initial LLM generation pass, `_generate_content()` automatically calls `_review_content_with_rmc()`:
+
+```python
+# Internal — called automatically after content generation
+content = agent._review_content_with_rmc(content, section, curriculum, targets)
+```
+
+**Layer 1 — Educational Quality Review:**
+1. Conceptual leaps (concepts appearing without prior explanation)
+2. Explanation clarity (sentences too difficult for target audience)
+3. Code-text connection (sufficient explanation before/after code blocks)
+4. Flow breaks (logical gaps between subheadings)
+5. Repetition (duplicate explanations)
+
+**Layer 2 — Review of the Review:**
+- Audience calibration (beginner/intermediate/advanced appropriate?)
+- Severity check (is the issue actually disruptive?)
+- Good content preservation (avoid unnecessary edits)
+
+**Validation**: `revised_word_count >= original_word_count × 0.8` — else original is used (guards against LLM returning meta-evaluation instead of content).
+
+**Failure mode**: try/except — returns original content string unmodified.
 
 ---
 
@@ -556,7 +614,7 @@ Provides interactive Q&A using RAG with enhanced quality (v0.3.5).
 ```python
 from lecture_forge.agents.qa_agent import QAAgent
 
-agent = QAAgent(collection_name="ml_lecture_001")
+agent = QAAgent(knowledge_base_path="ml_lecture_001")
 ```
 
 #### Main Method
@@ -589,6 +647,34 @@ Dictionary with:
 - Cross-lingual search (Korean ↔ English)
 - Dynamic confidence scoring (fixed ChromaDB L2 distance conversion)
 - Automatic answer expansion for short answers (< 200 chars)
+
+#### RMC Self-Review (v0.3.8)
+
+After `_post_process_answer()` completes, `_review_answer_with_rmc()` runs automatically:
+
+```python
+# Internal — called automatically before returning the final answer
+answer = agent._review_answer_with_rmc(answer, question, contexts, query_language)
+```
+
+**Layer 1 — Grounding Verification:**
+
+Each major claim is classified against source contexts (up to 5 snippets, 200 chars each):
+- ✓ — Clearly supported in sources
+- ~ — Reasonably inferable from sources
+- ✗ — No source support (hallucination risk)
+
+✗ items are either removed or marked with a language-appropriate disclaimer:
+- Korean: `"(강의 자료에서 직접 확인되지 않은 내용입니다)"`
+- English: `"(This information was not directly found in the lecture materials)"`
+
+**Layer 2 — Review of the Review:**
+- Avoid marking widely-known facts as ✗
+- Avoid approving genuinely unsupported claims as ✓/~
+
+**Validation**: `revised_word_count >= original_word_count × 0.5` — accepts shorter answers (hallucination removal legitimately reduces length). Falls back to original if threshold not met.
+
+**Failure mode**: try/except — returns original answer string unmodified.
 
 **Example:**
 
@@ -661,5 +747,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-02-18
-**Version**: 0.3.7
+**Last Updated**: 2026-02-19
+**Version**: 0.3.8

@@ -228,11 +228,14 @@ Image Directory + Metadata
 ContentAnalyzer (RAG query → topics/entities)
     ↓
 CurriculumDesigner (structure planning)
+    ├─ [RMC] _review_with_rmc: section order, objective coverage, prerequisites
+    └─ Apply: reorder sections, revise objectives
     ↓
 ContentWriter (RAG query → write sections)
     ├─ ImageSelector (select relevant images)
     ├─ CodeGenerator (generate code examples)
-    └─ ContentExpander (improve quality)
+    ├─ ContentExpander (improve quality)
+    └─ [RMC] _review_content_with_rmc: conceptual leaps, clarity, flow, repetition
     ↓
 DiagramGenerator (create Mermaid diagrams)
     ↓
@@ -269,6 +272,10 @@ Chain of Thought Generation (temperature=0.3)
 Answer Post-processing
     ├─ Expand if too short (<200 chars)
     └─ Extract partial info if incomplete
+    ↓
+[RMC] _review_answer_with_rmc (v0.3.8)
+    ├─ Classify each claim: ✓ (supported) / ~ (inferable) / ✗ (hallucination)
+    └─ Remove or flag ✗ items with source-language disclaimer
     ↓
 Confidence Calculation (ChromaDB L2 distance corrected)
     ├─ Search quality (30%)
@@ -390,6 +397,23 @@ Logged to conversation_log.txt (v0.3.6+)
 - Multiple sources: **70% faster** through parallel I/O
 - Example: 3 PDFs + 5 URLs: sync 80s → async 24s
 
+#### 7. RMC Self-Review (v0.3.8)
+**Pattern**: Each modified agent calls an internal `_review_with_rmc()` / `_review_content_with_rmc()` / `_review_answer_with_rmc()` method **after** LLM generation, **before** the next pipeline stage.
+
+**Two-layer structure**:
+- Layer 1: Domain-specific quality check (5 criteria)
+- Layer 2: Review of the review (prevent over-correction)
+
+**Agents updated:**
+- `CurriculumDesignerAgent` — section ordering, objective coverage, prerequisite logic
+- `ContentWriterAgent` — conceptual leaps, clarity, flow, repetition
+- `QAAgent` — hallucination grounding (✓/~/✗ per claim)
+
+**Design principles:**
+- All RMC methods wrapped in try/except → pipeline never fails due to RMC
+- Word-count validation guards against LLM returning meta-evaluation text
+- Uses `self.invoke_llm(phase="[agent]_rmc_review")` for token tracking
+
 ---
 
 ## Performance Characteristics
@@ -457,6 +481,12 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.3.8: RMC Self-Review
+
+**What changed**: Added `_review_with_rmc()` / `_review_content_with_rmc()` / `_review_answer_with_rmc()` to `CurriculumDesignerAgent`, `ContentWriterAgent`, and `QAAgent` respectively.
+
+**Why**: External quality loops (QualityEvaluator) only run after full HTML assembly. RMC adds per-agent semantic quality checks inside the generation step itself — catching curriculum logic errors, content meaning issues, and answer hallucinations before they propagate downstream.
+
 ### v0.3.7: UI & Slides Enhancement
 
 #### 7. Lightbox (Click-to-Zoom)
@@ -501,5 +531,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-02-18
-**Version**: 0.3.7
+**Last Updated**: 2026-02-19
+**Version**: 0.3.8

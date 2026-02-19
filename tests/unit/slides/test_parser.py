@@ -162,12 +162,15 @@ def test_process_code_block(parser):
 
 
 def test_process_code_block_no_code_elem(parser):
-    """_process_code_block returns None when no <code> inside <pre>."""
+    """_process_code_block falls back to <pre> text when no <code> child is present."""
     html = "<pre>bare text</pre>"
     soup = BeautifulSoup(html, "html.parser")
     pre = soup.find("pre")
     block = parser._process_code_block(pre)
-    assert block is None
+    # P4: bare <pre> text is extracted directly (fallback for code blocks without <code>)
+    assert block is not None
+    assert block["type"] == "code"
+    assert "bare text" in block["content"]
 
 
 def test_process_image(parser):

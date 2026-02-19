@@ -34,20 +34,7 @@ YOU MUST ADD: {word_gap:,}+ WORDS RIGHT NOW!
      * 시각적 설명 (어떻게 생겼는지, 어떻게 작동하는지)
      * 역사적 배경 (누가, 언제, 왜 만들었는지)
 
-2. **추가 코드 예제 작성 (CRITICAL!)** (add ~{code_words} words):
-   - ⚠️ MANDATORY: 코드 블록 필수 포함 (```python ... ```)
-   - 각 개념당 2-3개의 완전한 실행 가능한 예제
-   - 각 예제: 20-50 lines of code
-   - 단계별 설명 (step 1, 2, 3...)
-   - 한글 주석 포함
-   - 예상 출력 명시
-
-   **CODE EXAMPLE FORMAT (MANDATORY):**
-   ```python
-   # [설명]
-   # 코드 20-50 lines
-   # 한글 주석
-   ```
+{code_section_text}
 
 3. **흔한 실수와 주의사항** (add ~{pitfall_words} words):
    - 초보자가 자주 하는 실수 3-5가지

@@ -2,6 +2,7 @@
 Content Collector Agent - Collects text content from various sources.
 """
 
+import uuid
 from typing import Dict, List
 
 from lecture_forge.agents.base import BaseAgent
@@ -200,7 +201,7 @@ class ContentCollectorAgent(BaseAgent):
         # 5. Store in vector database
         if all_chunks:
             logger.info("Storing in vector database...")
-            chunk_ids = [f"chunk_{i}" for i in range(len(all_chunks))]
+            chunk_ids = [str(uuid.uuid4()) for _ in all_chunks]
 
             self.vector_store.add_documents(
                 documents=all_chunks,
@@ -212,11 +213,12 @@ class ContentCollectorAgent(BaseAgent):
             logger.info(f"✅ Vector DB updated: {stats['document_count']} total documents")
 
         # 6. Return collection result
+        chunk_ids = [str(uuid.uuid4()) for _ in all_chunks]
         result = {
             "success": True,
             "documents": all_documents,
             "chunks": all_chunks,
-            "chunk_ids": [f"chunk_{i}" for i in range(len(all_chunks))],
+            "chunk_ids": chunk_ids,
             "metadata": {
                 "total_docs": len(all_documents),
                 "total_chunks": len(all_chunks),

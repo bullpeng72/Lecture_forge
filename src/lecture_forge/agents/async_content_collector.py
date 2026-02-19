@@ -10,6 +10,7 @@ Expected speedup: 5-10 minutes → 2-3 minutes (70% reduction)
 """
 
 import asyncio
+import uuid
 from typing import Dict, List
 
 from lecture_forge.agents.async_base import AsyncBaseAgent
@@ -141,7 +142,7 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
         # 6. Store in vector database (sync operation, but fast)
         if all_chunks:
             logger.info("Storing in vector database...")
-            chunk_ids = [f"chunk_{i}" for i in range(len(all_chunks))]
+            chunk_ids = [str(uuid.uuid4()) for _ in all_chunks]
 
             # Run in executor to avoid blocking
             await self.run_in_executor(
@@ -155,11 +156,12 @@ class AsyncContentCollectorAgent(AsyncBaseAgent):
             logger.info(f"✅ Vector DB updated: {stats['document_count']} total documents")
 
         # 7. Return collection result
+        chunk_ids = [str(uuid.uuid4()) for _ in all_chunks]
         result = {
             "success": True,
             "documents": all_documents,
             "chunks": all_chunks,
-            "chunk_ids": [f"chunk_{i}" for i in range(len(all_chunks))],
+            "chunk_ids": chunk_ids,
             "metadata": {
                 "total_docs": len(all_documents),
                 "total_chunks": len(all_chunks),

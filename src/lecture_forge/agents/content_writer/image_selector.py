@@ -60,6 +60,7 @@ class ImageSelector:
             List of selected image references
         """
         selected = []
+        selected_ids: set = set()  # Track selected image IDs across all phases (intra-section dedup)
 
         if not available_images:
             logger.warning(f"  ⚠️  No images available for section: {section.title}")
@@ -81,6 +82,7 @@ class ImageSelector:
             logger.debug(f"     📍 Trying location-based matching...")
             location_matched_images = self._match_images_by_location(context_metadatas, pdf_images, max_images)
             selected.extend(location_matched_images)
+            selected_ids.update(img_ref.image_id for img_ref in location_matched_images)
             location_matched = len(location_matched_images)
             logger.info(f"     ✅ Location-based: {location_matched} images matched")
 
@@ -92,6 +94,9 @@ class ImageSelector:
         for img in search_images:
             if len(selected) >= max_images:
                 break
+
+            if img.get("id", "") in selected_ids:
+                continue
 
             img_desc = img.get("description", "").lower()
             img_query = img.get("query", "").lower()
@@ -123,9 +128,11 @@ class ImageSelector:
                     break
 
             if matched:
+                img_id = img.get("id", "")
+                selected_ids.add(img_id)
                 selected.append(
                     ImageReference(
-                        image_id=img.get("id", ""),
+                        image_id=img_id,
                         path=img.get("path", ""),
                         description=img.get("description", "") or img.get("query", "") or img_alt,
                         caption=matched_topic,
@@ -143,6 +150,9 @@ class ImageSelector:
             for img in pdf_images:
                 if len(selected) >= max_images:
                     break
+
+                if img.get("id", "") in selected_ids:
+                    continue
 
                 img_desc = img.get("description", "").lower()
                 img_alt = img.get("alt_text", "").lower()
@@ -168,9 +178,11 @@ class ImageSelector:
                             break
 
                     if matched:
+                        img_id = img.get("id", "")
+                        selected_ids.add(img_id)
                         selected.append(
                             ImageReference(
-                                image_id=img.get("id", ""),
+                                image_id=img_id,
                                 path=img.get("path", ""),
                                 description=img.get("description", ""),
                                 caption=f"{matched_topic} (PDF page {img.get('page', '?')})",
@@ -267,20 +279,17 @@ class ImageSelector:
                     # Calculate final score with content-type-aware weighting
                     content_type = full_img.get("content_type", "unknown")
 
-                    # Adjust weights based on content type
-                    # Diagrams/charts get higher quality weight (more important than page location)
+                    # Adjust weights based on content type (all sourced from Config)
                     if content_type in ["diagram", "chart"]:
-                        quality_weight = Config.IMAGE_WEIGHT_QUALITY  # Increase quality importance
+                        quality_weight = Config.IMAGE_WEIGHT_QUALITY
                         importance_weight = Config.IMAGE_WEIGHT_IMPORTANCE
-                        position_weight = Config.IMAGE_WEIGHT_POSITION
                     elif content_type in ["screenshot", "technical"]:
-                        quality_weight = 0.25
-                        importance_weight = 0.65
-                        position_weight = 0.10
-                    else:
-                        quality_weight = 0.20  # Default
-                        importance_weight = 0.70
-                        position_weight = 0.10
+                        quality_weight = Config.IMAGE_WEIGHT_QUALITY_SCREENSHOT
+                        importance_weight = Config.IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT
+                    else:  # photo, unknown
+                        quality_weight = Config.IMAGE_WEIGHT_QUALITY_PHOTO
+                        importance_weight = Config.IMAGE_WEIGHT_IMPORTANCE_PHOTO
+                    position_weight = Config.IMAGE_WEIGHT_POSITION  # shared across all types
 
                     final_score = (
                         importance_score * importance_weight  # Page importance
@@ -439,12 +448,18 @@ class ImageSelector:
         content_type = image.get("content_type", "unknown")
 
         if extraction_quality is not None:
-            # Use the enhanced quality score from extraction phase
-            base_score = extraction_quality
+            # Threshold is applied to raw extraction_quality BEFORE adding the type bonus.
+            # This ensures consistent filtering across all content types: the bonus only
+            # affects ranking among images that already pass the quality bar, not admission.
+            if extraction_quality < Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
+                logger.debug(
+                    f"           ⏭️  Raw quality {extraction_quality:.2f} below threshold "
+                    f"{Config.IMAGE_SELECTION_QUALITY_THRESHOLD} — type bonus not applied"
+                )
+                return extraction_quality  # Returns value < threshold; caller will skip
 
-            # Apply content type bonus
             content_bonus = self._get_content_type_bonus(content_type)
-            final_score = min(1.0, base_score + content_bonus)
+            final_score = min(1.0, extraction_quality + content_bonus)
 
             logger.debug(
                 f"           📊 Quality (enhanced): {extraction_quality:.2f} "
@@ -813,12 +828,10 @@ class ImageSelector:
             source = candidate["source"]
             page = candidate["page"]
 
-            # 1. Global deduplication check
-            if hasattr(self, "used_image_ids") and img_id in self.used_image_ids:
-                logger.debug(f"           ⏭️  Skip {img_id} (already used in previous section)")
-                continue
+            # Cross-section deduplication is handled upstream in write_all_sections()
+            # by filtering available_images before each section call.
 
-            # 2. Page limit check (max 1 per page)
+            # Page limit check (max 1 per page)
             page_key = (source, page)
             page_usage = used_pages.get(page_key, 0)
 
@@ -929,10 +942,7 @@ class ImageSelector:
                         if not full_img:
                             continue
 
-                        # Global deduplication check
                         img_id = full_img.get("id")
-                        if hasattr(self, "used_image_ids") and img_id in self.used_image_ids:
-                            continue
 
                         # Quality check
                         quality = self._evaluate_image_quality_simple(full_img)

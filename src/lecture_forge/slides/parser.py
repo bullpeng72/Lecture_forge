@@ -331,7 +331,11 @@ class HTMLLectureParser:
         Returns:
             Content block dictionary or None
         """
-        mermaid_code = diagram_div.text.strip()
+        import html as _html
+        # BeautifulSoup's .text decodes HTML entities, but unescape() ensures
+        # any residual &gt; / &lt; / &amp; in the raw source are also resolved
+        # so that Mermaid receives clean --> / < / & syntax.
+        mermaid_code = _html.unescape(diagram_div.text.strip())
         if not mermaid_code:
             return None
 

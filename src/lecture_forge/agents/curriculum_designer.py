@@ -47,7 +47,10 @@ class CurriculumDesignerAgent(BaseAgent):
         selected_topics = self._select_topics(analysis_result, duration, audience_level)
 
         # 3. Create sections with time allocation
-        sections = self._create_sections(selected_topics, analysis_result, duration, audience_level, topic=topic)
+        sections = self._create_sections(
+            selected_topics, analysis_result, duration, audience_level, topic=topic,
+            learning_objectives=learning_objectives,
+        )
 
         # 4. Build prerequisite map
         prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
@@ -151,11 +154,16 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         duration: int,
         audience_level: str,
         topic: str = "",
+        learning_objectives: List[str] = None,
     ) -> List[Section]:
         """Create curriculum sections from topics."""
         from lecture_forge.utils.language_utils import detect_language
 
-        is_korean = detect_language(topic) == "ko"
+        # Use learning_objectives for language detection: they are always generated in Korean
+        # by _generate_learning_objectives(), so mixed-language topics like "AI Engineering"
+        # correctly resolve to Korean output.
+        _lang_text = " ".join(learning_objectives) if learning_objectives else topic
+        is_korean = detect_language(_lang_text) == "ko"
 
         sections = []
 

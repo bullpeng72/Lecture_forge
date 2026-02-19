@@ -71,22 +71,15 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
 
     \b
     Enhancement Options:
-      --enhance-pdf-images: (LEGACY) Re-generate descriptions for PDF images
-                            Note: Auto-describe is now enabled by default in 'create'
-                            This option is mainly for old lectures (pre-v0.2.4)
-                            Uses GPT-4o-mini to infer image content from page text
-                            Cost: ~$0.04 per 400 images (384 pages)
-
-      --to-slides:          Convert lecture HTML to Reveal.js presentation slides
-                            Creates separate *_slides.html file
-                            Automatically splits content into slides
-                            Optimized for presentations (v0.3.0+ improvements)
-                            Preserves images, code blocks, and Mermaid diagrams
-
-      --with-notes:         Auto-generate presenter notes for each slide
-                            Requires --to-slides flag
-                            Uses LLM (GPT-4o-mini) to write 2-4 sentence notes
-                            per slide; press S in browser to open speaker view
+      --enhance-pdf-images  (LEGACY) Re-generate PDF image descriptions
+                            · For old lectures (pre-v0.2.4); auto-describe is on by default
+                            · Cost: ~$0.04 per 400 images
+      --to-slides           Convert lecture HTML to Reveal.js presentation slides
+                            · Creates a separate *_slides.html file
+                            · Splits content into slides; preserves images & diagrams
+      --with-notes          Auto-generate presenter notes (requires --to-slides)
+                            · LLM writes 2-4 sentences per slide
+                            · Press S in browser to open speaker view
 
     \b
     Slide Keyboard Shortcuts:

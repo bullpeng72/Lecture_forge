@@ -408,7 +408,7 @@ class Config:
     CONTENT_MAX_EXPANSION_ITERATIONS: int = int(os.getenv("CONTENT_MAX_EXPANSION_ITERATIONS", "2"))  # Max expansion attempts
 
     # ===== Slide Generation =====
-    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "5"))  # Maximum content blocks per slide
+    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "6"))  # Maximum content blocks per slide
 
     # ===== Web Scraping =====
     WEB_SCRAPER_TIMEOUT: int = int(os.getenv("WEB_SCRAPER_TIMEOUT", "30"))

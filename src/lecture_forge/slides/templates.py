@@ -20,6 +20,10 @@ def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
       2. Truncates long plain text at a natural boundary (colon, comma, space).
     Inline HTML formatting (<strong>, <em>, <code>) is preserved when the item
     is already within the limit.
+
+    Truncation uses plain-text coordinates but cuts first_html at the
+    corresponding HTML position, then closes any unclosed inline tags to
+    ensure the output is always valid HTML.
     """
     plain = re.sub(r"<[^>]+>", "", item)
     # For multi-line items keep only the first meaningful line
@@ -29,18 +33,50 @@ def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
     if len(first_plain) <= max_chars:
         return first_html
 
-    # Truncate at a natural boundary within the plain text
+    # Find cut position in plain-text coordinates
     window = first_plain[:max_chars]
+    cut_plain = -1
     for sep in (":", "：", ",", "，", " —", " -"):
         pos = window.find(sep)
         if 10 <= pos < max_chars:
-            return first_html[: pos + 1].rstrip() + "…"
+            cut_plain = pos + 1
+            break
 
-    last_space = window.rfind(" ")
-    if last_space > max_chars // 2:
-        return first_html[:last_space] + "…"
+    if cut_plain == -1:
+        last_space = window.rfind(" ")
+        cut_plain = last_space if last_space > max_chars // 2 else max_chars
 
-    return first_html[:max_chars] + "…"
+    # Translate cut_plain (plain-text chars) → position in first_html
+    # by scanning first_html and skipping over HTML tags.
+    plain_count = 0
+    cut_html = len(first_html)  # fallback: include full string
+    i = 0
+    while i < len(first_html):
+        if first_html[i] == "<":
+            end = first_html.find(">", i)
+            i = (end + 1) if end != -1 else len(first_html)
+        else:
+            plain_count += 1
+            if plain_count >= cut_plain:
+                cut_html = i + 1
+                break
+            i += 1
+
+    truncated = first_html[:cut_html].rstrip()
+
+    # Close any unclosed inline tags to ensure valid HTML output
+    open_tags: List[str] = []
+    for m in re.finditer(r"<(/?)([a-z][a-z0-9]*)(?:\s[^>]*)?>", truncated, re.IGNORECASE):
+        is_close, name = bool(m.group(1)), m.group(2).lower()
+        if name in ("strong", "em", "code", "b", "i", "s", "u"):
+            if is_close:
+                if open_tags and open_tags[-1] == name:
+                    open_tags.pop()
+            else:
+                open_tags.append(name)
+
+    closing = "".join(f"</{t}>" for t in reversed(open_tags))
+    return truncated + closing + "…"
 
 
 class RevealJsTemplate:
@@ -288,13 +324,24 @@ class RevealJsTemplate:
             # first chunk's heading instead of creating a heading-only slide
             prefix_headings = list(current_slide_content)
 
-        # Split into chunks of max_items each
-        for i in range(0, len(list_items), max_items):
-            chunk = list_items[i : i + max_items]
+        # Pre-compute all chunks of max_items each
+        all_chunks: List[List[str]] = [
+            list_items[i : i + max_items]
+            for i in range(0, len(list_items), max_items)
+        ]
+
+        # Merge last wimpy chunk into the previous one to avoid sparse "(계속)" slides.
+        # e.g. with max=6: [6, 1] → [7], [6, 6, 2] → [6, 8]
+        _MIN_LAST_CHUNK = 3
+        if len(all_chunks) >= 2 and len(all_chunks[-1]) < _MIN_LAST_CHUNK:
+            all_chunks[-2] = all_chunks[-2] + all_chunks[-1]
+            all_chunks.pop()
+
+        for chunk_idx, chunk in enumerate(all_chunks):
             items_html = "".join(f"<li>{_render_slide_item(item)}</li>" for item in chunk)
 
             chunk_content: List[str] = []
-            if i == 0 and prefix_headings:
+            if chunk_idx == 0 and prefix_headings:
                 # Use the pre-injected heading(s) for the first chunk
                 chunk_content.extend(prefix_headings)
             elif current_title:
@@ -346,6 +393,7 @@ class RevealJsTemplate:
 
         P3: Renders the block's 'title' field (preceding heading from parser)
         above the image so the audience sees context.
+        Image is center-aligned via .slide-img-wrap flex container.
         """
         title = block.get("title", "")
         caption = block.get("caption", "")
@@ -353,7 +401,9 @@ class RevealJsTemplate:
         caption_html = f"        <p><small>{caption}</small></p>\n" if caption else ""
         return f"""
     <section>
-{title_html}        <img src="{block['src']}" alt="{block['alt']}" style="max-height: 450px; max-width: 90%;">
+{title_html}        <div class="slide-img-wrap">
+            <img src="{block['src']}" alt="{block['alt']}" style="max-height: 420px; max-width: 90%; object-fit: contain;">
+        </div>
 {caption_html}    </section>
                 """
 
@@ -476,49 +526,14 @@ class RevealJsTemplate:
             padding: 1.5em;
         }
         .reveal .slides section {
-            display: none;
             text-align: left;
-            max-height: 700px;
-            overflow-y: auto;
-            overflow-x: hidden;
             padding: 40px 50px;
             box-sizing: border-box;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: flex-start;
         }
-        .reveal .slides section.present {
-            display: flex !important;
-        }
-        /* Center-aligned slides (title, subsection) */
+        /* Center-aligned slides: title (zoom) and section headers (convex) */
         .reveal .slides section[data-transition="zoom"],
-        .reveal .slides section[data-transition="slide"] {
-            justify-content: center;
-            align-items: center;
+        .reveal .slides section[data-transition="convex"] {
             text-align: center;
-        }
-        .reveal .slides section[data-transition="zoom"] {
-            text-align: center;
-        }
-        /* 스크롤바 스타일 (WebKit) */
-        .reveal .slides section::-webkit-scrollbar {
-            width: 8px;
-        }
-        .reveal .slides section::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
-        }
-        .reveal .slides section::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-        }
-        .reveal .slides section::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.5);
-        }
-        /* Firefox 스크롤바 */
-        .reveal .slides section {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
         }
         /* 계속 슬라이드 표시 (P4: 눈에 띄는 스타일) */
         .reveal .slide-cont {
@@ -567,6 +582,14 @@ class RevealJsTemplate:
         .reveal pre::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.3);
             border-radius: 3px;
+        }
+        /* 이미지 슬라이드 중앙 정렬 wrapper */
+        .reveal .slide-img-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin: auto 0;
         }
         /* 클릭 가능한 이미지·다이어그램 커서 */
         .reveal .slides img.zoomable,
@@ -659,8 +682,6 @@ class RevealJsTemplate:
             margin: 0.04,
             minScale: 0.2,
             maxScale: 2.0,
-            display: 'block',
-            scrollActivationWidth: null,
         }).then(() => {
             // Mermaid 초기화 (Mermaid 10 API)
             mermaid.initialize({
@@ -751,93 +772,5 @@ class RevealJsTemplate:
             // 슬라이드 전환 시 다이어그램 클릭 핸들러 재부착 (지연 렌더링 대응)
             Reveal.on('slidechanged', function() { setTimeout(attachDiagramClicks, 400); });
             // ─────────────────────────────────────────────────────────
-
-            // 스크롤 인디케이터 관리
-            const updateScrollIndicator = (section) => {
-                if (!section) return;
-
-                // 기존 인디케이터 제거
-                const oldIndicator = section.querySelector('.scroll-indicator');
-                if (oldIndicator) {
-                    oldIndicator.remove();
-                }
-
-                // 스크롤 필요 여부 확인
-                const needsScroll = section.scrollHeight > (section.clientHeight + 20);
-
-                if (needsScroll) {
-                    const indicator = document.createElement('div');
-                    indicator.className = 'scroll-indicator';
-                    indicator.innerHTML = '↓ 아래로 스크롤하세요 ↓';
-                    indicator.style.cssText = `
-                        position: fixed;
-                        bottom: 40px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: rgba(0, 0, 0, 0.7);
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 20px;
-                        font-size: 0.8em;
-                        animation: pulse 2s infinite;
-                        pointer-events: none;
-                        z-index: 1000;
-                        transition: opacity 0.3s;
-                    `;
-                    document.body.appendChild(indicator);
-
-                    // 스크롤 시 인디케이터 처리
-                    const scrollHandler = () => {
-                        const scrollPercent = (section.scrollTop / (section.scrollHeight - section.clientHeight)) * 100;
-                        if (scrollPercent > 5) {
-                            indicator.style.opacity = '0';
-                        } else {
-                            indicator.style.opacity = '1';
-                        }
-
-                        if (scrollPercent > 95) {
-                            indicator.remove();
-                            section.removeEventListener('scroll', scrollHandler);
-                        }
-                    };
-
-                    section.addEventListener('scroll', scrollHandler);
-
-                    const cleanup = () => {
-                        indicator.remove();
-                        section.removeEventListener('scroll', scrollHandler);
-                    };
-
-                    section.dataset.cleanupIndicator = 'registered';
-                    Reveal.on('slidechanged', cleanup);
-                }
-            };
-
-            // 슬라이드 변경 시 처리
-            Reveal.on('slidechanged', event => {
-                event.currentSlide.scrollTop = 0;
-                document.querySelectorAll('.scroll-indicator').forEach(ind => ind.remove());
-                setTimeout(() => {
-                    updateScrollIndicator(event.currentSlide);
-                }, 100);
-            });
-
-            // 초기 슬라이드 인디케이터
-            Reveal.on('ready', () => {
-                setTimeout(() => {
-                    const currentSlide = Reveal.getCurrentSlide();
-                    updateScrollIndicator(currentSlide);
-                }, 300);
-            });
         });
-
-        // 펄스 애니메이션
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0%, 100% { opacity: 0.6; }
-                50% { opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
     </script>"""

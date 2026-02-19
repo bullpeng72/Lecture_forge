@@ -269,8 +269,11 @@ class TestCreateContentSlidesBlockTypes:
         assert "Before diagram" in full
 
     def test_long_list_block_returns_multiple_slides(self, t):
-        """list with > max_bullet_points items → multiple slides returned."""
-        items = [f"Item {i}" for i in range(8)]  # 8 > max_bullet_points=5
+        """list exceeding max_items_per_slide (6) with a last chunk >= MIN_LAST_CHUNK(3)
+        must still produce multiple slides.  A 9-item list → [6, 3] = 2 slides.
+        (8 items → [6, 2] would be merged into one slide by the last-chunk merge logic.)
+        """
+        items = [f"Item {i}" for i in range(9)]  # [6, 3] → 2 slides
         blocks = [{"type": "list", "items": items, "ordered": False}]
         slides = t._create_content_slides(blocks)
         # Should get multiple slides for the split list

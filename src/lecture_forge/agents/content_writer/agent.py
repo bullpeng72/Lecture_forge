@@ -462,8 +462,11 @@ class ContentWriterAgent(BaseAgent):
         # Use more contexts (increase from 8 to 10 for better content)
         context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
 
-        # Determine language-aware labels for section headings
-        is_korean = detect_language(curriculum.topic) == "ko"
+        # Determine language-aware labels for section headings.
+        # learning_objectives are always generated in Korean (see curriculum_designer.py),
+        # so they are a more reliable signal than the topic alone (e.g. "AI Engineering").
+        _lang_text = " ".join(curriculum.learning_objectives) if curriculum.learning_objectives else curriculum.topic
+        is_korean = detect_language(_lang_text) == "ko"
         intro_label = "도입부" if is_korean else "Introduction"
         summary_label = "요약 및 실습" if is_korean else "Summary & Practice"
 

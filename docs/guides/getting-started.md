@@ -18,7 +18,7 @@ Complete guide to installing and using LectureForge for the first time.
 ### System Requirements
 
 - **Operating System**: macOS, Linux, or Windows
-- **Python**: 3.11 or 3.12 (3.13 not recommended)
+- **Python**: 3.11, 3.12, or 3.13
 - **Memory**: 2GB+ RAM recommended
 - **Disk Space**: 500MB+ for installation + 50MB per lecture
 
@@ -114,14 +114,7 @@ pytest
 |--------|--------|-------|
 | 3.11 | ✅ **Recommended** | Full support, tested |
 | 3.12 | ✅ Supported | Works correctly |
-| 3.13 | ❌ **Not Recommended** | ChromaDB compatibility issues |
-
-**If you have Python 3.13**, downgrade to 3.11:
-```bash
-conda create -n lecture-forge python=3.11
-conda activate lecture-forge
-pip install lecture-forge
-```
+| 3.13 | ✅ Supported | Verified compatible (v0.3.8+) |
 
 ---
 
@@ -466,13 +459,23 @@ lecture-forge edit-images outputs/your_lecture.html
 Convert your lecture to presentation slides:
 
 ```bash
+# Basic conversion
 lecture-forge improve outputs/your_lecture.html --to-slides
+
+# With auto-generated presenter notes (LLM writes 2-4 sentences per slide)
+lecture-forge improve outputs/your_lecture.html --to-slides --with-notes
+
+# With slide-optimized content (eliminates truncated bullets, ≤35자 per bullet)
+lecture-forge improve outputs/your_lecture.html --to-slides --slide-rewrite
+
+# Combine both enhancements
+lecture-forge improve outputs/your_lecture.html --to-slides --with-notes --slide-rewrite
 ```
 
 This creates a Reveal.js presentation with:
 - Keyboard navigation (Arrow keys, Space)
 - Overview mode (Esc)
-- Speaker notes (S)
+- Speaker notes (S) — press S to open speaker view (requires `--with-notes`)
 - Full screen (F)
 
 ### 5. Enhance PDF Images (Optional)
@@ -526,18 +529,6 @@ lecture-forge init
 # Or manually create .env
 lecture-forge home env
 # Add: OPENAI_API_KEY=sk-proj-...
-```
-
-### Issue: Python 3.13 GLIBCXX Error
-
-**Problem**: ChromaDB not compatible with Python 3.13.
-
-**Solution:**
-```bash
-# Create Python 3.11 environment
-conda create -n lecture-forge python=3.11
-conda activate lecture-forge
-pip install lecture-forge
 ```
 
 ### Issue: "playwright not found"

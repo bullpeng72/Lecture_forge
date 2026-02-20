@@ -1,5 +1,5 @@
 # ===== LectureForge Requirements =====
-# Python 3.11-3.12 compatible (3.13+ not recommended due to ChromaDB/hnswlib issues)
+# Python 3.11-3.13 compatible (all versions verified and supported)
 # Fast installation (~3-5 minutes)
 # Heavy optional packages are commented out - uncomment if needed
 # Last updated: 2026-02-17
@@ -24,7 +24,7 @@ requests>=2.31.0,<3.0.0
 
 # ===== Image Processing (Basic) =====
 pillow>=10.2.0,<11.0.0
-# Numpy version (Python 3.11-3.12 compatible - requires 1.26+ for Python 3.12)
+# Numpy version (Python 3.11-3.13 compatible - requires 1.26+)
 numpy>=1.26.0,<2.0.0
 scipy>=1.11.0,<2.0.0  # For advanced image quality analysis (entropy)
 

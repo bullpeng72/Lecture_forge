@@ -358,14 +358,12 @@ pip install -e .
 playwright install chromium
 ```
 
-> **Python 버전 호환성** (중요 ⚠️):
-> - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원 (Production Ready)
-> - ✅ **Python 3.12**: **완벽 지원** - v0.3.3부터 공식 지원 (numpy 1.26.0+)
-> - ❌ **Python 3.13**: **비권장** - ChromaDB/hnswlib 호환성 문제 발생
->   - 증상: `GLIBCXX_3.4.32 not found` 오류
->   - 해결: Python 3.11 또는 3.12로 다운그레이드 필수
+> **Python 버전 호환성**:
+> - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원
+> - ✅ **Python 3.12**: **완벽 지원** - v0.3.3부터 공식 지원
+> - ✅ **Python 3.13**: **지원됨** - v0.3.8부터 검증 완료
 >
-> **v0.3.3부터 Python 3.11과 3.12 모두 완벽하게 지원합니다.**
+> **Python 3.11, 3.12, 3.13 모두 지원합니다.**
 
 ### 2️⃣ 환경 설정
 
@@ -647,6 +645,8 @@ lecture-forge improve outputs/lecture.html --to-slides
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
 | `--to-slides` | Reveal.js 슬라이드 변환 | `--to-slides` |
+| `--with-notes` | 슬라이드별 발표자 노트 자동 생성 (LLM) | `--with-notes` |
+| `--slide-rewrite` | 슬라이드 최적화 LLM 재작성 (말줄임표 제거, ≤35자) | `--slide-rewrite` |
 | `--enhance-pdf-images` | PDF 이미지 설명 추가 (레거시) | `--enhance-pdf-images` |
 | `--source-pdf FILE` | 원본 PDF 경로 (레거시용) | `--source-pdf doc.pdf` |
 
@@ -654,8 +654,14 @@ lecture-forge improve outputs/lecture.html --to-slides
 
 **예제:**
 ```bash
-# 슬라이드 변환 (권장)
+# 슬라이드 변환 (기본)
 lecture-forge improve outputs/lecture.html --to-slides
+
+# 발표자 노트 포함 (브라우저에서 S키)
+lecture-forge improve outputs/lecture.html --to-slides --with-notes
+
+# 슬라이드 최적화 재작성 (말줄임표 없는 완결된 bullet)
+lecture-forge improve outputs/lecture.html --to-slides --slide-rewrite
 
 # PDF 이미지 보강 (레거시)
 lecture-forge improve outputs/lecture.html --enhance-pdf-images --source-pdf original.pdf
@@ -894,43 +900,21 @@ pie title 품질 평가 가중치 분포
 <details>
 <summary><b>Q: 어떤 Python 버전이 필요한가요?</b></summary>
 
-A: **Python 3.11 또는 3.12를 권장합니다.**
+A: **Python 3.11, 3.12, 3.13 모두 지원합니다.**
 
 - ✅ Python 3.11: 완벽 지원 (권장)
 - ✅ Python 3.12: 완벽 지원 (v0.3.3+)
-- ❌ Python 3.13: 호환성 문제 (비권장)
+- ✅ Python 3.13: 지원됨 (v0.3.8+, 검증 완료)
 
 ```bash
 # 버전 확인
 python --version
 
-# Python 3.11 환경 생성
+# Python 3.11 환경 생성 (권장)
 conda create -n lecture-forge python=3.11
 conda activate lecture-forge
-
-# 또는 Python 3.12
-conda create -n lecture-forge python=3.12
-conda activate lecture-forge
-```
-</details>
-
-<details>
-<summary><b>Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.</b></summary>
-
-A: Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다.
-
-**해결 방법**: Python 3.11 또는 3.12로 다운그레이드
-```bash
-# 새 환경 생성 (3.11 또는 3.12)
-conda create -n lecture-forge python=3.11  # 또는 python=3.12
-conda activate lecture-forge
-
-# 재설치
 pip install lecture-forge
-playwright install chromium
 ```
-
-Python 3.11과 3.12 모두 완벽하게 지원됩니다! (v0.3.3+)
 </details>
 
 <details>
@@ -1133,7 +1117,7 @@ lecture-forge create
 
 **Python 3.12 호환**:
 - 🔧 **NumPy 1.26.0+**: Python 3.12 공식 지원
-- ✅ 전체 의존성 Python 3.11-3.12 검증
+- ✅ 전체 의존성 Python 3.11-3.13 검증
 
 **영향**:
 - ✅ Chat 모드 UX 대폭 향상

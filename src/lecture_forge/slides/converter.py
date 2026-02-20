@@ -26,13 +26,21 @@ class SlideConverter:
         self.template = RevealJsTemplate()
         self.console = console or Console()
 
-    def convert(self, lecture_html_path: Path, output_path: Path, with_notes: bool = False) -> bool:
+    def convert(
+        self,
+        lecture_html_path: Path,
+        output_path: Path,
+        with_notes: bool = False,
+        slide_rewrite: bool = False,
+    ) -> bool:
         """Convert lecture HTML to Reveal.js presentation slides.
 
         Args:
             lecture_html_path: Path to the lecture HTML file
             output_path: Path for the output slides HTML
             with_notes: If True, auto-generate LLM presenter notes for each slide
+            slide_rewrite: If True, run per-section LLM rewrite to produce
+                           concise, complete bullets (Plan D).
 
         Returns:
             True if successful, False otherwise
@@ -52,6 +60,15 @@ class SlideConverter:
             # Show progress
             total_sections = len(sections)
             self.console.print(f"   ✅ {total_sections}개 섹션, {converted_paragraphs}개 단락을 개조식으로 변환했습니다.")
+
+            # Optional: per-section slide rewrite (Plan D)
+            if slide_rewrite:
+                self.console.print(
+                    f"   • 섹션별 슬라이드 최적화 중... ({total_sections}개 섹션, LLM 사용)"
+                )
+                from lecture_forge.slides.section_rewriter import rewrite_sections_for_slides
+                sections = rewrite_sections_for_slides(sections)
+                self.console.print("   ✅ 슬라이드 최적화 완료")
 
             # Generate Reveal.js HTML
             self.console.print("   • 슬라이드 HTML 생성 중...")

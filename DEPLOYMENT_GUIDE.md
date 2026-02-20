@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.7 🔄 **배포 준비 중**
-> **최종 수정**: 2026-02-18
+> **최신 버전**: 0.3.8 ✅ **배포 완료**
+> **최종 수정**: 2026-02-20
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 버전 확인
-grep -r "0.3.7" pyproject.toml setup.py src/lecture_forge/__version__.py
+grep -r "0.3.8" pyproject.toml setup.py src/lecture_forge/__version__.py
 
 # 2. 테스트 실행
 pytest tests/ -v
@@ -916,10 +916,24 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.7 (2026-02-18) 🔄 **최신 (배포 준비 중)**
+### v0.3.8 (2026-02-20) ✅ **최신**
 
-- **상태**: 개발 완료, 배포 대기
-- **PyPI**: 아직 배포 안 됨
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.8/
+- **주요 변경사항**:
+  - ✅ **RMC 자기검토** (Reflective Meta-Cognition): 3개 에이전트 내부 자기반성 추가
+    - `CurriculumDesignerAgent._review_with_rmc()`: 섹션 순서·난이도·학습목표 검토
+    - `ContentWriterAgent._review_content_with_rmc()`: 개념 비약·흐름 단절·중복 검토
+    - `QAAgent._review_answer_with_rmc()`: 할루시네이션 탐지 및 ✗ 항목 제거
+  - ✅ **Mermaid 다이어그램 버그 수정** (`--with-notes`):
+    - `SlideNotesGenerator`: BeautifulSoup `str(soup)` 시 `-->` → `--&gt;` 인코딩 문제 수정
+    - 수정: `.mermaid` div 내용에만 `html.unescape()` 적용
+  - ✅ **Python 3.13 검증**: 전체 의존성 Python 3.11-3.13 호환 확인
+
+### v0.3.7 (2026-02-18) ✅
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.3.7/
 - **주요 변경사항**:
   - ✅ **HTML 강의 UI 개선**:
     - Lightbox 클릭 확대: 이미지·Mermaid 다이어그램 클릭시 전체화면 모달 표시
@@ -1041,7 +1055,6 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.3.7: UI & 슬라이드 개선 (배포 준비 중)
 - v0.4.0: 새로운 기능 추가 (웹 UI, 다국어 확장 등)
 - v1.0.0: 안정 버전 릴리스
 

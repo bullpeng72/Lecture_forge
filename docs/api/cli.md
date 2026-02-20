@@ -365,6 +365,7 @@ lecture-forge improve LECTURE_PATH [OPTIONS]
 - `--source-pdf PATH`: Source PDF file (required with `--enhance-pdf-images`)
 - `--to-slides`: Convert lecture HTML to a Reveal.js presentation (creates `*_slides.html`)
 - `--with-notes`: Auto-generate presenter notes for each slide using LLM (requires `--to-slides`; press **S** in browser to view speaker notes)
+- `--slide-rewrite`: Per-section LLM rewrite for slide optimization — eliminates truncated bullets ending in "…", produces concise complete bullets ≤35자 (requires `--to-slides`; adds ~15 seconds)
 
 #### Python API
 

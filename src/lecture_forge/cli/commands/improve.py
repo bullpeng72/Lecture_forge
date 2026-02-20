@@ -59,7 +59,12 @@ def _find_image_dir_from_html(html_path: Path) -> Path:
 @click.option("--source-pdf", type=click.Path(exists=True), help="Source PDF file (required for --enhance-pdf-images)")
 @click.option("--to-slides", is_flag=True, help="Convert lecture to presentation slides format (Reveal.js)")
 @click.option("--with-notes", is_flag=True, help="Auto-generate presenter notes for each slide (requires --to-slides, uses LLM)")
-def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool, with_notes: bool) -> None:
+@click.option(
+    "--slide-rewrite",
+    is_flag=True,
+    help="Per-section LLM rewrite for slide optimization: produces concise, complete bullets with no truncation (requires --to-slides, uses LLM)",
+)
+def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool, with_notes: bool, slide_rewrite: bool) -> None:
     """
     Improve existing lecture quality with optional enhancements.
 
@@ -80,6 +85,10 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
       --with-notes          Auto-generate presenter notes (requires --to-slides)
                             · LLM writes 2-4 sentences per slide
                             · Press S in browser to open speaker view
+      --slide-rewrite       Per-section LLM rewrite for slide optimization (requires --to-slides)
+                            · Eliminates truncated bullets ending in "…"
+                            · Produces concise, complete bullets (≤35자)
+                            · ~1 extra LLM call per section; adds ~15 seconds
 
     \b
     Slide Keyboard Shortcuts:
@@ -106,6 +115,10 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
     \b
       # Convert with auto-generated presenter notes
       $ lecture-forge improve outputs/lecture.html --to-slides --with-notes
+
+    \b
+      # Convert with slide-optimized content (no truncation)
+      $ lecture-forge improve outputs/lecture.html --to-slides --slide-rewrite
 
     \b
       # Combine both enhancements
@@ -193,6 +206,10 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         console.print("[yellow]⚠️  --with-notes requires --to-slides. Ignoring --with-notes.[/yellow]")
         console.print()
 
+    if slide_rewrite and not to_slides:
+        console.print("[yellow]⚠️  --slide-rewrite requires --to-slides. Ignoring --slide-rewrite.[/yellow]")
+        console.print()
+
     if to_slides:
         # Run slides conversion
         console.print("[bold]Converting to Presentation Slides[/bold]")
@@ -203,7 +220,7 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
 
         # Use SlideConverter from slides module
         converter = SlideConverter(console=console)
-        success = converter.convert(lecture_path, slides_path, with_notes=with_notes)
+        success = converter.convert(lecture_path, slides_path, with_notes=with_notes, slide_rewrite=slide_rewrite)
 
         if success:
             console.print(f"[green]✅ Slides created: {slides_path}[/green]")

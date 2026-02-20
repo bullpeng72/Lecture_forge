@@ -69,7 +69,7 @@ Looking for something specific?
 - ✅ **RAG quality boost (v0.3.5)** - 400-word answers, 15+15 retrieval, confidence fix, Markdown rendering
 - ✅ **Async I/O support (v0.3.4)** - 70% faster content collection
 - ✅ Enhanced input system with prompt-toolkit (v0.3.3)
-- ✅ Python 3.12 full support (v0.3.3)
+- ✅ Python 3.11-3.13 full support (v0.3.8)
 - ✅ Multilingual support (v0.3.2)
 - ✅ RAG quality enhancements (v0.3.2)
 

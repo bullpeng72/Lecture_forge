@@ -38,7 +38,7 @@
 - **프롬프트**: 템플릿 기반 관리 시스템
 - **Async I/O**: httpx (async HTTP), aiofiles (async file I/O), asyncio
 - **배포**: pip installable package
-- **Python**: 3.11-3.12 (3.13 비권장)
+- **Python**: 3.11-3.13 (전체 지원)
 
 ---
 
@@ -324,12 +324,10 @@ pip install -e .
 playwright install chromium
 ```
 
-**Python 버전 지원** (중요 ⚠️):
+**Python 버전 지원**:
 - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원
-- ✅ Python 3.12: 지원됨 - 정상 작동
-- ❌ **Python 3.13**: **비권장** - ChromaDB/hnswlib 호환성 문제 (`GLIBCXX_3.4.32` 오류)
-
-**Python 3.13 사용자는 3.11로 다운그레이드 필수!**
+- ✅ Python 3.12: 완벽 지원 (v0.3.3+)
+- ✅ Python 3.13: 지원됨 (v0.3.8+, 검증 완료)
 
 ### 2. 환경 변수 설정
 
@@ -398,6 +396,8 @@ lecture-forge improve <html_path> \
   --source-pdf <pdf_path>
 
 lecture-forge improve <html_path> --to-slides     # 슬라이드 변환
+lecture-forge improve <html_path> --to-slides --with-notes    # 발표자 노트 포함
+lecture-forge improve <html_path> --to-slides --slide-rewrite # 슬라이드 최적화 재작성
 
 # ===== CLEANUP: 지식베이스 정리 =====
 lecture-forge cleanup                             # 대화형 선택
@@ -651,15 +651,15 @@ A: `/exit` 또는 `/quit`를 입력하거나 `Ctrl+C`로 종료 가능합니다.
 **Q: 테스트 코드는?**
 A: **네, 있습니다!** 827개 테스트 함수, ~48% 자동화 테스트 커버리지를 제공합니다. 10개 에이전트 모두 smoke test가 있으며, 통합 테스트도 포함되어 있습니다. `pytest` 명령으로 실행 가능합니다.
 
-**Q: Python 3.13에서 GLIBCXX_3.4.32 오류가 발생합니다.**
-A: **Python 3.11 또는 3.12로 다운그레이드하세요.** Python 3.13은 ChromaDB의 hnswlib 의존성과 호환되지 않습니다. Python 3.11-3.12 환경을 생성하면 모든 기능이 정상 작동합니다:
+**Q: Python 3.13에서 설치가 잘 되나요?**
+A: **네, v0.3.8부터 Python 3.13이 검증 완료되어 지원됩니다.** Python 3.11, 3.12, 3.13 모두 정상 작동합니다:
 ```bash
-conda create -n lecture-forge python=3.11  # 또는 python=3.12
+conda create -n lecture-forge python=3.11  # 또는 python=3.12, python=3.13
 conda activate lecture-forge
 pip install lecture-forge
 ```
 
-**v0.3.3부터 Python 3.11과 3.12 모두 완벽하게 지원합니다.**
+**v0.3.8부터 Python 3.11, 3.12, 3.13 모두 완벽하게 지원합니다.**
 
 **Q: 생성된 강의 자료는 어디에 저장되나요? (v0.3.1+)**
 A: `~/Documents/LectureForge/outputs/`에 저장됩니다. `lecture-forge home outputs` 명령으로 폴더를 바로 열 수 있습니다. Finder/탐색기에서도 직접 접근 가능합니다.
@@ -706,7 +706,7 @@ A: **v0.3.3부터 완벽하게 해결되었습니다!** prompt-toolkit을 사용
 - 🛠️ **Tools**: 9개 (PDF, 웹, 이미지, 검색, 이미지 편집 등)
 - 💻 **CLI**: 7개 명령어 (init, create, chat, edit-images, improve, cleanup, home)
 - 📂 **데이터 저장**: ~/Documents/LectureForge/ (일반 폴더, 접근 용이)
-- 📦 **패키지**: PyPI 배포 완료, Python 3.11-3.12 지원 (3.13 비권장)
+- 📦 **패키지**: PyPI 배포 완료, Python 3.11-3.13 지원
 - 🎨 **Templates**: HTML, CSS, JS + 프롬프트 템플릿 3개
 - 💰 **비용**: ~$0.035 per 60분 강의 (실측, GPT-4o-mini 기준)
 - 🧪 **테스트**: 827개 테스트 함수, 81개 테스트 파일, ~48% 커버리지
@@ -945,8 +945,8 @@ lecture-forge create --async-mode --quality-level strict
 **Python 3.12 완벽 호환**:
 - 🔧 **NumPy 1.26.0+**: Python 3.12 공식 지원
   - 변경 전: numpy>=1.24.0 (Python 3.12 미지원)
-  - 변경 후: numpy>=1.26.0 (Python 3.11-3.12 모두 지원)
-- ✅ **의존성 검증**: 모든 주요 패키지 Python 3.11-3.12 호환 확인
+  - 변경 후: numpy>=1.26.0 (Python 3.11-3.13 모두 지원)
+- ✅ **의존성 검증**: 모든 주요 패키지 Python 3.11-3.13 호환 확인
   - chromadb 1.1.0+: Python 3.12 지원
   - prompt-toolkit 3.0+: Python 3.12 지원
   - langchain 0.3.x: Python 3.12 지원

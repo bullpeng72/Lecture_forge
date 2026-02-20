@@ -118,8 +118,9 @@ class HTMLLectureParser:
     def _extract_content_blocks(self, section_elem) -> List[Dict]:
         """Extract content blocks from a section element.
 
-        Paragraphs that require LLM conversion are collected first, then
-        converted in a single batched API call to minimise LLM round-trips.
+        Paragraphs AND list blocks with long items (>80 chars) are collected
+        first, then converted together in a single batched LLM call to
+        minimise round-trips and eliminate mid-sentence truncation.
 
         Args:
             section_elem: BeautifulSoup section element
@@ -161,7 +162,24 @@ class HTMLLectureParser:
                     continue
                 block = self._process_list(elem)
                 if block:
-                    content_blocks.append(block)
+                    # If any item is too long for direct slide display, schedule the
+                    # entire list for LLM bullet-conversion (same path as long paragraphs).
+                    # Threshold matches _MAX_ITEM_CHARS in templates.py (80 chars).
+                    _LONG_ITEM_CHARS = 80
+                    has_long_item = any(
+                        len(re.sub(r"<[^>]+>", "", it)) > _LONG_ITEM_CHARS
+                        for it in block["items"]
+                    )
+                    if has_long_item:
+                        # Join all items as lines so LLM sees the full context
+                        combined_text = "\n".join(
+                            re.sub(r"<[^>]+>", "", it) for it in block["items"]
+                        )
+                        placeholder_idx = len(content_blocks)
+                        content_blocks.append(None)  # type: ignore[arg-type]
+                        pending_paragraphs.append((placeholder_idx, combined_text))
+                    else:
+                        content_blocks.append(block)
             elif elem.name == "pre":
                 block = self._process_code_block(elem)
                 if block:

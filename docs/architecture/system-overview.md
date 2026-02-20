@@ -296,7 +296,7 @@ Logged to conversation_log.txt (v0.3.6+)
 
 | Category | Technology | Purpose |
 |----------|-----------|---------|
-| **Language** | Python 3.11-3.12 | Main language |
+| **Language** | Python 3.11-3.13 | Main language |
 | **Framework** | LangChain | LLM orchestration |
 | **LLM** | OpenAI GPT-4o-mini | Content generation |
 | **Vector DB** | ChromaDB | Embeddings storage |

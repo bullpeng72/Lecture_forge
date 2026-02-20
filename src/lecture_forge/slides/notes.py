@@ -2,6 +2,7 @@
 Slide notes generator for adding presenter notes to Reveal.js slides.
 """
 
+import html as _html
 import re
 from typing import Dict, List, Optional
 
@@ -128,7 +129,21 @@ class SlideNotesGenerator:
                 aside.string = notes_text
                 sec.append(aside)
 
-        return str(soup)
+        result = str(soup)
+
+        # BeautifulSoup's str() encodes text-node '>' as '&gt;', which breaks
+        # Mermaid syntax (e.g. 'A --> B' becomes 'A --&gt; B').  Decode HTML
+        # entities inside every .mermaid div so Mermaid.js sees correct syntax.
+        def _decode_mermaid(m: re.Match) -> str:
+            return m.group(1) + _html.unescape(m.group(2)) + m.group(3)
+
+        result = re.sub(
+            r'(<div[^>]*class="mermaid"[^>]*>)(.*?)(</div>)',
+            _decode_mermaid,
+            result,
+            flags=re.DOTALL,
+        )
+        return result
 
     @staticmethod
     def _extract_title(section) -> str:

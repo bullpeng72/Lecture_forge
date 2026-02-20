@@ -13,19 +13,26 @@ from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 
 _BATCH_SIZE = 15
-_MAX_BULLET_CHARS = 60  # hard limit for a single bullet point (한글 기준)
+_MAX_BULLET_CHARS = 80  # hard limit for a single bullet point (한글 기준)
 
 
 def _truncate_bullet(text: str, max_chars: int = _MAX_BULLET_CHARS) -> str:
     """Truncate a bullet point to max_chars at a natural language boundary.
 
-    Priority: colon > comma > Korean clause marker > last space.
+    Priority: complete sentence > colon > comma > Korean clause marker > last space.
     Returns original text if already within limit.
+    When a complete sentence fits, returns it WITHOUT ellipsis ("…").
     """
     if len(text) <= max_chars:
         return text
 
     window = text[:max_chars]
+
+    # 0) Prefer complete sentence boundary: find the last ". " within the window
+    #    and return WITHOUT ellipsis — a complete sentence is cleaner than a fragment
+    last_period = window.rfind(". ")
+    if last_period >= max(10, max_chars // 3):
+        return text[:last_period + 1].rstrip()  # Complete sentence, no "…"
 
     # 1) Natural break at colon (topic: description pattern)
     for sep in (":", "："):
@@ -115,7 +122,8 @@ def _process_batch(texts: List[str]) -> List[List[str]]:
 - 불필요한 접속사나 서술어 제거
 - 명사형 종결 또는 간결한 동사형 사용
 - 3-5개의 bullet points로 정리
-- 각 bullet point는 한글 50자 이내
+- 각 bullet point는 한글 35자 이내로 완결된 의미를 담을 것 (말줄임표 절대 금지)
+- 긴 개념은 2개의 bullet로 나누어 각각 완결되게 표현
 
 각 텍스트의 변환 결과를 ===PARA_N=== 구분자로 구분하여 출력하세요.
 
@@ -204,7 +212,8 @@ def convert_to_bullet_points(text: str) -> List[str]:
 - 불필요한 접속사나 서술어 제거
 - 명사형 종결 또는 간결한 동사형 사용
 - 3-5개의 bullet points로 정리
-- 각 bullet point는 한글 50자 이내
+- 각 bullet point는 한글 35자 이내로 완결된 의미를 담을 것 (말줄임표 절대 금지)
+- 긴 개념은 2개의 bullet로 나누어 각각 완결되게 표현
 
 원문:
 {text}

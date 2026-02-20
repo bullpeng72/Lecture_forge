@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from lecture_forge.config import Config
 
-_MAX_ITEM_CHARS = 60  # hard limit for a rendered list item (plain-text length)
+_MAX_ITEM_CHARS = 80  # hard limit for a rendered list item (plain-text length)
 
 
 def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
@@ -36,15 +36,24 @@ def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
     # Find cut position in plain-text coordinates
     window = first_plain[:max_chars]
     cut_plain = -1
-    for sep in (":", "：", ",", "，", " —", " -"):
-        pos = window.find(sep)
-        if 10 <= pos < max_chars:
-            cut_plain = pos + 1
-            break
+    sentence_cut = False  # True when cut is at a complete sentence boundary (no "…" needed)
 
-    if cut_plain == -1:
-        last_space = window.rfind(" ")
-        cut_plain = last_space if last_space > max_chars // 2 else max_chars
+    # Priority 0) Complete sentence boundary: find the last ". " within the window
+    #             and return WITHOUT ellipsis — cleaner than a truncated fragment
+    last_period = window.rfind(". ")
+    if last_period >= max(10, max_chars // 3):
+        cut_plain = last_period + 1  # include the period
+        sentence_cut = True
+    else:
+        for sep in (":", "：", ",", "，", " —", " -"):
+            pos = window.find(sep)
+            if 10 <= pos < max_chars:
+                cut_plain = pos + 1
+                break
+
+        if cut_plain == -1:
+            last_space = window.rfind(" ")
+            cut_plain = last_space if last_space > max_chars // 2 else max_chars
 
     # Translate cut_plain (plain-text chars) → position in first_html
     # by scanning first_html and skipping over HTML tags.
@@ -76,6 +85,8 @@ def _render_slide_item(item: str, max_chars: int = _MAX_ITEM_CHARS) -> str:
                 open_tags.append(name)
 
     closing = "".join(f"</{t}>" for t in reversed(open_tags))
+    if sentence_cut:
+        return truncated + closing  # Complete sentence — no "…"
     return truncated + closing + "…"
 
 
@@ -685,7 +696,7 @@ class RevealJsTemplate:
         }).then(() => {
             // Mermaid 초기화 (Mermaid 10 API)
             mermaid.initialize({
-                startOnLoad: false,  // Reveal.js와 충돌 방지; mermaid.run()으로 수동 실행
+                startOnLoad: false,  // Reveal.js와 충돌 방지; 슬라이드 표시 시 수동 실행
                 theme: 'default',
                 securityLevel: 'loose',
                 // useMaxWidth: true → SVG가 컨테이너 폭을 꽉 채우도록 허용
@@ -695,7 +706,25 @@ class RevealJsTemplate:
                 classDiagram: { useMaxWidth: true },
                 stateDiagram: { useMaxWidth: true },
             });
-            mermaid.run();  // contentLoaded()는 Mermaid 10에서 제거됨
+
+            // 현재 슬라이드의 Mermaid 다이어그램만 렌더링 (display:none 문제 방지)
+            function renderCurrentSlideMermaid() {
+                const currentSlide = Reveal.getCurrentSlide();
+                if (!currentSlide) return;
+
+                const mermaidDivs = currentSlide.querySelectorAll('.mermaid:not([data-processed="true"])');
+                if (mermaidDivs.length > 0) {
+                    mermaid.run({ nodes: mermaidDivs });
+                }
+            }
+
+            // 초기 슬라이드 렌더링
+            renderCurrentSlideMermaid();
+
+            // 슬라이드 전환 시 새 슬라이드의 Mermaid 렌더링
+            Reveal.on('slidechanged', function() {
+                renderCurrentSlideMermaid();
+            });
 
             // ── 라이트박스 ────────────────────────────────────────────
             const lb        = document.getElementById('slide-lightbox');

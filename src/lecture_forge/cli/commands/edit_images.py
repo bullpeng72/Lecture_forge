@@ -64,7 +64,7 @@ def edit_images(html_path: str, output: str) -> None:
     # Detect Reveal.js slides file before entering the main try block
     with open(html_path, "r", encoding="utf-8", errors="replace") as _f:
         _head = _f.read(4096)
-    if 'class="reveal"' in _head or "reveal.min.js" in _head:
+    if 'class="reveal"' in _head or "reveal.min.js" in _head or "reveal.min.css" in _head:
         console.print("\n[bold red]❌ 슬라이드 파일은 지원되지 않습니다[/bold red]")
         console.print("[yellow]💡 edit-images 명령어는 강의 HTML 파일 전용입니다.[/yellow]")
         console.print("[dim]   슬라이드 파일이 아닌 강의 HTML 파일을 지정하세요.[/dim]")

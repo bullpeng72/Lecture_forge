@@ -344,21 +344,21 @@ Logged to conversation_log.txt (v0.3.6+)
 - ✅ 3 utility modules
 - ✅ Better testability
 
-#### 2. ContentWriter Refactoring (v0.3.1)
+#### 2. ContentWriter Refactoring (v0.3.1, grown since)
 **Before**: Single class (1,611 lines, 24 methods)
-**After**: 4 component classes (1,761 lines total)
+**After**: 4 component classes (~2,560 lines total, including v0.3.8 additions)
 
-**Components:**
-- `agent.py` (519 lines) - Core orchestrator
-- `image_selector.py` (955 lines) - Image selection
-- `code_generator.py` (127 lines) - Code handling
-- `content_expander.py` (139 lines) - Quality improvement
+**Components (current):**
+- `agent.py` (~1,170 lines) - Core orchestrator + RMC self-review + structural section prompt
+- `image_selector.py` (~970 lines) - Image selection with y0-spatial proximity
+- `code_generator.py` (~130 lines) - Code handling
+- `content_expander.py` (~290 lines) - Quality improvement + token-aware trimming
 
 **Impact:**
-- ✅ Main class reduced by 67.8%
 - ✅ Single Responsibility Principle
 - ✅ Easier to test independently
 - ✅ Reusable components
+- ✅ Main class has grown since initial refactoring due to RAG improvements and RMC
 
 #### 3. Slide Module Extraction (v0.3.0)
 **Before**: Embedded in CLI (720 lines)

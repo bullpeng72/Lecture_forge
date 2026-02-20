@@ -616,14 +616,13 @@ lecture-forge home outputs
 ## What's Next?
 
 **Explore Advanced Features:**
-- [CLI Commands Reference](cli-commands.md)
-- [Configuration Guide](configuration.md)
-- [Workflow Guide](workflow.md)
+- [CLI API Reference](../api/cli.md) - Detailed options for all commands
+- [Architecture Overview](../architecture/system-overview.md) - How the system works
+- [Input Limits Analysis](../INPUT_LIMITS_ANALYSIS.md) - RAG parameters and multi-source strategy
 
 **For Developers:**
-- [API Reference](../api/agents.md)
+- [Agent API Reference](../api/agents.md)
 - [Architecture Overview](../architecture/system-overview.md)
-- [Contributing Guide](../../CONTRIBUTING.md)
 
 ---
 

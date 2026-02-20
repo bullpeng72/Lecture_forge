@@ -1,6 +1,6 @@
 # Agents API Reference
 
-Complete reference for all 10 agents in the LectureForge multi-agent system.
+Complete reference for all agents in the LectureForge multi-agent system (10 task agents + 1 async variant).
 
 ## Table of Contents
 
@@ -421,10 +421,10 @@ Writes lecture content using RAG with modular components.
 #### Structure
 
 The ContentWriterAgent has been refactored into:
-- **agent.py**: Main orchestrator (~700 lines, includes RMC self-review)
-- **image_selector.py**: Image selection logic (955 lines)
-- **code_generator.py**: Code extraction/generation (127 lines)
-- **content_expander.py**: Quality improvement (139 lines)
+- **agent.py**: Main orchestrator (~1,170 lines, includes RMC self-review + structural section prompt)
+- **image_selector.py**: Image selection logic (~970 lines, includes y0-spatial proximity sorting)
+- **code_generator.py**: Code extraction/generation (~130 lines)
+- **content_expander.py**: Quality improvement (~290 lines, includes token-aware trimming)
 
 #### Initialization
 

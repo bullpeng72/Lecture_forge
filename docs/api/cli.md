@@ -33,10 +33,13 @@ cli/
 │   └── input_handlers.py - User input
 └── commands/ - Individual commands
     ├── init.py - Configuration setup
-    ├── create.py - Lecture generation
+    ├── init_helpers.py - Init helpers (file copy, env template)
+    ├── create.py - Lecture generation (sync)
+    ├── create_async.py - Lecture generation (async, --async-mode)
     ├── chat.py - Q&A mode
     ├── cleanup.py - KB management
-    ├── improve.py - Enhancement
+    ├── cleanup_helpers.py - Cleanup helpers
+    ├── improve.py - Enhancement & slide conversion
     ├── edit_images.py - Image editing
     └── home.py - Folder navigation
 ```

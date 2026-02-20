@@ -56,8 +56,9 @@ class ContentAnalyzerAgent(BaseAgent):
             logger.warning("No documents to analyze")
             return AnalysisResult()
 
-        # Combine all document text for analysis
-        all_text = "\n\n".join([doc["text"] for doc in documents])
+        # Build analysis text: prefer diverse sampling from vector DB,
+        # fall back to concatenating raw documents if no vector store is available.
+        all_text = self._build_analysis_text(documents, topic)
 
         # 1. Extract key topics using LLM
         logger.info("Extracting key topics...")
@@ -102,10 +103,76 @@ class ContentAnalyzerAgent(BaseAgent):
         logger.info(f"Analysis complete: {len(entities)} entities, {len(key_topics)} topics")
         return result
 
+    def _build_analysis_text(self, documents: List[Dict], topic: str) -> str:
+        """
+        Build the text sample used for topic extraction.
+
+        Strategy (in priority order):
+        1. If a vector_store is available, issue diverse queries to sample chunks
+           spread across the entire knowledge base (not just the first few pages).
+        2. Fall back to concatenating raw document texts (old behaviour) when no
+           vector store is available.
+
+        The goal is to give the LLM a representative cross-section of the full
+        content rather than only the very beginning of the first document.
+        """
+        # ── Path 1: diverse vector DB sampling ──────────────────────────────
+        if self.vector_store:
+            try:
+                stats = self.vector_store.get_stats()
+                total = stats.get("document_count", 0)
+
+                if total > 0:
+                    # Probe queries that tend to surface different parts of any document
+                    probe_queries = [
+                        topic,
+                        "introduction overview",
+                        "core concept definition",
+                        "advanced technique method",
+                        "example application case study",
+                        "summary conclusion",
+                    ]
+
+                    # How many results per probe (scale with DB size, cap at 10)
+                    per_probe = min(10, max(3, total // max(1, len(probe_queries) * 5)))
+
+                    seen_ids: set = set()
+                    sampled_chunks: List[str] = []
+
+                    for probe in probe_queries:
+                        try:
+                            results = self.vector_store.query(probe, n_results=per_probe)
+                            docs = (results.get("documents") or [[]])[0]
+                            metas = (results.get("metadatas") or [[]])[0]
+                            ids = (results.get("ids") or [[]])[0]
+
+                            for doc, meta, chunk_id in zip(docs, metas, ids):
+                                if chunk_id not in seen_ids:
+                                    seen_ids.add(chunk_id)
+                                    sampled_chunks.append(doc)
+                        except Exception as probe_err:
+                            logger.debug(f"Probe query '{probe[:30]}' failed: {probe_err}")
+
+                    if sampled_chunks:
+                        logger.info(
+                            f"   📊 Analysis sampling: {len(sampled_chunks)} diverse chunks "
+                            f"from {total} total (was: first 8,000 chars only)"
+                        )
+                        return "\n\n---\n\n".join(sampled_chunks)
+
+            except Exception as e:
+                logger.warning(f"Vector DB sampling failed, falling back to raw text: {e}")
+
+        # ── Path 2: raw document concatenation (fallback) ────────────────────
+        all_text = "\n\n".join([doc["text"] for doc in documents])
+        logger.info(f"   📊 Analysis text: {len(all_text):,} chars from {len(documents)} raw docs")
+        return all_text
+
     def _extract_key_topics(self, text: str, main_topic: str) -> List[str]:
         """Extract key topics from text using LLM."""
-        # Limit text length for LLM
-        text_sample = text[:8000] if len(text) > 8000 else text
+        # Limit text length for LLM — generous limit since text is now
+        # built from diverse KB samples rather than just the first document.
+        text_sample = text[:20000] if len(text) > 20000 else text
 
         prompt = f"""Analyze the following educational content about "{main_topic}" and identify the 5-10 most important topics or concepts that should be covered in a lecture.
 
@@ -157,7 +224,7 @@ Return ONLY a JSON array of topic names (strings), nothing else. Example: ["주�
 
         # Use LLM to extract additional entities for first few topics
         for topic in key_topics[:3]:  # Limit to first 3 topics for efficiency
-            text_sample = text[:5000] if len(text) > 5000 else text
+            text_sample = text[:10000] if len(text) > 10000 else text
 
             prompt = f"""For the topic "{topic}", identify 3-5 important sub-concepts or related terms from this text.
 

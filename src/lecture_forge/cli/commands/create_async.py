@@ -199,7 +199,7 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
 
         # Phase 3b: Curriculum Design
         task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=None)
-        designer = CurriculumDesignerAgent()
+        designer = CurriculumDesignerAgent(vector_store=content_agent.vector_store)
         curriculum = designer.design(
             analysis_result=analysis_result,
             topic=inputs["topic"],

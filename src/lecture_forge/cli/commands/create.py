@@ -307,7 +307,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
 
         # Phase 3b: Curriculum Design
         task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=None)
-        designer = CurriculumDesignerAgent()
+        designer = CurriculumDesignerAgent(vector_store=content_agent.vector_store)
         curriculum = designer.design(
             analysis_result=analysis_result,
             topic=inputs["topic"],

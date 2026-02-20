@@ -78,7 +78,7 @@ class CodeGenerator(BaseAgent):
     def _generate_code_examples(self, section: Section, curriculum: Curriculum, contexts: List[str], num_examples: int) -> str:
         """Generate code examples separately when main content lacks them."""
 
-        context_text = "\n\n---\n\n".join(contexts[:5]) if contexts else ""
+        context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else ""
 
         # Prepare template variables
         template_vars = {

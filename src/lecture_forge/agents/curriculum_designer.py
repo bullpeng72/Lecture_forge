@@ -3,9 +3,10 @@ Curriculum Designer Agent - Designs lecture structure and curriculum.
 """
 
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.analysis import AnalysisResult
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.utils import logger
@@ -14,8 +15,9 @@ from lecture_forge.utils import logger
 class CurriculumDesignerAgent(BaseAgent):
     """Agent for designing lecture curriculum and structure."""
 
-    def __init__(self):
+    def __init__(self, vector_store: Optional[VectorStore] = None):
         super().__init__()
+        self.vector_store = vector_store
         logger.info("Initializing Curriculum Designer Agent")
 
     def design(
@@ -52,7 +54,10 @@ class CurriculumDesignerAgent(BaseAgent):
             learning_objectives=learning_objectives,
         )
 
-        # 4. Build prerequisite map
+        # 4. Validate sections against the knowledge base and fill coverage gaps
+        sections = self._validate_and_enrich_sections(sections, duration, audience_level, topic)
+
+        # 5. Build prerequisite map
         prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
 
         # Calculate total estimated time
@@ -352,6 +357,167 @@ Rules:
             logger.warning(f"RMC curriculum review failed (returning original): {e}")
 
         return curriculum
+
+    def _validate_and_enrich_sections(
+        self,
+        sections: List[Section],
+        duration: int,
+        audience_level: str,
+        topic: str,
+    ) -> List[Section]:
+        """
+        Validate each section against the knowledge base and discover topics
+        that are well-covered in the KB but not yet in the curriculum.
+
+        Steps:
+        1. Query the KB for each section title; log a warning if no chunks match.
+        2. Ask the KB for topics NOT yet covered by the current section list
+           and insert new sections if significant content exists.
+        """
+        if not self.vector_store:
+            return sections
+
+        try:
+            stats = self.vector_store.get_stats()
+            if stats.get("document_count", 0) == 0:
+                return sections
+        except Exception:
+            return sections
+
+        # ── Step 1: validate existing sections ──────────────────────────────
+        validated: List[Section] = []
+        content_sections = [
+            s for s in sections
+            if not s.id.lower().endswith("_intro")
+            and not s.id.lower().endswith("_conclusion")
+        ]
+        structural = [
+            s for s in sections
+            if s.id.lower().endswith("_intro") or s.id.lower().endswith("_conclusion")
+        ]
+
+        for section in content_sections:
+            try:
+                results = self.vector_store.query(section.title, n_results=3)
+                docs = (results.get("documents") or [[]])[0]
+                if docs:
+                    validated.append(section)
+                else:
+                    logger.warning(
+                        f"   ⚠️  CurriculumDesigner: no KB content for section "
+                        f"'{section.title}' — keeping anyway (may be derivable)"
+                    )
+                    validated.append(section)  # keep; LLM may still generate useful content
+            except Exception as e:
+                logger.debug(f"KB validation query failed for '{section.title}': {e}")
+                validated.append(section)
+
+        # ── Step 2: discover uncovered KB topics ─────────────────────────────
+        try:
+            existing_titles = {s.title.lower() for s in validated}
+
+            # Probe the KB with diverse queries and collect chunk metadata
+            probe_queries = [
+                topic + " overview",
+                topic + " advanced",
+                topic + " application",
+                topic + " comparison",
+                topic + " implementation",
+            ]
+            candidate_topics: Dict[str, int] = {}  # title → hit count
+
+            for probe in probe_queries:
+                try:
+                    results = self.vector_store.query(probe, n_results=8)
+                    metas = (results.get("metadatas") or [[]])[0]
+                    for meta in metas:
+                        # Each chunk carries a 'source' key; group by source filename
+                        src = str(meta.get("source", "")).split("/")[-1]
+                        if src:
+                            candidate_topics[src] = candidate_topics.get(src, 0) + 1
+                except Exception:
+                    pass
+
+            # Use LLM to propose missing sections based on KB coverage probes
+            if validated and len(validated) < max(3, duration // 15):
+                covered_str = ", ".join(s.title for s in validated)
+                # Build a brief content hint from the KB probes
+                hint_chunks: List[str] = []
+                try:
+                    hint_results = self.vector_store.query(topic, n_results=6)
+                    hint_chunks = (hint_results.get("documents") or [[]])[0]
+                except Exception:
+                    pass
+
+                if hint_chunks:
+                    content_hint = "\n\n".join(hint_chunks[:4])[:3000]
+                    prompt = f"""A lecture on "{topic}" currently covers: {covered_str}.
+Based on the following knowledge base excerpts, list up to 3 additional important topics
+that are clearly present in the source material but NOT already covered.
+
+Knowledge base excerpts:
+{content_hint}
+
+Return ONLY a JSON array of short topic names in Korean (max 5 words each).
+If no important topics are missing, return an empty array [].
+Example: ["추가 주제 1", "추가 주제 2"]"""
+
+                    try:
+                        response = self.invoke_llm(prompt, phase="curriculum_kb_enrichment")
+                        raw = response.content.strip()
+                        if "```json" in raw:
+                            raw = raw.split("```json")[1].split("```")[0].strip()
+                        elif "```" in raw:
+                            raw = raw.split("```")[1].split("```")[0].strip()
+
+                        new_topics = json.loads(raw)
+                        if isinstance(new_topics, list):
+                            # Time budget: remaining after existing sections
+                            used_time = sum(s.estimated_time for s in validated)
+                            intro_time = next(
+                                (s.estimated_time for s in structural if "_intro" in s.id), 5
+                            )
+                            conclusion_time = next(
+                                (s.estimated_time for s in structural if "_conclusion" in s.id), 5
+                            )
+                            remaining = duration - used_time - intro_time - conclusion_time
+                            time_per_new = max(10, remaining // max(1, len(new_topics)))
+
+                            for i, new_title in enumerate(new_topics[:3]):
+                                if new_title.lower() not in existing_titles:
+                                    new_section = Section(
+                                        id=f"section_kb_{i}_{new_title.lower().replace(' ', '_')[:20]}",
+                                        title=new_title,
+                                        topics=[new_title],
+                                        estimated_time=time_per_new,
+                                        difficulty_level="intermediate",
+                                        learning_outcomes=[
+                                            f"{new_title}를 이해한다",
+                                            f"{new_title}를 적용할 수 있다",
+                                        ],
+                                    )
+                                    validated.append(new_section)
+                                    logger.info(
+                                        f"   ✅ CurriculumDesigner: added KB-discovered section '{new_title}'"
+                                    )
+                    except Exception as e:
+                        logger.debug(f"KB enrichment LLM call failed: {e}")
+
+        except Exception as e:
+            logger.warning(f"KB enrichment step failed (non-critical): {e}")
+
+        # Rebuild with structural sections (intro first, conclusion last)
+        intro_sections = [s for s in structural if "_intro" in s.id]
+        conclusion_sections = [s for s in structural if "_conclusion" in s.id]
+        result = intro_sections + validated + conclusion_sections
+
+        if len(result) != len(sections):
+            logger.info(
+                f"   📋 CurriculumDesigner: {len(sections)} → {len(result)} sections "
+                f"after KB validation"
+            )
+
+        return result
 
     def _build_prerequisite_map(
         self,

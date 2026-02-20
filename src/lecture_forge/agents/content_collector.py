@@ -2,6 +2,7 @@
 Content Collector Agent - Collects text content from various sources.
 """
 
+import hashlib
 import uuid
 from typing import Dict, List
 
@@ -197,6 +198,24 @@ class ContentCollectorAgent(BaseAgent):
                     )
 
         logger.info(f"Total chunks created: {len(all_chunks)}")
+
+        # J: SHA256-based deduplication — remove duplicate chunks before storing
+        _seen_hashes: set = set()
+        _deduped_chunks: list = []
+        _deduped_metas: list = []
+        for chunk, meta in zip(all_chunks, chunk_metadatas):
+            h = hashlib.sha256(chunk.encode("utf-8", errors="replace")).hexdigest()
+            if h not in _seen_hashes:
+                _seen_hashes.add(h)
+                _deduped_chunks.append(chunk)
+                _deduped_metas.append(meta)
+        dup_count = len(all_chunks) - len(_deduped_chunks)
+        if dup_count:
+            logger.info(
+                f"🧹 Deduplication: removed {dup_count} duplicate chunks "
+                f"({len(_deduped_chunks)} unique remain)"
+            )
+        all_chunks, chunk_metadatas = _deduped_chunks, _deduped_metas
 
         # 5. Store in vector database
         if all_chunks:

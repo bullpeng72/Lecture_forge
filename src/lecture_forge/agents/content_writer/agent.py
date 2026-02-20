@@ -12,7 +12,11 @@ from typing import List
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.agents.content_writer.code_generator import CodeGenerator
-from lecture_forge.agents.content_writer.content_expander import ContentExpander
+from lecture_forge.agents.content_writer.content_expander import (
+    ContentExpander,
+    _format_context_with_metadata,
+    _trim_contexts_by_tokens,
+)
 from lecture_forge.agents.content_writer.image_selector import ImageSelector
 from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
@@ -143,6 +147,44 @@ def _build_code_checklist_item(with_code: bool, target_code_examples: int) -> st
             "   - Followed by 100-150 word explanation"
         )
     return "✅ **Code Examples**: N/A (not required for this lecture)"
+
+
+def _filter_chunks_by_similarity(
+    docs: list,
+    metas: list,
+    ids: list,
+    distances: list,
+) -> tuple:
+    """Filter retrieved chunks by similarity threshold (F).
+
+    ChromaDB uses L2 distance (lower = more similar).
+    Converts to similarity: similarity = max(0, 1 - distance / 2).
+    Retains chunks with similarity >= RAG_SIMILARITY_THRESHOLD.
+    Always keeps at least RAG_MIN_FALLBACK_RESULTS chunks (by best similarity).
+    """
+    if not docs or not distances:
+        return docs, metas, ids
+
+    threshold = Config.RAG_SIMILARITY_THRESHOLD     # default 0.3
+    min_keep = Config.RAG_MIN_FALLBACK_RESULTS       # default 3
+
+    # Pair with similarity scores (ChromaDB already sorts by distance)
+    scored = [
+        (max(0.0, 1.0 - d / 2.0), doc, meta, cid)
+        for d, doc, meta, cid in zip(distances, docs, metas, ids)
+    ]
+
+    # Filter below threshold
+    filtered = [(sim, doc, meta, cid) for sim, doc, meta, cid in scored if sim >= threshold]
+
+    # Guarantee minimum results regardless of threshold
+    if len(filtered) < min_keep:
+        filtered = scored[:min_keep]
+
+    f_docs  = [doc for _, doc, _, _  in filtered]
+    f_metas = [meta for _, _, meta, _ in filtered]
+    f_ids   = [cid for _, _, _, cid  in filtered]
+    return f_docs, f_metas, f_ids
 
 
 # LLM refusal patterns (case-insensitive prefix match)
@@ -364,6 +406,7 @@ class ContentWriterAgent(BaseAgent):
             curriculum=curriculum,
             contexts=contexts,
             available_image_count=len(images),  # Pass actual image count
+            context_metadatas=context_metadatas,  # K2: pass metadata for source-aware context
         )
 
         # 4. Extract code blocks (if any)
@@ -389,21 +432,82 @@ class ContentWriterAgent(BaseAgent):
         return content
 
 
+    def _compute_dynamic_n_results(self, section: Section) -> int:
+        """Compute RAG query chunk count scaled by section duration and difficulty (K).
+
+        Formula: base × time_factor × difficulty_mult, clamped to [RAG_N_RESULTS_MIN, RAG_N_RESULTS_MAX].
+        Baseline: 15 minutes → RAG_CONTENT_N_RESULTS chunks.
+        """
+        base = Config.RAG_CONTENT_N_RESULTS          # default 10
+        time_factor = max(0.3, section.estimated_time / 15.0)
+        difficulty = (getattr(section, "difficulty_level", None) or "intermediate").lower()
+        mult = {"beginner": 0.8, "intermediate": 1.0, "advanced": 1.3}.get(difficulty, 1.0)
+        n = int(base * time_factor * mult)
+        result = max(Config.RAG_N_RESULTS_MIN, min(Config.RAG_N_RESULTS_MAX, n))
+        logger.debug(
+            f"   Dynamic n_results: base={base} × time_factor={time_factor:.1f} × diff_mult={mult} "
+            f"→ {n} → clamped={result}"
+        )
+        return result
+
+    def _rerank_by_metadata(
+        self,
+        all_docs: list,
+        all_metas: list,
+        section_language: str,
+    ) -> tuple:
+        """Re-rank retrieved chunks using metadata signals (G).
+
+        Applies a language-match bonus: chunks in the same language as the section
+        are promoted to the front so the LLM receives the most relevant signal first.
+        Stable sort preserves the original similarity ordering within equal scores.
+        """
+        if not all_docs or not all_metas:
+            return all_docs, all_metas
+
+        lang_bonus = 0.1
+
+        def meta_score(meta: dict) -> float:
+            if not meta:
+                return 0.0
+            return lang_bonus if meta.get("language", "") == section_language else 0.0
+
+        scored = [(meta_score(m), doc, m) for doc, m in zip(all_docs, all_metas)]
+        scored.sort(key=lambda x: x[0], reverse=True)   # stable sort
+
+        lang_matched = sum(1 for s, _, _ in scored if s > 0)
+        if lang_matched > 0:
+            logger.debug(
+                f"   Metadata rerank: {lang_matched}/{len(all_docs)} chunks match "
+                f"section language '{section_language}'"
+            )
+
+        return [doc for _, doc, _ in scored], [m for _, _, m in scored]
+
     def _query_knowledge(self, section: Section, curriculum: "Curriculum | None" = None) -> tuple:
-        """Query vector DB for relevant context with increased retrieval.
+        """Query vector DB with per-subtopic, cross-lingual, and fallback queries.
+
+        Improvements applied (F/K/H/G/I):
+          F – Similarity threshold filtering (RAG_SIMILARITY_THRESHOLD)
+          K – Dynamic n_results scaled by section duration × difficulty
+          H – Bidirectional cross-lingual: KO↔EN, not just KO→EN
+          G – Metadata reranking: language-matched chunks promoted
+          I – Sparse fallback: broadened queries if < RAG_SPARSE_THRESHOLD chunks
 
         Returns:
-            Tuple of (documents, metadatas) for RAG context and location-based image matching
+            Tuple of (documents, metadatas) for RAG context and location-based image matching.
         """
         if not self.vector_store:
             return [], []
 
-        # Build comprehensive query from section topics
         _sid = section.id.lower()
         is_structural = _sid.endswith("_intro") or _sid.endswith("_conclusion")
 
+        # K: compute dynamic n_results for this section
+        dynamic_n = self._compute_dynamic_n_results(section)
+
+        # ── Structural sections: single enriched query ───────────────────────
         if is_structural and curriculum:
-            # Use topic + main section titles for better semantic matching
             content_titles = [
                 s.title for s in curriculum.sections
                 if not s.id.lower().endswith("_intro")
@@ -411,23 +515,150 @@ class ContentWriterAgent(BaseAgent):
             ]
             query = curriculum.topic + " " + " ".join(content_titles[:4])
             logger.info(f"   🔍 Structural section RAG query (enriched): '{query[:80]}'")
-        else:
-            query = " ".join(section.topics)
-
-        try:
-            # Increase from 5 to 10 for more comprehensive context
-            results = self.vector_store.query(query, n_results=Config.RAG_CONTENT_N_RESULTS)
-
-            if results and results["documents"]:
-                documents = results["documents"][0]
-                metadatas = results.get("metadatas", [[]])[0]  # Extract metadatas
-                return documents, metadatas
-            else:
-                return [], []
-
-        except Exception as e:
-            logger.warning(f"Error querying vector DB: {e}")
+            try:
+                results = self.vector_store.query(query, n_results=dynamic_n)
+                if results and results["documents"]:
+                    docs  = results["documents"][0]
+                    metas = results.get("metadatas", [[]])[0]
+                    ids   = results.get("ids", [[]])[0]
+                    dists = results.get("distances", [[]])[0]
+                    # F: filter by similarity threshold
+                    docs, metas, ids = _filter_chunks_by_similarity(docs, metas, ids, dists)
+                    # M: token-aware trimming for structural sections too
+                    docs, metas = _trim_contexts_by_tokens(docs, metas, Config.RAG_MAX_CONTEXT_TOKENS)
+                    return docs, metas
+            except Exception as e:
+                logger.warning(f"Error querying vector DB for structural section: {e}")
             return [], []
+
+        # ── Content sections: per-subtopic + cross-lingual + fallback ────────
+        seen_ids: set = set()
+        all_docs: list = []
+        all_metas: list = []
+
+        # Detect section language once (for cross-lingual + reranking)
+        _lang_text = (
+            " ".join(curriculum.learning_objectives)
+            if (curriculum and curriculum.learning_objectives)
+            else section.title
+        )
+        section_language = detect_language(_lang_text)
+
+        # Number of results per individual sub-topic query
+        per_query = max(4, dynamic_n // max(1, len(section.topics)))
+
+        # ── Step 1: Per-subtopic queries with intent variants (L2) + similarity filter (F) ──
+        # L2: two intent-aware query formulations per topic improve retrieval diversity:
+        #   - conceptual: retrieves definitions, explanations, theory
+        #   - practical:  retrieves tutorials, examples, implementation walkthroughs
+        for sub_topic in section.topics:
+            query_variants = [
+                sub_topic,                                       # conceptual
+                f"{sub_topic} example application tutorial",     # practical (L2)
+            ]
+            for query_str in query_variants:
+                try:
+                    results = self.vector_store.query(query_str, n_results=per_query)
+                    docs  = (results.get("documents")  or [[]])[0]
+                    metas = (results.get("metadatas")  or [[]])[0]
+                    ids   = (results.get("ids")         or [[]])[0]
+                    dists = (results.get("distances")   or [[]])[0]
+                    # F: filter low-relevance chunks
+                    docs, metas, ids = _filter_chunks_by_similarity(docs, metas, ids, dists)
+                    for doc, meta, cid in zip(docs, metas, ids):
+                        if cid not in seen_ids:
+                            seen_ids.add(cid)
+                            all_docs.append(doc)
+                            all_metas.append(meta)
+                except Exception as e:
+                    logger.debug(f"Sub-topic query failed for '{query_str}': {e}")
+
+        logger.info(
+            f"   🔍 Per-subtopic RAG ({len(section.topics)} topics × 2 intents × {per_query}): "
+            f"{len(all_docs)} unique chunks (post similarity-filter)"
+        )
+
+        # ── Step 2: Bidirectional cross-lingual query (H) ────────────────────
+        try:
+            from lecture_forge.utils.language_utils import translate_text
+            topics_str = " ".join(section.topics)
+            if section_language == "ko":
+                translated_query = translate_text(topics_str, target_language="en")
+                cross_label = "EN"
+            else:
+                translated_query = translate_text(topics_str, target_language="ko")
+                cross_label = "KO"
+
+            if translated_query and translated_query != topics_str:
+                xresults = self.vector_store.query(translated_query, n_results=per_query)
+                xdocs  = (xresults.get("documents")  or [[]])[0]
+                xmetas = (xresults.get("metadatas")  or [[]])[0]
+                xids   = (xresults.get("ids")         or [[]])[0]
+                xdists = (xresults.get("distances")   or [[]])[0]
+                # F: filter cross-lingual results too
+                xdocs, xmetas, xids = _filter_chunks_by_similarity(xdocs, xmetas, xids, xdists)
+                added = 0
+                for doc, meta, cid in zip(xdocs, xmetas, xids):
+                    if cid not in seen_ids:
+                        seen_ids.add(cid)
+                        all_docs.append(doc)
+                        all_metas.append(meta)
+                        added += 1
+                if added:
+                    logger.info(f"   🌐 Cross-lingual ({cross_label}) query added {added} chunks")
+        except Exception as e:
+            logger.debug(f"Cross-lingual query failed (non-critical): {e}")
+
+        # ── Step 3: Sparse fallback queries (I) ──────────────────────────────
+        if len(all_docs) < Config.RAG_SPARSE_THRESHOLD and curriculum:
+            logger.info(
+                f"   ⚠️ Sparse RAG ({len(all_docs)} chunks < {Config.RAG_SPARSE_THRESHOLD}) "
+                f"— running fallback queries"
+            )
+            fallback_queries = [section.title, curriculum.topic]
+            for fq in fallback_queries:
+                try:
+                    fresults = self.vector_store.query(fq, n_results=per_query)
+                    fdocs  = (fresults.get("documents")  or [[]])[0]
+                    fmetas = (fresults.get("metadatas")  or [[]])[0]
+                    fids   = (fresults.get("ids")         or [[]])[0]
+                    fdists = (fresults.get("distances")   or [[]])[0]
+                    fdocs, fmetas, fids = _filter_chunks_by_similarity(fdocs, fmetas, fids, fdists)
+                    added = 0
+                    for doc, meta, cid in zip(fdocs, fmetas, fids):
+                        if cid not in seen_ids:
+                            seen_ids.add(cid)
+                            all_docs.append(doc)
+                            all_metas.append(meta)
+                            added += 1
+                    if added:
+                        logger.info(f"   🔄 Fallback '{fq[:50]}' added {added} chunks")
+                    if len(all_docs) >= Config.RAG_SPARSE_THRESHOLD:
+                        break
+                except Exception as e:
+                    logger.debug(f"Fallback query failed for '{fq}': {e}")
+
+            if len(all_docs) < Config.RAG_SPARSE_THRESHOLD:
+                logger.warning(
+                    f"   ⚠️ Sparse KB coverage for '{section.title}': "
+                    f"only {len(all_docs)} chunks after all fallbacks"
+                )
+
+        # ── Step 4: Metadata reranking — language-matched chunks first (G) ───
+        all_docs, all_metas = self._rerank_by_metadata(all_docs, all_metas, section_language)
+
+        # Cap by chunk count, then trim to token budget (M)
+        cap = dynamic_n * 2
+        capped_docs  = all_docs[:cap]
+        capped_metas = all_metas[:cap]
+        trimmed_docs, trimmed_metas = _trim_contexts_by_tokens(
+            capped_docs, capped_metas, Config.RAG_MAX_CONTEXT_TOKENS
+        )
+        logger.info(
+            f"   📚 Final context: {len(trimmed_docs)}/{len(all_docs)} chunks "
+            f"(cap={cap}, token_limit={Config.RAG_MAX_CONTEXT_TOKENS})"
+        )
+        return trimmed_docs, trimmed_metas
 
 
     def _generate_content(
@@ -436,6 +667,7 @@ class ContentWriterAgent(BaseAgent):
         curriculum: Curriculum,
         contexts: List[str],
         available_image_count: int = 0,
+        context_metadatas: list = None,
     ) -> str:
         """Generate detailed, comprehensive markdown content using LLM with RAG.
 
@@ -444,6 +676,7 @@ class ContentWriterAgent(BaseAgent):
             curriculum: Full curriculum
             contexts: RAG contexts
             available_image_count: Number of images selected for this section (for quality evaluation)
+            context_metadatas: Metadata for each context chunk (K2: included in prompt)
         """
         # Calculate target metrics
         targets = calculate_target_metrics(section.estimated_time, section.difficulty_level)
@@ -459,8 +692,8 @@ class ContentWriterAgent(BaseAgent):
         if is_structural_section:
             targets["target_practice_problems"] = 0
 
-        # Use more contexts (increase from 8 to 10 for better content)
-        context_text = "\n\n---\n\n".join(contexts[:10]) if contexts else "No additional context available."
+        # K2: format context with source metadata so LLM can reason about provenance
+        context_text = _format_context_with_metadata(contexts, context_metadatas or [])
 
         # Determine language-aware labels for section headings.
         # learning_objectives are always generated in Korean (see curriculum_designer.py),
@@ -638,6 +871,7 @@ class ContentWriterAgent(BaseAgent):
                             targets=targets,
                             previous_content=content,
                             previous_quality=quality,
+                            context_metadatas=context_metadatas,  # K2: pass metadata
                         )
 
                         # Check if expansion was successful (content changed)

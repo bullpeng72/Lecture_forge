@@ -70,10 +70,12 @@ class TestContentWriterIntegration:
         mock_generate.return_value = "# Test Content\n\n```python\nprint('hello')\n```\n\nSome text."
 
         section = Section(
+            id="s1",
             title="Test Section",
             topics=["topic1", "topic2"],
             learning_objectives=["objective1"],
             estimated_time=30,
+            difficulty_level="intermediate",
         )
         curriculum = Curriculum(
             topic="Test Topic",
@@ -101,10 +103,12 @@ class TestImageSelectorIntegration:
 
         # Mock data
         section = Section(
+            id="s1",
             title="Machine Learning Basics",
             topics=["supervised learning", "neural networks"],
             learning_objectives=["Understand ML concepts"],
             estimated_time=30,
+            difficulty_level="intermediate",
         )
 
         available_images = [
@@ -199,18 +203,16 @@ console.log("Hello");
 
     def test_generate_code_examples_with_context(self):
         """Test code generation with RAG context."""
-        mock_llm = Mock()
         mock_vector_store = Mock()
-        generator = CodeGenerator(llm_client=mock_llm, vector_store=mock_vector_store)
-
-        # Mock LLM response
-        mock_llm.invoke.return_value = Mock(content="```python\nprint('test')\n```")
+        generator = CodeGenerator(vector_store=mock_vector_store)
 
         section = Section(
+            id="s1",
             title="Python Basics",
             topics=["variables", "functions"],
             learning_objectives=["Learn Python"],
             estimated_time=30,
+            difficulty_level="beginner",
         )
         curriculum = Curriculum(
             topic="Programming",
@@ -221,12 +223,11 @@ console.log("Hello");
 
         contexts = ["Python is a programming language", "Functions are reusable code"]
 
-        result = generator.generate_code_examples(section, curriculum, contexts, num_examples=2)
+        with patch.object(generator, 'invoke_llm', return_value=Mock(content="```python\nprint('test')\n```")):
+            result = generator.generate_code_examples(section, curriculum, contexts, num_examples=2)
 
         assert isinstance(result, str)
-        # Should have generated code examples
-        if mock_llm.invoke.called:
-            assert "```" in result or len(result) > 0
+        assert len(result) > 0
 
 
 class TestContentExpanderIntegration:
@@ -253,29 +254,34 @@ Some text.
 
     def test_expand_content_improves_quality(self):
         """Test content expansion improves quality metrics."""
-        mock_llm = Mock()
-        expander = ContentExpander(llm_client=mock_llm)
-
-        # Mock LLM to return expanded content
-        mock_llm.invoke.return_value = Mock(
-            content="# Expanded Content\n\nThis is much longer content with more detail and examples."
-        )
+        expander = ContentExpander()
 
         section = Section(
+            id="s1",
             title="Test",
             topics=["topic"],
             learning_objectives=["Learn"],
             estimated_time=30,
+            difficulty_level="intermediate",
         )
         curriculum = Curriculum(topic="Test", duration=60, audience_level="beginner", sections=[section])
 
         short_content = "Short content."
         contexts = ["Context 1", "Context 2"]
+        targets = {"min_words": 500, "target_words": 800, "min_code_examples": 1, "min_subsections": 2}
+        previous_quality = {"word_count": 2, "score": 40, "code_block_count": 0, "subsection_count": 0}
 
-        # The expansion should produce longer content
-        expanded = expander.expand_content(section, curriculum, short_content, contexts)
+        expanded_content = "# Expanded Content\n\nThis is much longer content with more detail and examples."
+        with patch.object(expander, 'invoke_llm', return_value=Mock(content=expanded_content)):
+            expanded = expander.expand_content(
+                section=section,
+                curriculum=curriculum,
+                contexts=contexts,
+                targets=targets,
+                previous_content=short_content,
+                previous_quality=previous_quality,
+            )
 
-        # If LLM was called, should have attempted expansion
         assert isinstance(expanded, str)
 
 
@@ -310,10 +316,12 @@ def train_model(data):
 
         # Create curriculum
         section = Section(
+            id="s1",
             title="Introduction to ML",
             topics=["machine learning", "AI"],
             learning_objectives=["Understand ML basics"],
             estimated_time=30,
+            difficulty_level="beginner",
         )
         curriculum = Curriculum(
             topic="Machine Learning",

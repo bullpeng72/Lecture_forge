@@ -2,7 +2,7 @@
 Lecture data model.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -46,6 +46,8 @@ class SectionContent(BaseModel):
     word_count: int = 0
     estimated_time: int = 20  # Default: 20 minutes
     difficulty_level: str = "intermediate"  # Default: intermediate
+    # v0.4.0: subsection-level image distribution (heading → images)
+    subsection_images: Dict[str, List[ImageReference]] = Field(default_factory=dict)
 
 
 class Lecture(BaseModel):

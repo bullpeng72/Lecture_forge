@@ -14,7 +14,9 @@ class LectureForgeError(Exception):
     This allows catching all LectureForge-specific errors with a single except clause.
     """
 
-    pass
+    def __init__(self, message="", context=None, **kwargs):
+        super().__init__(message, **kwargs)
+        self.context = context or {}
 
 
 # ===== Content Collection Errors =====

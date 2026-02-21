@@ -55,7 +55,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Initialize LectureForge" in result.output
-        assert "API keys" in result.output.lower()
+        assert "api keys" in result.output.lower()
 
     def test_create_command_help(self):
         """Test create command help."""

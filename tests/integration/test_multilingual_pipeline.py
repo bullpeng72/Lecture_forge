@@ -186,7 +186,7 @@ class TestLanguageReranking:
         english_result = results[0]
         korean_result = results[1]
 
-        assert english_result["score"] == 0.88  # 0.8 * 1.1
+        assert english_result["score"] == pytest.approx(0.88)  # 0.8 * 1.1
         assert english_result["score"] < korean_result["score"] or \
                abs(english_result["score"] - korean_result["score"]) < 0.1
 

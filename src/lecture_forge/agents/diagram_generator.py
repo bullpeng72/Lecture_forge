@@ -37,28 +37,39 @@ class DiagramGeneratorAgent(BaseAgent):
             if "intro" in section.section_id.lower() or "conclusion" in section.section_id.lower():
                 continue
 
-            logger.info(f"Generating diagram for section: {section.title}")
+            # v0.4.0: generate multiple diagrams based on section length
+            num_diagrams = min(
+                Config.DIAGRAM_MAX_PER_SECTION,
+                max(1, section.estimated_time // Config.DIAGRAM_MINUTES_PER),
+            )
+            logger.info(f"Generating {num_diagrams} diagram(s) for section: {section.title} ({section.estimated_time} min)")
 
-            # Generate diagram based on section content
-            diagram = self._generate_diagram_for_section(section)
-
-            if diagram:
-                section.diagrams.append(diagram)
-                logger.info(f"  ✅ Generated {diagram.diagram_type} diagram")
-            else:
-                logger.info(f"  ℹ️  No diagram generated")
+            for diagram_idx in range(num_diagrams):
+                diagram = self._generate_diagram_for_section(section, diagram_idx=diagram_idx)
+                if diagram:
+                    section.diagrams.append(diagram)
+                    logger.info(f"  ✅ Generated {diagram.diagram_type} diagram (#{diagram_idx + 1})")
+                else:
+                    logger.info(f"  ℹ️  No diagram generated (#{diagram_idx + 1})")
 
         return section_contents
 
-    def _generate_diagram_for_section(self, section: SectionContent) -> Optional[MermaidDiagram]:
-        """Generate a Mermaid diagram with validation and retry."""
+    def _generate_diagram_for_section(
+        self, section: SectionContent, diagram_idx: int = 0
+    ) -> Optional[MermaidDiagram]:
+        """Generate a Mermaid diagram with validation and retry.
+
+        Args:
+            section: Section to generate diagram for
+            diagram_idx: Index within section (0 = primary, 1+ = secondary types)
+        """
         max_retries = 3
         content_preview = section.markdown_content[:3000] if len(section.markdown_content) > 3000 else section.markdown_content
 
         for attempt in range(max_retries):
             try:
                 # Generate diagram
-                mermaid_code = self._call_llm_for_diagram(section, content_preview, attempt)
+                mermaid_code = self._call_llm_for_diagram(section, content_preview, attempt, diagram_idx=diagram_idx)
 
                 if not mermaid_code:
                     continue
@@ -89,9 +100,10 @@ class DiagramGeneratorAgent(BaseAgent):
                             )
                         if quality_score["feedback"]:
                             logger.debug(f"     Quality notes: {', '.join(quality_score['feedback'][:2])}")
+                        diagram_suffix = f"_{diagram_idx}" if diagram_idx > 0 else ""
                         return MermaidDiagram(
-                            id=f"diagram_{section.section_id}",
-                            title=f"{section.title} 개요",
+                            id=f"diagram_{section.section_id}{diagram_suffix}",
+                            title=f"{section.title} 개요" if diagram_idx == 0 else f"{section.title} 상세 {diagram_idx}",
                             mermaid_code=mermaid_code,
                             diagram_type=diagram_type,
                         )
@@ -106,15 +118,30 @@ class DiagramGeneratorAgent(BaseAgent):
             except Exception as e:
                 logger.error(f"  ❌ Attempt {attempt + 1} failed: {e}")
 
-        # All retries failed - skip diagram instead of using low-quality fallback
-        logger.warning(f"  ⚠️ All {max_retries} attempts failed - skipping diagram for this section")
-        logger.info(f"     Tip: Diagrams work best for sections with clear processes or architectures")
-        return None  # Skip diagram instead of generating meaningless fallback
+        # v0.4.0: All retries failed — use fallback mindmap instead of skipping
+        logger.warning(f"  ⚠️ All {max_retries} attempts failed - using template fallback")
+        return self._generate_fallback_diagram(section, diagram_idx=diagram_idx)
 
-    def _call_llm_for_diagram(self, section: SectionContent, content_preview: str, attempt: int) -> str:
-        """Call LLM to generate diagram with improved prompt - FLOWCHART ONLY."""
-        # Detect section type (using both title and content)
-        section_type = self._detect_section_type(section.title, content_preview)
+    def _call_llm_for_diagram(
+        self, section: SectionContent, content_preview: str, attempt: int, diagram_idx: int = 0
+    ) -> str:
+        """Call LLM to generate diagram with improved prompt.
+
+        diagram_idx=0: primary flowchart (existing logic)
+        diagram_idx>0: secondary type (sequence or mindmap)
+        """
+        # v0.4.0: secondary diagrams use different types
+        if diagram_idx > 0:
+            section_type = self._detect_secondary_diagram_type(section, diagram_idx)
+        else:
+            # Detect section type (using both title and content)
+            section_type = self._detect_section_type(section.title, content_preview)
+
+        # For sequence/mindmap types use dedicated lightweight prompts
+        if section_type == "sequence" and Config.DIAGRAM_ENABLE_SEQUENCE:
+            return self._call_llm_for_sequence_diagram(section, content_preview, attempt)
+        if section_type == "mindmap" and Config.DIAGRAM_ENABLE_MINDMAP:
+            return self._call_llm_for_mindmap_diagram(section, content_preview, attempt)
 
         # Get appropriate template
         template = self._get_diagram_template(section_type)
@@ -228,7 +255,7 @@ flowchart TD
     B --> C[위치 인코딩 추가]
     C --> D[셀프 어텐션 레이어]
     D --> E[피드포워드 네트워크]
-    E --> F{{추가 레이어 필요?}}
+    E --> F{{추가 레이어 필요}}
     F -->|Yes| D
     F -->|No| G[출력 레이어]
     G --> H[확률 분포 생성]
@@ -345,9 +372,40 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Create a CONCEPTUAL map (flowchart TD)
 - Show characteristics, mechanisms, and applications
 - Focus on: Concept → Features → Mechanism → Applications""",
+            # v0.4.0: new types (handled by dedicated LLM callers, not this flowchart path)
+            "sequence": "Show system interaction flows using sequenceDiagram syntax.",
+            "mindmap": "Show concept relationships using mindmap syntax.",
         }
 
         return instructions.get(section_type, instructions["concept"])
+
+    def _detect_secondary_diagram_type(self, section: SectionContent, idx: int) -> str:
+        """
+        v0.4.0: Determine diagram type for 2nd+ diagrams in a section.
+
+        Chooses a type different from the primary type to add variety.
+        Respects DIAGRAM_ENABLE_SEQUENCE and DIAGRAM_ENABLE_MINDMAP config flags.
+        """
+        content_preview = section.markdown_content[:500]
+        primary_type = self._detect_section_type(section.title, content_preview)
+
+        fallback_order = {
+            "process":      ["sequence", "mindmap", "concept"],
+            "architecture": ["mindmap", "concept", "process"],
+            "comparison":   ["concept", "mindmap", "architecture"],
+            "concept":      ["mindmap", "sequence", "process"],
+        }
+        candidates = fallback_order.get(primary_type, ["mindmap", "concept"])
+
+        # Filter out disabled types
+        if not Config.DIAGRAM_ENABLE_SEQUENCE:
+            candidates = [c for c in candidates if c != "sequence"]
+        if not Config.DIAGRAM_ENABLE_MINDMAP:
+            candidates = [c for c in candidates if c != "mindmap"]
+        if not candidates:
+            candidates = ["concept"]
+
+        return candidates[(idx - 1) % len(candidates)]
 
     def _detect_section_type(self, title: str, content: str = "") -> str:
         """
@@ -358,7 +416,8 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
             content: Section content (optional, for content-based detection)
 
         Returns:
-            Section type: "process", "architecture", "comparison", or "concept"
+            Section type: "process", "architecture", "comparison", "concept",
+                          "sequence", or "mindmap"
         """
         title_lower = title.lower()
         content_preview = content[:500].lower() if content else ""
@@ -385,25 +444,17 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         # ===== Priority 2: Content-based detection =====
 
         if content_preview:
+            # v0.4.0: Sequence detection (API/interaction patterns)
+            sequence_keywords = ["api", "요청", "응답", "호출", "통신", "인터페이스", "클라이언트", "서버", "상호작용"]
+            seq_count = sum(1 for k in sequence_keywords if k in content_preview)
+            if seq_count >= 2 and Config.DIAGRAM_ENABLE_SEQUENCE:
+                logger.debug(f"Section type: sequence (keywords: {seq_count})")
+                return "sequence"
+
             # Count sequential indicators in content
             sequential_indicators = [
-                "첫째",
-                "둘째",
-                "셋째",
-                "넷째",
-                "먼저",
-                "다음",
-                "그다음",
-                "마지막",
-                "1.",
-                "2.",
-                "3.",
-                "4.",
-                "5.",
-                "단계 1",
-                "단계 2",
-                "step 1",
-                "step 2",
+                "첫째", "둘째", "셋째", "넷째", "먼저", "다음", "그다음", "마지막",
+                "1.", "2.", "3.", "4.", "5.", "단계 1", "단계 2", "step 1", "step 2",
             ]
             sequential_count = sum(1 for indicator in sequential_indicators if indicator in content_preview)
 
@@ -414,20 +465,8 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 
             # Check for process action verbs
             action_verbs = [
-                "수집",
-                "전처리",
-                "훈련",
-                "검증",
-                "평가",
-                "설정",
-                "초기화",
-                "실행",
-                "분석",
-                "구성",
-                "준비",
-                "변환",
-                "적용",
-                "조정",
+                "수집", "전처리", "훈련", "검증", "평가", "설정", "초기화",
+                "실행", "분석", "구성", "준비", "변환", "적용", "조정",
             ]
             action_count = sum(1 for verb in action_verbs if verb in content_preview)
 
@@ -526,6 +565,36 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
 - Mechanism (D): How it works
 - Applications (E): Use cases
 - Use hierarchical connections""",
+            # v0.4.0: new diagram types
+            "sequence": """sequenceDiagram
+    participant A as 사용자
+    participant B as 시스템
+    participant C as 외부서비스
+
+    A->>B: 요청
+    B->>C: 처리요청
+    C-->>B: 결과반환
+    B-->>A: 응답
+
+**DIAGRAM STRUCTURE:**
+- participant: 시스템 구성 요소 이름 (실제 컴포넌트명 사용)
+- ->>: 동기 요청, -->>: 응답/반환
+- 실제 섹션 내용의 시스템 간 상호작용 묘사""",
+            "mindmap": """mindmap
+    root((핵심주제))
+        개념1
+            세부내용1
+            세부내용2
+        개념2
+            세부내용3
+        개념3
+            세부내용4
+
+**DIAGRAM STRUCTURE:**
+- root(()): 중심 주제 (짧게 2-3단어)
+- 1단계: 주요 개념 (3-4개)
+- 2단계: 세부 내용 (각 2-3개)
+- 공백과 한글만 사용, 특수문자 금지""",
         }
 
         return templates.get(section_type, templates["concept"])
@@ -546,6 +615,124 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
             return "sequence"
         else:
             return "flowchart"  # default
+
+    def _call_llm_for_sequence_diagram(
+        self, section: SectionContent, content_preview: str, attempt: int
+    ) -> str:
+        """v0.4.0: Generate a sequenceDiagram showing system interactions."""
+        template = self._get_diagram_template("sequence")
+        strictness = ""
+        if attempt > 0:
+            strictness = f"\n**⚠️ PREVIOUS ATTEMPT FAILED: Simplify to max {4 - attempt} participants and {6 - attempt * 2} messages.**"
+
+        prompt = f"""Create a sequenceDiagram showing interactions for: **{section.title}**
+
+**Content:**
+{content_preview}
+
+**Template:**
+{template}
+
+**Rules:**
+1. MUST start with 'sequenceDiagram'
+2. Use 3-4 participants with real names from the content
+3. Show 5-8 meaningful messages using actual terminology
+4. Use ->>  for requests and -->> for responses/returns
+5. Use Korean participant names (실제 시스템명 사용)
+6. NO special characters in participant/message names
+{strictness}
+
+Return ONLY the sequenceDiagram code (no markdown fences, no explanations):"""
+
+        response = self.invoke_llm(prompt, phase="diagram_generation")
+        return response.content.strip()
+
+    def _call_llm_for_mindmap_diagram(
+        self, section: SectionContent, content_preview: str, attempt: int
+    ) -> str:
+        """v0.4.0: Generate a mindmap showing concept relationships."""
+        template = self._get_diagram_template("mindmap")
+        strictness = ""
+        if attempt > 0:
+            strictness = f"\n**⚠️ PREVIOUS ATTEMPT FAILED: Simplify to 3 main branches, 2 sub-items each. Plain Korean only.**"
+
+        prompt = f"""Create a mindmap for: **{section.title}**
+
+**Content:**
+{content_preview}
+
+**Template:**
+{template}
+
+**Rules:**
+1. MUST start with 'mindmap'
+2. root(()) contains the central topic (2-3 words)
+3. 3-4 main branches using real concepts from the content
+4. 2-3 sub-items per branch
+5. Use ONLY plain Korean text — NO special characters, NO parentheses, NO colons
+6. Max 20 nodes total
+{strictness}
+
+Return ONLY the mindmap code (no markdown fences, no explanations):"""
+
+        response = self.invoke_llm(prompt, phase="diagram_generation")
+        return response.content.strip()
+
+    def _generate_fallback_diagram(
+        self, section: SectionContent, diagram_idx: int = 0
+    ) -> Optional[MermaidDiagram]:
+        """
+        v0.4.0: LLM 실패 시 키워드 기반 단순 mindmap 생성 (LLM 호출 없음).
+
+        Uses _extract_keywords_simple() since SectionContent has no .topics attribute.
+        Returns None only if no usable keywords can be extracted.
+        """
+        section_type = self._detect_section_type(section.title, section.markdown_content[:500])
+        keywords = self._extract_keywords_simple(section.markdown_content, section.title, section_type)
+
+        if not keywords:
+            return None
+
+        root = self._clean_text_for_mermaid(section.title)[:20] or "핵심개념"
+        topic_lines = []
+        for topic in keywords[:6]:
+            safe = self._clean_text_for_mermaid(topic)[:15]
+            if safe:
+                topic_lines.append(f"        {safe}")
+
+        if not topic_lines:
+            return None
+
+        mermaid_code = f"mindmap\n    root(({root}))\n" + "\n".join(topic_lines)
+
+        diagram_suffix = f"_{diagram_idx}_fallback" if diagram_idx > 0 else "_fallback"
+        return MermaidDiagram(
+            id=f"diagram_{section.section_id}{diagram_suffix}",
+            title=f"{section.title} 개념 구조",
+            mermaid_code=mermaid_code,
+            diagram_type="mindmap",
+        )
+
+    def _evaluate_sequence_quality(self, mermaid_code: str) -> dict:
+        """v0.4.0: Evaluate quality of a sequenceDiagram."""
+        participant_count = mermaid_code.count("participant ")
+        message_count = mermaid_code.count("->>") + mermaid_code.count("-->>")
+        score = min(100, participant_count * 15 + message_count * 10)
+        feedback = []
+        if participant_count < 2:
+            feedback.append("Too few participants (need 3+)")
+        if message_count < 4:
+            feedback.append("Too few messages (need 5+)")
+        return {"score": score, "pass": score >= 60, "feedback": feedback}
+
+    def _evaluate_mindmap_quality(self, mermaid_code: str) -> dict:
+        """v0.4.0: Evaluate quality of a mindmap."""
+        node_count = len([ln for ln in mermaid_code.split("\n") if ln.strip() and not ln.strip().startswith("mindmap") and not ln.strip().startswith("root")])
+        score = min(100, node_count * 8)
+        feedback = []
+        if node_count < 5:
+            feedback.append("Too few nodes (need 6+)")
+        return {"score": score, "pass": score >= 60, "feedback": feedback}
 
     def _create_fallback_diagram(self, section: SectionContent) -> MermaidDiagram:
         """Create a meaningful fallback diagram using content keywords."""
@@ -862,15 +1049,24 @@ Return ONLY the flowchart code (no markdown, no explanations):"""
         """
         Evaluate diagram complexity and quality.
 
+        v0.4.0: Dispatches to type-specific evaluators for sequence/mindmap.
+
         Returns:
             dict with 'score' (0-100), 'pass' (bool), 'feedback' (list)
         """
+        first_line = mermaid_code.strip().split("\n")[0].lower()
+        if first_line.startswith("sequencediagram"):
+            return self._evaluate_sequence_quality(mermaid_code)
+        if first_line.startswith("mindmap"):
+            return self._evaluate_mindmap_quality(mermaid_code)
+
+        # Existing flowchart/graph quality evaluation
         lines = [line.strip() for line in mermaid_code.split("\n") if line.strip() and not line.strip().startswith("flowchart")]
 
         # Count nodes and connections
         node_lines = [line for line in lines if "[" in line and "]" in line and "-->" not in line]
         connection_lines = [line for line in lines if "-->" in line]
-        decision_lines = [line for line in lines if "{{" in line and "}}" in line]
+        decision_lines = [line for line in lines if "{" in line and "}" in line and "-->" not in line]
 
         node_count = len(node_lines)
         connection_count = len(connection_lines)

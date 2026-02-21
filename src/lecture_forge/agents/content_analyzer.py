@@ -84,6 +84,9 @@ class ContentAnalyzerAgent(BaseAgent):
         logger.info("Recommending images...")
         image_recommendations = self._recommend_images(key_topics, entities, image_result)
 
+        # v0.4.0: collect source file paths for coverage tracking
+        source_files = list({doc.get("source", "") for doc in documents if doc.get("source")})
+
         result = AnalysisResult(
             entities=entities,
             key_topics=key_topics,
@@ -97,6 +100,7 @@ class ContentAnalyzerAgent(BaseAgent):
                 "total_entities": len(entities),
                 "total_topics": len(key_topics),
                 "total_clusters": len(topic_clusters),
+                "source_files": source_files,  # v0.4.0: for curriculum coverage tracking
             },
         )
 
@@ -123,18 +127,22 @@ class ContentAnalyzerAgent(BaseAgent):
                 total = stats.get("document_count", 0)
 
                 if total > 0:
-                    # Probe queries that tend to surface different parts of any document
+                    # Probe queries that tend to surface different parts of any document (v0.4.0: 6→10)
                     probe_queries = [
                         topic,
-                        "introduction overview",
-                        "core concept definition",
+                        topic + " 심화 고급",
+                        topic + " 실습 예제 활용",
+                        "introduction overview background",
+                        "core concept definition principle",
                         "advanced technique method",
                         "example application case study",
-                        "summary conclusion",
+                        "comparison alternative trade-off",
+                        "implementation architecture component",
+                        "summary conclusion future",
                     ]
 
-                    # How many results per probe (scale with DB size, cap at 10)
-                    per_probe = min(10, max(3, total // max(1, len(probe_queries) * 5)))
+                    # How many results per probe (scale with DB size, cap at 15)
+                    per_probe = min(15, max(3, total // max(1, len(probe_queries) * 5)))
 
                     seen_ids: set = set()
                     sampled_chunks: List[str] = []
@@ -171,10 +179,10 @@ class ContentAnalyzerAgent(BaseAgent):
     def _extract_key_topics(self, text: str, main_topic: str) -> List[str]:
         """Extract key topics from text using LLM."""
         # Limit text length for LLM — generous limit since text is now
-        # built from diverse KB samples rather than just the first document.
-        text_sample = text[:20000] if len(text) > 20000 else text
+        # built from diverse KB samples rather than just the first document. (v0.4.0: 20k→50k)
+        text_sample = text[:50000] if len(text) > 50000 else text
 
-        prompt = f"""Analyze the following educational content about "{main_topic}" and identify the 5-10 most important topics or concepts that should be covered in a lecture.
+        prompt = f"""Analyze the following educational content about "{main_topic}" and identify the 5-15 most important topics or concepts that should be covered in a lecture.
 
 Content:
 {text_sample}
@@ -195,7 +203,7 @@ Return ONLY a JSON array of topic names (strings), nothing else. Example: ["주�
             topics = json.loads(content)
 
             if isinstance(topics, list):
-                return topics[:10]  # Limit to 10 topics
+                return topics[:15]  # v0.4.0: 10 → 15
             else:
                 logger.warning(f"Unexpected topics format: {topics}")
                 return []

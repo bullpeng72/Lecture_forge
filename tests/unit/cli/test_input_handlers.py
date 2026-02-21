@@ -65,10 +65,10 @@ class TestCollectCommaSeparatedInput:
 # ===== collect_inputs_interactive() =====
 
 class TestCollectInputsInteractive:
-    def _mock_prompts(self, topic="AI", duration="60", audience="intermediate", pdf_choice="3",
-                      urls="", keywords="", hada="", img=""):
+    def _mock_prompts(self, topic="AI", duration="60", audience="intermediate", kb_choice="1",
+                      pdf_choice="3", urls="", keywords="", hada="", img=""):
         """Return a side_effect list for Prompt.ask calls."""
-        return [topic, duration, audience, pdf_choice, urls, keywords, hada, img]
+        return [topic, duration, audience, kb_choice, pdf_choice, urls, keywords, hada, img]
 
     def test_returns_dict_with_required_keys(self):
         from lecture_forge.cli.utils.input_handlers import collect_inputs_interactive
@@ -103,7 +103,7 @@ class TestCollectInputsInteractive:
     def test_pdf_choice_2_manual_input(self):
         from lecture_forge.cli.utils.input_handlers import collect_inputs_interactive
         # pdf_choice="2" triggers manual input (one extra Prompt.ask call for PDFs)
-        values = ["AI", "60", "intermediate", "2", "doc1.pdf, doc2.pdf", "", "", "", ""]
+        values = ["AI", "60", "intermediate", "1", "2", "doc1.pdf, doc2.pdf", "", "", "", ""]
         with patch("lecture_forge.cli.utils.input_handlers.Prompt.ask", side_effect=values):
             with patch("lecture_forge.cli.utils.input_handlers.console"):
                 result = collect_inputs_interactive()
@@ -112,7 +112,7 @@ class TestCollectInputsInteractive:
 
     def test_keywords_parsed_as_list(self):
         from lecture_forge.cli.utils.input_handlers import collect_inputs_interactive
-        values = ["AI", "60", "beginner", "3", "", "machine learning, deep learning", "", ""]
+        values = ["AI", "60", "beginner", "1", "3", "", "machine learning, deep learning", "", ""]
         with patch("lecture_forge.cli.utils.input_handlers.Prompt.ask", side_effect=values):
             with patch("lecture_forge.cli.utils.input_handlers.console"):
                 result = collect_inputs_interactive()
@@ -122,7 +122,7 @@ class TestCollectInputsInteractive:
     def test_pdf_choice_1_calls_select_pdf_files(self):
         from lecture_forge.cli.utils.input_handlers import collect_inputs_interactive
         # pdf_choice="1" calls select_pdf_files() then optionally asks to add more
-        values = ["AI", "60", "intermediate", "1", "", "", "", ""]
+        values = ["AI", "60", "intermediate", "1", "1", "", "", "", ""]
         with patch("lecture_forge.cli.utils.input_handlers.Prompt.ask", side_effect=values):
             with patch("lecture_forge.cli.utils.input_handlers.select_pdf_files", return_value=[]) as mock_select:
                 with patch("lecture_forge.cli.utils.input_handlers.console"):

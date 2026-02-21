@@ -81,9 +81,13 @@ class SlideConverter:
                 slides_html = notes_gen.generate(slides_html)
                 self.console.print("   ✅ 발표자 노트 생성 완료 (브라우저에서 S키로 확인)")
 
-            # Write to output file
-            with open(output_path, "w", encoding="utf-8") as f:
+            # Write to output file (write to temp first to avoid 0-byte file on error)
+            if not slides_html:
+                raise ValueError("Generated slides HTML is empty")
+            tmp_path = output_path.with_suffix(".tmp")
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 f.write(slides_html)
+            tmp_path.replace(output_path)
 
             self.console.print(f"   ✅ 슬라이드 생성 완료: {output_path}")
             return True

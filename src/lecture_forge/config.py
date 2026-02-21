@@ -335,15 +335,15 @@ class Config:
     # Q&A mode: top-k after merge and re-ranking
     RAG_QA_TOP_K: int = int(os.getenv("RAG_QA_TOP_K", "12"))
     # Content generation: RAG retrieval count per section query
-    RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "10"))
+    RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "15"))   # 10 → 15
     # Dynamic n_results bounds: scaled by section duration/difficulty (K)
     RAG_N_RESULTS_MIN: int = int(os.getenv("RAG_N_RESULTS_MIN", "5"))
-    RAG_N_RESULTS_MAX: int = int(os.getenv("RAG_N_RESULTS_MAX", "30"))
+    RAG_N_RESULTS_MAX: int = int(os.getenv("RAG_N_RESULTS_MAX", "40"))            # 30 → 40
     # Sparse fallback threshold: trigger broadened queries if fewer chunks found (I)
     RAG_SPARSE_THRESHOLD: int = int(os.getenv("RAG_SPARSE_THRESHOLD", "5"))
     # Maximum context token budget passed to the LLM per section (M)
-    # ~3 chars/token approximation; 16 000 tokens ≈ 48 000 chars of mixed KO/EN text
-    RAG_MAX_CONTEXT_TOKENS: int = int(os.getenv("RAG_MAX_CONTEXT_TOKENS", "16000"))
+    # ~3 chars/token approximation; 24 000 tokens ≈ 72 000 chars of mixed KO/EN text
+    RAG_MAX_CONTEXT_TOKENS: int = int(os.getenv("RAG_MAX_CONTEXT_TOKENS", "24000"))  # 16000 → 24000
 
     # ===== RAG Similarity & Diversity =====
     # Minimum similarity score to include a result (L2 distance based)
@@ -360,6 +360,12 @@ class Config:
 
     # Diagram quality threshold (0-100)
     DIAGRAM_QUALITY_THRESHOLD: int = int(os.getenv("DIAGRAM_QUALITY_THRESHOLD", "70"))
+
+    # Diagram generation settings (v0.4.0)
+    DIAGRAM_MAX_PER_SECTION: int = int(os.getenv("DIAGRAM_MAX_PER_SECTION", "3"))
+    DIAGRAM_MINUTES_PER: int = int(os.getenv("DIAGRAM_MINUTES_PER", "20"))  # 20분당 1개
+    DIAGRAM_ENABLE_SEQUENCE: bool = os.getenv("DIAGRAM_ENABLE_SEQUENCE", "true").lower() == "true"
+    DIAGRAM_ENABLE_MINDMAP: bool = os.getenv("DIAGRAM_ENABLE_MINDMAP", "true").lower() == "true"
 
     # ===== Content Metrics =====
     # Lecture speed (words per minute)

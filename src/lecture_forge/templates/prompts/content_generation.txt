@@ -38,7 +38,7 @@
      * **Write 3-5 paragraphs per subsection**
      * **Include 2-3 examples per concept**
      * **Explain WHY and HOW, not just WHAT**
-   - {summary_label}: **{summary_words:,} words** (20% - 요약, 핵심 포인트, 실습)
+   - {summary_label}: **{summary_words:,} words** (20% - 요약, 핵심 포인트)
 
    **✅ HOW TO VERIFY YOUR WORD COUNT:**
    - Count your words BEFORE submitting

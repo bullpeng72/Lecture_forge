@@ -52,7 +52,8 @@ def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict
     }
 
     time_per_practice = practice_per_time.get(difficulty_level.lower(), Config.PRACTICE_PER_TIME_INTERMEDIATE)
-    target_practice_problems = max(1, estimated_time // time_per_practice)
+    _ = time_per_practice  # kept for config reference
+    target_practice_problems = 0  # practice problems disabled
 
     # Subsections: logical breaks in content (from Config)
     target_subsections = max(3, estimated_time // Config.SUBSECTION_MINUTES)
@@ -138,10 +139,10 @@ def evaluate_content_quality(
 
     # Calculate overall score with weights
     overall_score = (
-        word_score * 0.30  # 30% - content length
+        word_score * 0.40  # 40% - content length
         + code_score * 0.25  # 25% - code examples
-        + structure_score * 0.20  # 20% - structure
-        + practice_score * 0.15  # 15% - practice problems
+        + structure_score * 0.25  # 25% - structure
+        + practice_score * 0.00  # 0% - practice problems (disabled)
         + visual_score * 0.10  # 10% - visuals
     )
 

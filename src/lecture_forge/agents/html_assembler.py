@@ -313,27 +313,104 @@ class HTMLAssemblerAgent(BaseAgent):
         except Exception:
             return html_content
 
+    def _render_image_html(self, img) -> str:
+        """Render a single ImageReference as HTML <figure> with correct relative path."""
+        img_path = Path(img.path)
+
+        if img_path.is_absolute():
+            try:
+                rel_to_data = img_path.relative_to(Config.DATA_DIR)
+                rel_data_dir = os.path.relpath(Config.DATA_DIR, Config.OUTPUT_DIR)
+                corrected_path = str(Path(rel_data_dir) / rel_to_data).replace("\\", "/")
+            except ValueError:
+                corrected_path = str(img.path)
+        elif img.path.startswith(("http://", "https://")):
+            corrected_path = img.path
+        elif img.path.startswith("../"):
+            corrected_path = img.path
+        else:
+            corrected_path = f"../{img.path}"
+
+        return f"""
+            <figure class="my-6">
+                <img src="{corrected_path}" alt="{img.description}" loading="lazy"
+                     onerror="this.closest('figure').style.display='none'" />
+                <figcaption class="text-center text-sm text-gray-600 mt-2">
+                    {img.caption or img.description}
+                    {f'<br><span class="text-xs">{img.attribution}</span>' if img.attribution else ''}
+                </figcaption>
+            </figure>"""
+
     def _generate_section_html(self, section: SectionContent, section_num: int) -> str:
         """Generate HTML for a single section."""
-        # Convert markdown to HTML with improved code highlighting
-        md_html = markdown.markdown(
-            section.markdown_content,
-            extensions=[
-                "extra",  # Tables, attributes, etc.
-                "fenced_code",  # ```python code blocks
-                "codehilite",  # Syntax highlighting
-                "tables",  # Table support
-                "nl2br",  # Newline to <br>
-                "sane_lists",  # Better list handling
-            ],
-            extension_configs={"codehilite": {"css_class": "highlight", "linenums": False, "guess_lang": True}},
-        )
+        _md_extensions = [
+            "extra",       # Tables, attributes, etc.
+            "fenced_code", # ```python code blocks
+            "codehilite",  # Syntax highlighting
+            "tables",      # Table support
+            "nl2br",       # Newline to <br>
+            "sane_lists",  # Better list handling
+        ]
+        _md_ext_configs = {"codehilite": {"css_class": "highlight", "linenums": False, "guess_lang": True}}
 
-        # Clean up HTML structure
-        md_html = self._cleanup_content(md_html)
+        # v0.4.0: subsection-based image placement (inline after each ## heading)
+        subsection_images = getattr(section, "subsection_images", {})
 
-        # Annotate .highlight divs with data-lang for slides parser
-        md_html = self._annotate_code_languages(section.markdown_content, md_html)
+        if subsection_images:
+            # Import parse_markdown_subsections from content_writer (or use inline version)
+            try:
+                from lecture_forge.agents.content_writer.agent import parse_markdown_subsections
+            except ImportError:
+                # Inline fallback
+                import re as _re
+                def parse_markdown_subsections(md):
+                    pat = _re.compile(r"^(#{2,3})\s+(.+)$", _re.MULTILINE)
+                    ms = list(pat.finditer(md))
+                    if not ms:
+                        return [{"heading": "", "heading_text": "", "level": 2, "content": md}]
+                    subs = []
+                    for i, m in enumerate(ms):
+                        start = m.end()
+                        end = ms[i+1].start() if i+1 < len(ms) else len(md)
+                        subs.append({"heading": m.group(0), "heading_text": m.group(2),
+                                     "level": len(m.group(1)), "content": md[start:end].strip()})
+                    return subs
+
+            subsections = parse_markdown_subsections(section.markdown_content)
+            html_parts = []
+            for subsec in subsections:
+                # Convert this subsection's markdown (heading + content) to HTML
+                subsec_md = (f"{subsec['heading']}\n\n{subsec['content']}" if subsec["heading"]
+                             else subsec["content"])
+                subsec_html = markdown.markdown(subsec_md, extensions=_md_extensions,
+                                                extension_configs=_md_ext_configs)
+                subsec_html = self._cleanup_content(subsec_html)
+                subsec_html = self._annotate_code_languages(subsec_md, subsec_html)
+                html_parts.append(subsec_html)
+
+                # Insert images assigned to this subsection
+                for img in subsection_images.get(subsec["heading"], []):
+                    html_parts.append(self._render_image_html(img))
+
+            md_html = "\n".join(html_parts)
+
+            # Collect images that were NOT assigned to any subsection (fallback)
+            assigned_image_ids = {
+                img.image_id
+                for imgs in subsection_images.values()
+                for img in imgs
+            }
+            remaining_images = [img for img in section.images if img.image_id not in assigned_image_ids]
+        else:
+            # Fallback: classic rendering — all markdown then all images
+            md_html = markdown.markdown(
+                section.markdown_content,
+                extensions=_md_extensions,
+                extension_configs=_md_ext_configs,
+            )
+            md_html = self._cleanup_content(md_html)
+            md_html = self._annotate_code_languages(section.markdown_content, md_html)
+            remaining_images = section.images
 
         # Add diagrams
         diagrams_html = []
@@ -348,47 +425,8 @@ class HTMLAssemblerAgent(BaseAgent):
             </div>"""
             )
 
-        # Add images with corrected relative paths
-        images_html = []
-        for img in section.images:
-            # Fix path: Calculate proper relative path from OUTPUT_DIR to image
-            img_path = Path(img.path)
-
-            # Handle absolute paths (convert to relative from outputs/)
-            if img_path.is_absolute():
-                try:
-                    # Get relative path from DATA_DIR
-                    rel_to_data = img_path.relative_to(Config.DATA_DIR)
-
-                    # Calculate relative path from OUTPUT_DIR to DATA_DIR
-                    # This works for any .env configuration!
-                    rel_data_dir = os.path.relpath(Config.DATA_DIR, Config.OUTPUT_DIR)
-                    corrected_path = str(Path(rel_data_dir) / rel_to_data)
-
-                    # Normalize path separators for web (use forward slashes)
-                    corrected_path = corrected_path.replace('\\', '/')
-                except ValueError:
-                    # Not under DATA_DIR, might be URL or other path
-                    corrected_path = str(img.path)
-            # Handle relative paths and URLs
-            elif img.path.startswith(("http://", "https://")):
-                corrected_path = img.path
-            elif img.path.startswith("../"):
-                corrected_path = img.path
-            else:
-                corrected_path = f"../{img.path}"
-
-            images_html.append(
-                f"""
-            <figure class="my-6">
-                <img src="{corrected_path}" alt="{img.description}" loading="lazy"
-                     onerror="this.closest('figure').style.display='none'" />
-                <figcaption class="text-center text-sm text-gray-600 mt-2">
-                    {img.caption or img.description}
-                    {f'<br><span class="text-xs">{img.attribution}</span>' if img.attribution else ''}
-                </figcaption>
-            </figure>"""
-            )
+        # Add remaining images (not inline-placed) at the end
+        remaining_images_html = [self._render_image_html(img) for img in remaining_images]
 
         safe_id = self._sanitize_section_id(section.section_id)
         return f"""
@@ -396,5 +434,5 @@ class HTMLAssemblerAgent(BaseAgent):
             <h2>{section_num}. {section.title}</h2>
             {md_html}
             {''.join(diagrams_html)}
-            {''.join(images_html)}
+            {''.join(remaining_images_html)}
         </section>"""

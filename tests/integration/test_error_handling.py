@@ -118,8 +118,8 @@ class TestGracefulDegradation:
         """Test that missing API keys are handled gracefully."""
         from lecture_forge.config import Config
 
-        # Simulate missing API key
-        with patch.dict('os.environ', {}, clear=True):
+        # Simulate missing API key by patching the class attribute directly
+        with patch.object(Config, 'OPENAI_API_KEY', ''):
             # Should not crash, but provide helpful error
             with pytest.raises((ConfigurationError, MissingAPIKeyError)):
                 # This would normally be called during initialization

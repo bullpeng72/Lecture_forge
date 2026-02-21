@@ -26,6 +26,7 @@ class CurriculumDesignerAgent(BaseAgent):
         topic: str,
         duration: int,
         audience_level: str = "intermediate",
+        source_files: Optional[List[str]] = None,
     ) -> Curriculum:
         """
         Design curriculum based on analysis and user inputs.
@@ -42,6 +43,12 @@ class CurriculumDesignerAgent(BaseAgent):
         logger.info(f"Designing curriculum for {duration}-minute lecture on '{topic}'")
         logger.info(f"Target audience: {audience_level}")
 
+        # v0.4.0: extract source_files from analysis metadata if not explicitly provided
+        if source_files is None:
+            source_files = analysis_result.metadata.get("source_files", [])
+        if source_files:
+            logger.info(f"   📂 Source files for coverage tracking: {len(source_files)}")
+
         # 1. Generate learning objectives
         learning_objectives = self._generate_learning_objectives(topic, analysis_result, audience_level)
 
@@ -55,7 +62,7 @@ class CurriculumDesignerAgent(BaseAgent):
         )
 
         # 4. Validate sections against the knowledge base and fill coverage gaps
-        sections = self._validate_and_enrich_sections(sections, duration, audience_level, topic)
+        sections = self._validate_and_enrich_sections(sections, duration, audience_level, topic, source_files=source_files)
 
         # 5. Build prerequisite map
         prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
@@ -71,6 +78,7 @@ class CurriculumDesignerAgent(BaseAgent):
             sections=sections,
             total_estimated_time=total_time,
             prerequisite_map=prerequisite_map,
+            source_files=source_files,  # v0.4.0: for content writer diversity query
         )
 
         # RMC: Self-review of generated curriculum
@@ -145,8 +153,8 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         else:  # intermediate
             selected = all_topics
 
-        # Estimate how many topics we can cover (roughly 10-20 min per topic)
-        avg_time_per_topic = 15  # minutes
+        # Estimate how many topics we can cover (v0.4.0: 15→10 min per topic for denser coverage)
+        avg_time_per_topic = 10  # minutes
         max_topics = max(3, duration // avg_time_per_topic)
 
         # Return top topics up to the limit
@@ -364,6 +372,7 @@ Rules:
         duration: int,
         audience_level: str,
         topic: str,
+        source_files: Optional[List[str]] = None,
     ) -> List[Section]:
         """
         Validate each section against the knowledge base and discover topics
@@ -438,8 +447,8 @@ Rules:
                 except Exception:
                     pass
 
-            # Use LLM to propose missing sections based on KB coverage probes
-            if validated and len(validated) < max(3, duration // 15):
+            # v0.4.0: Always run enrichment regardless of section count (removed len condition)
+            if validated:
                 covered_str = ", ".join(s.title for s in validated)
                 # Build a brief content hint from the KB probes
                 hint_chunks: List[str] = []
@@ -506,6 +515,71 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
         except Exception as e:
             logger.warning(f"KB enrichment step failed (non-critical): {e}")
 
+        # ── Step 3: v0.4.0 — source file coverage check ──────────────────────
+        if source_files:
+            try:
+                uncovered = self._check_source_coverage(validated, source_files)
+                if uncovered:
+                    logger.info(f"   📂 Uncovered sources: {[s.split('/')[-1] for s in uncovered]}")
+                    # Query KB for content from uncovered sources and propose new sections
+                    for src_path in uncovered[:3]:  # limit to 3 uncovered sources
+                        try:
+                            src_results = self.vector_store.query(
+                                src_path.split("/")[-1].replace(".pdf", "").replace("_", " "),
+                                n_results=4,
+                            )
+                            src_chunks = (src_results.get("documents") or [[]])[0]
+                            if not src_chunks:
+                                continue
+                            src_hint = "\n\n".join(src_chunks[:3])[:2000]
+                            covered_str = ", ".join(s.title for s in validated)
+                            prompt = f"""A lecture on "{topic}" currently covers: {covered_str}.
+The following content from source "{src_path.split('/')[-1]}" is NOT yet covered.
+Based on this content, suggest 1-2 additional section topics that would enrich the lecture.
+
+Content excerpt:
+{src_hint}
+
+Return ONLY a JSON array of short topic names in Korean (max 5 words each).
+If the content is already covered, return [].
+Example: ["추가 주제 1", "추가 주제 2"]"""
+                            resp = self.invoke_llm(prompt, phase="curriculum_source_coverage")
+                            raw = resp.content.strip()
+                            if "```json" in raw:
+                                raw = raw.split("```json")[1].split("```")[0].strip()
+                            elif "```" in raw:
+                                raw = raw.split("```")[1].split("```")[0].strip()
+                            import json as _json
+                            new_topics = _json.loads(raw)
+                            if isinstance(new_topics, list):
+                                existing_titles = {s.title.lower() for s in validated}
+                                used_time = sum(s.estimated_time for s in validated)
+                                intro_t = next((s.estimated_time for s in structural if "_intro" in s.id), 5)
+                                concl_t = next((s.estimated_time for s in structural if "_conclusion" in s.id), 5)
+                                remaining = duration - used_time - intro_t - concl_t
+                                time_per = max(10, remaining // max(1, len(new_topics)))
+                                for j, new_title in enumerate(new_topics[:2]):
+                                    if new_title.lower() not in existing_titles:
+                                        new_section = Section(
+                                            id=f"section_src_{j}_{new_title.lower().replace(' ', '_')[:20]}",
+                                            title=new_title,
+                                            topics=[new_title],
+                                            estimated_time=time_per,
+                                            difficulty_level="intermediate",
+                                            learning_outcomes=[
+                                                f"{new_title}를 이해한다",
+                                                f"{new_title}를 적용할 수 있다",
+                                            ],
+                                        )
+                                        validated.append(new_section)
+                                        logger.info(
+                                            f"   ✅ CurriculumDesigner: added source-coverage section '{new_title}'"
+                                        )
+                        except Exception as src_e:
+                            logger.debug(f"Source coverage enrichment failed for '{src_path}': {src_e}")
+            except Exception as cov_e:
+                logger.debug(f"Source coverage check failed (non-critical): {cov_e}")
+
         # Rebuild with structural sections (intro first, conclusion last)
         intro_sections = [s for s in structural if "_intro" in s.id]
         conclusion_sections = [s for s in structural if "_conclusion" in s.id]
@@ -518,6 +592,34 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
             )
 
         return result
+
+    def _check_source_coverage(
+        self,
+        sections: List[Section],
+        source_files: List[str],
+    ) -> List[str]:
+        """
+        v0.4.0: Check which source files have NO chunks matched by any existing section.
+
+        Returns a list of uncovered source file paths.
+        """
+        if not self.vector_store or not source_files:
+            return []
+
+        covered_sources: set = set()
+        for section in sections:
+            try:
+                results = self.vector_store.query(section.title, n_results=5)
+                metas = (results.get("metadatas") or [[]])[0]
+                for meta in metas:
+                    src = meta.get("source", "")
+                    if src:
+                        covered_sources.add(src)
+            except Exception:
+                pass
+
+        uncovered = [s for s in source_files if s and s not in covered_sources]
+        return uncovered
 
     def _build_prerequisite_map(
         self,

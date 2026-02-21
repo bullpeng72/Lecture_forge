@@ -66,8 +66,8 @@ class ImageSelector:
             logger.warning(f"  ⚠️  No images available for section: {section.title}")
             return selected
 
-        # Calculate max images based on section length (1 per 10 minutes, min 2)
-        max_images = max(2, section.estimated_time // 10)
+        # Calculate max images based on section length (v0.4.0: 1 per 8 min, min 3 for subsection distribution)
+        max_images = max(3, section.estimated_time // 8)
         logger.info(f"  🖼️  Selecting up to {max_images} images for section: {section.title}")
 
         # Separate PDF images from search images

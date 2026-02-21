@@ -32,6 +32,40 @@ from lecture_forge.utils.language_utils import detect_language
 from lecture_forge.utils.prompt_manager import load_prompt
 
 
+def parse_markdown_subsections(markdown: str) -> list:
+    """
+    v0.4.0: Split markdown into subsections based on ## / ### headings.
+
+    Returns a list of dicts:
+        [{"heading": "## 소제목", "heading_text": "소제목", "level": 2, "content": "..."}, ...]
+
+    If no headings are found, the entire markdown is returned as a single subsection
+    with an empty heading so the caller can treat it uniformly.
+    """
+    import re as _re
+
+    pattern = _re.compile(r"^(#{2,3})\s+(.+)$", _re.MULTILINE)
+    matches = list(pattern.finditer(markdown))
+
+    if not matches:
+        return [{"heading": "", "heading_text": "", "level": 2, "content": markdown}]
+
+    subsections = []
+    for i, match in enumerate(matches):
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown)
+        subsections.append(
+            {
+                "heading": match.group(0),         # "## 소제목"
+                "heading_text": match.group(2),    # "소제목"
+                "level": len(match.group(1)),       # 2 or 3
+                "content": markdown[start:end].strip(),
+            }
+        )
+
+    return subsections
+
+
 def _build_code_fail_condition(with_code: bool) -> str:
     if with_code:
         return "2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED"
@@ -415,6 +449,13 @@ class ContentWriterAgent(BaseAgent):
         # 5. Count words
         word_count = len(markdown_content.split())
 
+        # v0.4.0: Distribute images across subsections for inline placement
+        subsections = parse_markdown_subsections(markdown_content)
+        subsection_images = self._distribute_images_to_subsections(images, subsections)
+        logger.info(
+            f"   🖼️  Distributed {len(images)} images across {len(subsections)} subsections"
+        )
+
         content = SectionContent(
             section_id=section.id,
             title=section.title,
@@ -425,6 +466,7 @@ class ContentWriterAgent(BaseAgent):
             word_count=word_count,
             estimated_time=section.estimated_time,
             difficulty_level=section.difficulty_level,
+            subsection_images=subsection_images,
         )
 
         logger.info(f"Section '{section.title}': {word_count} words, {len(code_blocks)} code blocks, {len(images)} images")
@@ -483,6 +525,27 @@ class ContentWriterAgent(BaseAgent):
             )
 
         return [doc for _, doc, _ in scored], [m for _, _, m in scored]
+
+    def _distribute_images_to_subsections(
+        self,
+        images: List,
+        subsections: list,
+    ) -> dict:
+        """
+        v0.4.0: Distribute selected images to subsections using round-robin assignment.
+
+        Returns:
+            Dict mapping heading → List[ImageReference]
+        """
+        result = {s["heading"]: [] for s in subsections}
+        if not images or not subsections:
+            return result
+
+        for i, img in enumerate(images):
+            target_heading = subsections[i % len(subsections)]["heading"]
+            result[target_heading].append(img)
+
+        return result
 
     def _query_knowledge(self, section: Section, curriculum: "Curriculum | None" = None) -> tuple:
         """Query vector DB with per-subtopic, cross-lingual, and fallback queries.
@@ -647,8 +710,39 @@ class ContentWriterAgent(BaseAgent):
         # ── Step 4: Metadata reranking — language-matched chunks first (G) ───
         all_docs, all_metas = self._rerank_by_metadata(all_docs, all_metas, section_language)
 
-        # Cap by chunk count, then trim to token budget (M)
+        # Cap is computed early so Step 5 can check against it
         cap = dynamic_n * 2
+
+        # ── Step 5: Source diversity — include chunks from underrepresented sources (v0.4.0) ──
+        if curriculum and hasattr(curriculum, "source_files") and curriculum.source_files:
+            seen_sources = {m.get("source", "") for m in all_metas if m}
+            for source_path in curriculum.source_files:
+                if source_path and source_path not in seen_sources and len(all_docs) < cap:
+                    try:
+                        src_results = self.vector_store.query(
+                            section.title,
+                            n_results=3,
+                            where={"source": source_path},
+                        )
+                        src_docs  = (src_results.get("documents")  or [[]])[0]
+                        src_metas = (src_results.get("metadatas")  or [[]])[0]
+                        src_ids   = (src_results.get("ids")         or [[]])[0]
+                        added = 0
+                        for doc, meta, cid in zip(src_docs, src_metas, src_ids):
+                            if cid not in seen_ids and len(all_docs) < cap:
+                                seen_ids.add(cid)
+                                all_docs.append(doc)
+                                all_metas.append(meta)
+                                added += 1
+                        if added:
+                            seen_sources.add(source_path)
+                            from pathlib import Path as _Path
+                            logger.info(
+                                f"   📎 Source-diversity: +{added} chunks from "
+                                f"'{_Path(source_path).name}'"
+                            )
+                    except Exception:
+                        pass  # where filter not supported by this ChromaDB version
         capped_docs  = all_docs[:cap]
         capped_metas = all_metas[:cap]
         trimmed_docs, trimmed_metas = _trim_contexts_by_tokens(
@@ -701,7 +795,7 @@ class ContentWriterAgent(BaseAgent):
         _lang_text = " ".join(curriculum.learning_objectives) if curriculum.learning_objectives else curriculum.topic
         is_korean = detect_language(_lang_text) == "ko"
         intro_label = "도입부" if is_korean else "Introduction"
-        summary_label = "요약 및 실습" if is_korean else "Summary & Practice"
+        summary_label = "핵심 요약" if is_korean else "Core Summary"
 
         # Prepare template variables
         template_vars = {

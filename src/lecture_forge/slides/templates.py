@@ -676,7 +676,7 @@ class RevealJsTemplate:
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.min.js"></script>
     <script>
         // Reveal.js 초기화
         Reveal.initialize({
@@ -700,30 +700,89 @@ class RevealJsTemplate:
                 theme: 'default',
                 securityLevel: 'loose',
                 // useMaxWidth: true → SVG가 컨테이너 폭을 꽉 채우도록 허용
-                flowchart:    { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+                flowchart:    { useMaxWidth: true, htmlLabels: false, curve: 'basis' },
                 sequence:     { useMaxWidth: true },
                 gantt:        { useMaxWidth: true },
                 classDiagram: { useMaxWidth: true },
                 stateDiagram: { useMaxWidth: true },
             });
 
-            // 현재 슬라이드의 Mermaid 다이어그램만 렌더링 (display:none 문제 방지)
-            function renderCurrentSlideMermaid() {
-                const currentSlide = Reveal.getCurrentSlide();
-                if (!currentSlide) return;
+            // ── Mermaid 렌더링 (Firefox 완전 호환) ────────────────────────
+            // Firefox getBBox() 근본 원인:
+            //   - visibility:hidden / 뷰포트 외부(left:-9999px) 요소 → getBBox()={0,0}
+            //   - dagre 가 노드 크기를 0으로 계산 → translate(undefined,NaN) 경고
+            // 해결책: 실제 보이는 .mermaid div 자체를 render() 대상으로 사용
+            //   - renderCurrentSlideMermaid() 는 현재 표시 슬라이드만 처리하므로
+            //     div 가 뷰포트 안에 있어 getBBox() 가 정확한 치수를 반환함
+            // textContent 캐싱: innerHTML 직렬화의 --> --&gt; 변환 우회
 
-                const mermaidDivs = currentSlide.querySelectorAll('.mermaid:not([data-processed="true"])');
-                if (mermaidDivs.length > 0) {
-                    mermaid.run({ nodes: mermaidDivs });
+            var _mmSeq = 0;
+
+            // 렌더링 전 textContent 로 원본 코드 캐싱 (HTML 직렬화 없음)
+            document.querySelectorAll('.reveal .mermaid').forEach(function(div) {
+                div.dataset.mermaidCode = (div.textContent || '').trim();
+            });
+
+            async function renderDiagramDiv(div, attempt) {
+                var code = div.dataset.mermaidCode;
+                if (!code) return;
+                attempt = attempt || 0;
+                var id = 'mmrd-' + (++_mmSeq);
+
+                try {
+                    var api = (mermaid.mermaidAPI && mermaid.mermaidAPI.render)
+                        ? mermaid.mermaidAPI
+                        : mermaid;  // fallback
+                    // div 자체를 렌더 컨테이너로 전달: 현재 슬라이드 div 는 뷰포트 내
+                    // 가시 상태 → Firefox getBBox() 가 정확한 텍스트 치수를 반환함
+                    var result = await api.render(id, code, div);
+                    // dagre 레이아웃 실패 감지: 성공으로 resolve 되지만 SVG 에
+                    // translate(undefined,NaN) 포함 → 명시적으로 오류 처리 후 재시도
+                    if (!result || !result.svg ||
+                            result.svg.indexOf('translate(undefined, NaN)') !== -1) {
+                        throw new Error('Mermaid layout failed (NaN transforms — retrying)');
+                    }
+                    div.innerHTML = result.svg;
+                    div.dataset.processed = 'true';
+                    if (result.bindFunctions) result.bindFunctions(div);
+                } catch (e) {
+                    div.innerHTML = '';  // 실패한 렌더 아티팩트 정리
+                    console.warn('[Mermaid attempt=' + attempt + ']', e.message || e);
+                    // 재시도: 300ms → 800ms → 1600ms → 3000ms (최대 4회)
+                    var delays = [300, 800, 1600, 3000];
+                    if (attempt < delays.length) {
+                        setTimeout(function() { renderDiagramDiv(div, attempt + 1); }, delays[attempt]);
+                    } else {
+                        // 모든 재시도 실패 시 코드를 pre 블록으로 표시
+                        console.error('[Mermaid] 모든 재시도 실패:', code.slice(0, 60));
+                        div.innerHTML = '<pre style="font-size:0.6em;text-align:left;white-space:pre-wrap;padding:8px;">' +
+                            div.dataset.mermaidCode.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>';
+                    }
                 }
             }
 
-            // 초기 슬라이드 렌더링
-            renderCurrentSlideMermaid();
+            // 현재 슬라이드의 미렌더링 Mermaid 다이어그램 처리
+            function renderCurrentSlideMermaid() {
+                var currentSlide = Reveal.getCurrentSlide();
+                if (!currentSlide) return;
+                Array.from(
+                    currentSlide.querySelectorAll('.mermaid:not([data-processed="true"])')
+                ).forEach(function(div) { renderDiagramDiv(div); });
+            }
 
-            // 슬라이드 전환 시 새 슬라이드의 Mermaid 렌더링
+            // 초기 슬라이드: 폰트 로딩 완료 대기 후 rAF 로 첫 페인트 이후 실행
+            // 첫 로드 시 getBBox() 정확성을 위해 document.fonts.ready 사용
+            var _fontsReady = (typeof document.fonts !== 'undefined')
+                ? document.fonts.ready : Promise.resolve();
+            _fontsReady.then(function() {
+                requestAnimationFrame(function() {
+                    setTimeout(renderCurrentSlideMermaid, 50);
+                });
+            });
+
+            // 슬라이드 전환: CSS 트랜지션(~260ms) 완료 후 렌더링
             Reveal.on('slidechanged', function() {
-                renderCurrentSlideMermaid();
+                setTimeout(renderCurrentSlideMermaid, 300);
             });
 
             // ── 라이트박스 ────────────────────────────────────────────

@@ -51,12 +51,13 @@ Technical API documentation:
 
 ## 📊 Project Status
 
-**Version**: 0.3.8 (Beta Release)
+**Version**: 0.4.0
 **Status**: Production Ready+ (RMC Self-Review)
-**Test Coverage**: ~48% with 827+ test functions
+**Test Coverage**: ~48% with 1,356+ test functions
 **Python**: 3.11, 3.12, 3.13
 
 **Recent Updates:**
+- ✅ **Search Coverage Fix (v0.4.0)** - Full-section search indexing (removed [:500] truncation); `--re-evaluate` HTML stats auto-update
 - ✅ **RMC Self-Review (v0.3.8)** - 2-layer self-review in CurriculumDesigner, ContentWriter, QAAgent; LLM refusal detection
 - ✅ **UI & Slides Enhancement (v0.3.7)** - Lightbox zoom, substring search, diagram full-width, Mermaid 10 API fix
 - ✅ **Code Quality & Reliability (v0.3.6)** - retry utility, base classes, config validation, RAG env-vars
@@ -73,5 +74,5 @@ Technical API documentation:
 
 ---
 
-**Last Updated**: 2026-02-20 (v0.3.8)
+**Last Updated**: 2026-02-22 (v0.4.0)
 **Maintained by**: Sungwoo Kim

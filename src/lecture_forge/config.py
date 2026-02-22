@@ -338,12 +338,14 @@ class Config:
     RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "15"))   # 10 → 15
     # Dynamic n_results bounds: scaled by section duration/difficulty (K)
     RAG_N_RESULTS_MIN: int = int(os.getenv("RAG_N_RESULTS_MIN", "5"))
-    RAG_N_RESULTS_MAX: int = int(os.getenv("RAG_N_RESULTS_MAX", "40"))            # 30 → 40
+    RAG_N_RESULTS_MAX: int = int(os.getenv("RAG_N_RESULTS_MAX", "60"))            # 40 → 60
     # Sparse fallback threshold: trigger broadened queries if fewer chunks found (I)
     RAG_SPARSE_THRESHOLD: int = int(os.getenv("RAG_SPARSE_THRESHOLD", "5"))
     # Maximum context token budget passed to the LLM per section (M)
-    # ~3 chars/token approximation; 24 000 tokens ≈ 72 000 chars of mixed KO/EN text
-    RAG_MAX_CONTEXT_TOKENS: int = int(os.getenv("RAG_MAX_CONTEXT_TOKENS", "24000"))  # 16000 → 24000
+    # ~3 chars/token approximation; 40 000 tokens ≈ 120 000 chars of mixed KO/EN text
+    RAG_MAX_CONTEXT_TOKENS: int = int(os.getenv("RAG_MAX_CONTEXT_TOKENS", "40000"))  # 24000 → 40000
+    # Coverage sweep: minimum ratio of KB chunks that must be referenced across all sections
+    RAG_COVERAGE_MIN_RATIO: float = float(os.getenv("RAG_COVERAGE_MIN_RATIO", "0.70"))
 
     # ===== RAG Similarity & Diversity =====
     # Minimum similarity score to include a result (L2 distance based)
@@ -380,11 +382,6 @@ class Config:
     DIFFICULTY_MULTIPLIER_INTERMEDIATE: float = float(os.getenv("DIFFICULTY_MULTIPLIER_INTERMEDIATE", "1.0"))
     DIFFICULTY_MULTIPLIER_ADVANCED: float = float(os.getenv("DIFFICULTY_MULTIPLIER_ADVANCED", "1.1"))
 
-    # Code examples per time (minutes per example)
-    CODE_EXAMPLES_PER_TIME_BEGINNER: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_BEGINNER", "20"))
-    CODE_EXAMPLES_PER_TIME_INTERMEDIATE: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_INTERMEDIATE", "15"))
-    CODE_EXAMPLES_PER_TIME_ADVANCED: int = int(os.getenv("CODE_EXAMPLES_PER_TIME_ADVANCED", "12"))
-
     # Practice problems per time (minutes per problem)
     PRACTICE_PER_TIME_BEGINNER: int = int(os.getenv("PRACTICE_PER_TIME_BEGINNER", "25"))
     PRACTICE_PER_TIME_INTERMEDIATE: int = int(os.getenv("PRACTICE_PER_TIME_INTERMEDIATE", "20"))
@@ -393,6 +390,8 @@ class Config:
     # Subsections and visuals
     SUBSECTION_MINUTES: int = int(os.getenv("SUBSECTION_MINUTES", "12"))  # Minutes per subsection
     VISUAL_PER_MINUTES: int = int(os.getenv("VISUAL_PER_MINUTES", "10"))  # Minutes per visual
+    # Maximum images to select per subsection (subsection-level image matching)
+    IMAGE_MAX_PER_SUBSECTION: int = int(os.getenv("IMAGE_MAX_PER_SUBSECTION", "1"))
 
     # Word count tolerance
     MIN_WORDS_RATIO: float = float(os.getenv("MIN_WORDS_RATIO", "0.75"))  # Allow 25% under
@@ -403,8 +402,6 @@ class Config:
     CONTENT_READING_WPM: int = int(os.getenv("CONTENT_READING_WPM", "250"))
     # Fraction of lecture time expected to be covered by text (completeness)
     CONTENT_TIME_COVERAGE: float = float(os.getenv("CONTENT_TIME_COVERAGE", "0.7"))
-    # Minutes per code block baseline (1 code block expected per N minutes)
-    CONTENT_CODE_PER_MINUTES: int = int(os.getenv("CONTENT_CODE_PER_MINUTES", "30"))
     # Words per minute bounds for time-alignment score
     CONTENT_WPM_MIN: int = int(os.getenv("CONTENT_WPM_MIN", "150"))
     CONTENT_WPM_MAX: int = int(os.getenv("CONTENT_WPM_MAX", "250"))

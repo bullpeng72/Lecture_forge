@@ -2,93 +2,65 @@
 Improve command - Improve.
 """
 
-import re
 from pathlib import Path
 
 import click
 from rich.panel import Panel
-from rich.prompt import Confirm
 
 from lecture_forge.cli.utils import console
-from lecture_forge.config import Config
 from lecture_forge.slides import SlideConverter
 from lecture_forge.utils import logger
 
 
-def _find_image_dir_from_html(html_path: Path) -> Path:
-    """Extract image directory path from HTML metadata comments."""
-    try:
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-
-        # Look for metadata comment: <!-- image_dir: data/images/session_xxx -->
-        match = re.search(r"<!-- image_dir: (.+?) -->", html_content)
-
-        if match:
-            image_dir = Path(match.group(1))
-            if image_dir.exists():
-                return image_dir
-
-        # Fallback: try to infer from filename
-        filename = html_path.stem
-        parts = filename.rsplit("_", 2)
-        if len(parts) >= 3:
-            topic_part = parts[0]
-            date_part = parts[1]
-
-            # Search for matching directories
-            image_base = Path(Config.DATA_DIR) / "images"
-            if image_base.exists():
-                for img_dir in image_base.iterdir():
-                    if img_dir.is_dir() and topic_part in img_dir.name and date_part[:8] in img_dir.name:
-                        return img_dir
-
-    except Exception as e:
-        logger.error(f"Failed to extract image dir from HTML: {e}")
-
-    return None
-
-
 @click.command()
 @click.argument("lecture_path", type=click.Path(exists=True))
-@click.option(
-    "--enhance-pdf-images",
-    is_flag=True,
-    help="Generate descriptions for PDF images using page text (costs ~$0.04 per 400 images)",
-)
-@click.option("--source-pdf", type=click.Path(exists=True), help="Source PDF file (required for --enhance-pdf-images)")
 @click.option("--to-slides", is_flag=True, help="Convert lecture to presentation slides format (Reveal.js)")
 @click.option("--with-notes", is_flag=True, help="Auto-generate presenter notes for each slide (requires --to-slides, uses LLM)")
 @click.option(
-    "--slide-rewrite",
+    "--re-evaluate",
     is_flag=True,
-    help="Per-section LLM rewrite for slide optimization: produces concise, complete bullets with no truncation (requires --to-slides, uses LLM)",
+    help="KB 기반 품질 재평가 및 콘텐츠 보강 (→ *_enhanced.html)",
 )
-def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_slides: bool, with_notes: bool, slide_rewrite: bool) -> None:
+@click.option(
+    "--quality-level",
+    type=click.Choice(["lenient", "balanced", "strict"]),
+    default="balanced",
+    show_default=True,
+    help="품질 기준 (lenient=70, balanced=80, strict=90)",
+)
+@click.option(
+    "--kb",
+    type=click.Path(exists=True),
+    help="지식 DB 경로 (HTML에 메타데이터 없는 기존 파일용 fallback)",
+)
+def improve(
+    lecture_path: str,
+    to_slides: bool,
+    with_notes: bool,
+    re_evaluate: bool,
+    quality_level: str,
+    kb: str,
+) -> None:
     """
     Improve existing lecture quality with optional enhancements.
 
     Apply post-generation improvements to enhance lecture quality:
-    - Generate descriptions for PDF images using page text inference
-    - Re-match images with better descriptions
-    - Update HTML with additional images
     - Convert lecture to presentation slides format
+    - Re-evaluate quality and supplement with KB content
 
     \b
     Enhancement Options:
-      --enhance-pdf-images  (LEGACY) Re-generate PDF image descriptions
-                            · For old lectures (pre-v0.2.4); auto-describe is on by default
-                            · Cost: ~$0.04 per 400 images
       --to-slides           Convert lecture HTML to Reveal.js presentation slides
                             · Creates a separate *_slides.html file
                             · Splits content into slides; preserves images & diagrams
+                            · Per-section LLM rewrite included (≤35자, 말줄임표 없음)
       --with-notes          Auto-generate presenter notes (requires --to-slides)
                             · LLM writes 2-4 sentences per slide
                             · Press S in browser to open speaker view
-      --slide-rewrite       Per-section LLM rewrite for slide optimization (requires --to-slides)
-                            · Eliminates truncated bullets ending in "…"
-                            · Produces concise, complete bullets (≤35자)
-                            · ~1 extra LLM call per section; adds ~15 seconds
+      --re-evaluate         KB 기반 품질 재평가 후 미반영 내용 보충 추가
+                            · 기존 섹션 보존, 누락 청크를 말미에 추가
+                            · HTML 메타데이터에서 KB 경로 자동 감지
+                            · → *_enhanced.html 생성
 
     \b
     Slide Keyboard Shortcuts:
@@ -103,12 +75,6 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
 
     \b
     Examples:
-      # Enhance PDF images with descriptions
-      $ lecture-forge improve outputs/lecture.html \\
-          --enhance-pdf-images \\
-          --source-pdf "AI Engineering Guidebook.pdf"
-
-    \b
       # Convert to presentation slides
       $ lecture-forge improve outputs/lecture.html --to-slides
 
@@ -117,22 +83,21 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
       $ lecture-forge improve outputs/lecture.html --to-slides --with-notes
 
     \b
-      # Convert with slide-optimized content (no truncation)
-      $ lecture-forge improve outputs/lecture.html --to-slides --slide-rewrite
+      # 기본 재평가 및 보강
+      $ lecture-forge improve outputs/lecture.html --re-evaluate
 
     \b
-      # Combine both enhancements
-      $ lecture-forge improve outputs/lecture.html \\
-          --enhance-pdf-images --source-pdf "doc.pdf" --to-slides
+      # 엄격한 기준으로 재평가
+      $ lecture-forge improve outputs/lecture.html --re-evaluate --quality-level strict
 
     \b
-    Note:
-      - As of v0.2.0+, Location-based image matching is enabled by default
-      - Auto-describe for PDF images is also enabled by default (v0.2.4+)
-      - This command is mainly for legacy lectures or re-enhancement
-      - HTML must be generated by lecture-forge (contains metadata)
-      - Source PDF required for --enhance-pdf-images
-      - Original lecture file will be backed up before modification
+      # 기존 파일 (메타데이터 없음) — KB 경로 수동 지정
+      $ lecture-forge improve outputs/lecture.html --re-evaluate \\
+          --kb ~/Documents/LectureForge/data/vector_db/MyTopic_20260119_...
+
+    \b
+      # 보강 + 슬라이드 변환 동시 적용
+      $ lecture-forge improve outputs/lecture.html --re-evaluate --to-slides
     """
     console.print()
     console.print(Panel.fit("[bold cyan]🔧 LectureForge - Lecture Improvement[/bold cyan]", border_style="cyan"))
@@ -144,83 +109,39 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         console.print(f"[red]❌ Lecture file not found: {lecture_path}[/red]")
         return
 
-    if enhance_pdf_images:
-        if not source_pdf:
-            console.print("[red]❌ --source-pdf required when using --enhance-pdf-images[/red]")
-            console.print("   Example: --source-pdf 'document.pdf'")
-            return
-
-        source_pdf = Path(source_pdf)
-        if not source_pdf.exists():
-            console.print(f"[red]❌ Source PDF not found: {source_pdf}[/red]")
-            return
-
-        # Run PDF image enhancement
-        console.print("[bold]Step 1: Enhancing PDF Images[/bold]")
-        console.print("━" * 50)
-
-        # Find image directory from HTML metadata
-        image_dir = _find_image_dir_from_html(lecture_path)
-
-        if not image_dir:
-            console.print("[red]❌ Could not find image directory from HTML metadata[/red]")
-            console.print("   Make sure the HTML was generated by lecture-forge")
-            return
-
-        console.print(f"   PDF: {source_pdf.name}")
-        console.print(f"   Images: {image_dir}")
-        console.print()
-
-        # Confirm cost
-        console.print("[yellow]⚠️  This will use GPT-4o-mini API (estimated cost: $0.40)[/yellow]")
-        if not Confirm.ask("   Proceed with image enhancement?", default=True):
-            console.print("\n[green]✓ Cancelled[/green]")
-            return
-
-        # Run enhancement
-        from lecture_forge.tools.pdf_image_describer import PDFImageDescriber
-
-        describer = PDFImageDescriber()
-
-        with console.status("[bold green]Generating image descriptions..."):
-            result = describer.enhance_images(pdf_path=str(source_pdf), image_dir=str(image_dir))
-
-        if not result["success"]:
-            console.print(f"[red]❌ Enhancement failed: {result.get('error', 'Unknown error')}[/red]")
-            return
-
-        console.print(f"[green]✅ Enhanced {result['enhanced_count']} images[/green]")
-        console.print(f"[green]💰 Actual cost: ${result['estimated_cost']:.4f}[/green]")
-        console.print()
-
-        # Step 2: Reload and re-generate HTML with new descriptions
-        console.print("[bold]Step 2: Re-matching Images[/bold]")
-        console.print("━" * 50)
-        console.print("   This feature is coming soon!")
-        console.print("   Descriptions have been saved to:")
-        console.print(f"   {result['descriptions_file']}")
-        console.print()
-        console.print("[yellow]💡 Tip: For now, you can regenerate the lecture to use new descriptions[/yellow]")
-
     if with_notes and not to_slides:
         console.print("[yellow]⚠️  --with-notes requires --to-slides. Ignoring --with-notes.[/yellow]")
         console.print()
 
-    if slide_rewrite and not to_slides:
-        console.print("[yellow]⚠️  --slide-rewrite requires --to-slides. Ignoring --slide-rewrite.[/yellow]")
+    if re_evaluate:
+        console.print("[bold]KB 기반 품질 재평가 및 콘텐츠 보강[/bold]")
+        console.print("━" * 50)
+        console.print()
+
+        from lecture_forge.agents.content_enhancer import ContentEnhancer
+
+        enhancer = ContentEnhancer()
+        enhanced_path = enhancer.enhance(
+            html_path=lecture_path,
+            quality_level=quality_level,
+            kb_path=kb,
+        )
+
+        if enhanced_path:
+            console.print(f"[green]✅ 보강 완료: {enhanced_path}[/green]")
+        else:
+            console.print("[red]❌ 콘텐츠 보강 실패[/red]")
         console.print()
 
     if to_slides:
-        # Run slides conversion
         console.print("[bold]Converting to Presentation Slides[/bold]")
         console.print("━" * 50)
         console.print()
 
         slides_path = lecture_path.parent / f"{lecture_path.stem}_slides.html"
 
-        # Use SlideConverter from slides module
         converter = SlideConverter(console=console)
-        success = converter.convert(lecture_path, slides_path, with_notes=with_notes, slide_rewrite=slide_rewrite)
+        success = converter.convert(lecture_path, slides_path, with_notes=with_notes)
 
         if success:
             console.print(f"[green]✅ Slides created: {slides_path}[/green]")
@@ -232,9 +153,7 @@ def improve(lecture_path: str, enhance_pdf_images: bool, source_pdf: str, to_sli
         else:
             console.print(f"[red]❌ Slides conversion failed[/red]")
 
-    if not enhance_pdf_images and not to_slides:
+    if not re_evaluate and not to_slides:
         console.print("[yellow]No improvement options specified[/yellow]")
-        console.print("Use --enhance-pdf-images to generate PDF image descriptions")
+        console.print("Use --re-evaluate to re-evaluate and supplement content")
         console.print("Use --to-slides to convert to presentation format")
-
-

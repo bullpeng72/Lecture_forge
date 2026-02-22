@@ -120,42 +120,6 @@ class TestAssessDifficulty:
 
 # ===== _build_relationships() =====
 
-class TestBuildRelationships:
-    def _make_entity(self, name, entity_type="concept"):
-        from lecture_forge.models.analysis import Entity
-        return Entity(
-            name=name, type=entity_type, description=f"desc: {name}",
-            mentions=1, sources=["test"], difficulty="intermediate",
-        )
-
-    def test_returns_list(self, content_analyzer):
-        entities = [self._make_entity("Topic A"), self._make_entity("Topic B")]
-        result = content_analyzer._build_relationships(entities, "text")
-        assert isinstance(result, list)
-
-    def test_prerequisite_created_for_basic_advanced_pair(self, content_analyzer):
-        from lecture_forge.models.analysis import ConceptRelation
-        basic = self._make_entity("basic introduction")
-        advanced = self._make_entity("advanced optimization")
-        result = content_analyzer._build_relationships([basic, advanced], "text")
-        relation_types = [r.relation_type for r in result]
-        assert "prerequisite" in relation_types
-
-    def test_related_to_for_shared_words(self, content_analyzer):
-        entities = [
-            self._make_entity("machine learning"),
-            self._make_entity("machine vision"),
-        ]
-        result = content_analyzer._build_relationships(entities, "text")
-        relation_types = [r.relation_type for r in result]
-        assert "related_to" in relation_types
-
-    def test_no_relations_for_single_entity(self, content_analyzer):
-        entities = [self._make_entity("lone concept")]
-        result = content_analyzer._build_relationships(entities, "text")
-        assert result == []
-
-
 # ===== _create_clusters() =====
 
 class TestCreateClusters:
@@ -171,17 +135,17 @@ class TestCreateClusters:
             self._make_entity("Concept A", "concept"),
             self._make_entity("Concept B", "concept"),
         ]
-        result = content_analyzer._create_clusters(entities, [])
+        result = content_analyzer._create_clusters(entities)
         assert len(result) == 2
 
     def test_cluster_has_correct_name(self, content_analyzer):
         entities = [self._make_entity("My Topic", "concept")]
-        result = content_analyzer._create_clusters(entities, [])
+        result = content_analyzer._create_clusters(entities)
         assert result[0].name == "My Topic"
 
     def test_no_clusters_for_sub_concepts_only(self, content_analyzer):
         entities = [self._make_entity("Sub A", "sub_concept")]
-        result = content_analyzer._create_clusters(entities, [])
+        result = content_analyzer._create_clusters(entities)
         assert result == []
 
     def test_cluster_includes_related_sub_concepts(self, content_analyzer):
@@ -192,34 +156,8 @@ class TestCreateClusters:
             description="sub", mentions=1,
             sources=["Deep Learning"], difficulty="intermediate",
         )
-        result = content_analyzer._create_clusters([main, sub], [])
+        result = content_analyzer._create_clusters([main, sub])
         assert len(result) == 1
-
-
-# ===== _recommend_images() =====
-
-class TestRecommendImages:
-    def test_returns_dict(self, content_analyzer):
-        result = content_analyzer._recommend_images(["Machine Learning"], [])
-        assert isinstance(result, dict)
-
-    def test_each_topic_has_keywords(self, content_analyzer):
-        result = content_analyzer._recommend_images(["Deep Learning", "NLP"], [])
-        assert "Deep Learning" in result
-        assert "NLP" in result
-
-    def test_machine_learning_gets_extra_keywords(self, content_analyzer):
-        result = content_analyzer._recommend_images(["machine learning"], [])
-        kws = result["machine learning"]
-        assert len(kws) >= 1
-
-    def test_max_3_keywords_per_topic(self, content_analyzer):
-        result = content_analyzer._recommend_images(["neural network"], [])
-        assert len(result["neural network"]) <= 3
-
-    def test_empty_topics_returns_empty_dict(self, content_analyzer):
-        result = content_analyzer._recommend_images([], [])
-        assert result == {}
 
 
 # ===== _extract_key_topics() - exception handling =====
@@ -334,7 +272,7 @@ class TestCreateClustersRelatedAppend:
             sources=["Python List comprehension"],  # Contains both "Python" (main.name) AND "List" (sub.name)
             difficulty="beginner",
         )
-        result = content_analyzer._create_clusters([main, sub], [])
+        result = content_analyzer._create_clusters([main, sub])
         assert len(result) == 1
         # "List" should be in the cluster concepts since it matches the filter
         assert "List" in result[0].concepts

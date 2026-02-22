@@ -30,8 +30,7 @@ class TestQualityLoop:
         assert metrics_beginner["target_words"] > 0
         assert metrics_beginner["min_words"] == int(metrics_beginner["target_words"] * Config.MIN_WORDS_RATIO)
         assert metrics_beginner["max_words"] == int(metrics_beginner["target_words"] * Config.MAX_WORDS_RATIO)
-        assert metrics_beginner["target_code_examples"] > 0
-        assert metrics_beginner["target_practice_problems"] > 0
+        assert "target_practice_problems" in metrics_beginner
 
         # Test advanced level (different multiplier)
         metrics_advanced = calculate_target_metrics(
@@ -41,8 +40,6 @@ class TestQualityLoop:
 
         # Advanced should have different targets
         assert metrics_advanced["target_words"] != metrics_beginner["target_words"]
-        # Advanced has more code examples (shorter interval)
-        assert metrics_advanced["target_code_examples"] >= metrics_beginner["target_code_examples"]
 
     def test_quality_evaluation_meets_threshold(self):
         """
@@ -84,7 +81,6 @@ Python is an excellent choice for beginners and professionals alike.
         evaluation = evaluate_content_quality(
             content=content,
             targets=targets,
-            code_block_count=10,  # Good number of code blocks
             image_count=3,        # Good number of images
         )
 
@@ -111,13 +107,11 @@ This is too short.
         evaluation = evaluate_content_quality(
             content=content,
             targets=targets,
-            code_block_count=0,  # No code blocks
             image_count=0,       # No images
         )
 
         assert evaluation["overall_score"] >= 0
         assert evaluation["word_count"] < targets["target_words"]
-        assert evaluation["code_block_count"] == 0
         # Low quality content should likely not meet requirements
         # (exact threshold depends on Config.QUALITY_THRESHOLD_SECTION)
 

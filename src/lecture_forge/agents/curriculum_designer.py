@@ -64,9 +64,6 @@ class CurriculumDesignerAgent(BaseAgent):
         # 4. Validate sections against the knowledge base and fill coverage gaps
         sections = self._validate_and_enrich_sections(sections, duration, audience_level, topic, source_files=source_files)
 
-        # 5. Build prerequisite map
-        prerequisite_map = self._build_prerequisite_map(sections, analysis_result)
-
         # Calculate total estimated time
         total_time = sum(section.estimated_time for section in sections)
 
@@ -77,7 +74,6 @@ class CurriculumDesignerAgent(BaseAgent):
             learning_objectives=learning_objectives,
             sections=sections,
             total_estimated_time=total_time,
-            prerequisite_map=prerequisite_map,
             source_files=source_files,  # v0.4.0: for content writer diversity query
         )
 
@@ -421,97 +417,11 @@ Rules:
                 logger.debug(f"KB validation query failed for '{section.title}': {e}")
                 validated.append(section)
 
-        # ── Step 2: discover uncovered KB topics ─────────────────────────────
+        # ── Step 2: discover uncovered KB topics (v0.5.1: full-KB uniform sampling) ──
         try:
-            existing_titles = {s.title.lower() for s in validated}
-
-            # Probe the KB with diverse queries and collect chunk metadata
-            probe_queries = [
-                topic + " overview",
-                topic + " advanced",
-                topic + " application",
-                topic + " comparison",
-                topic + " implementation",
-            ]
-            candidate_topics: Dict[str, int] = {}  # title → hit count
-
-            for probe in probe_queries:
-                try:
-                    results = self.vector_store.query(probe, n_results=8)
-                    metas = (results.get("metadatas") or [[]])[0]
-                    for meta in metas:
-                        # Each chunk carries a 'source' key; group by source filename
-                        src = str(meta.get("source", "")).split("/")[-1]
-                        if src:
-                            candidate_topics[src] = candidate_topics.get(src, 0) + 1
-                except Exception:
-                    pass
-
-            # v0.4.0: Always run enrichment regardless of section count (removed len condition)
-            if validated:
-                covered_str = ", ".join(s.title for s in validated)
-                # Build a brief content hint from the KB probes
-                hint_chunks: List[str] = []
-                try:
-                    hint_results = self.vector_store.query(topic, n_results=6)
-                    hint_chunks = (hint_results.get("documents") or [[]])[0]
-                except Exception:
-                    pass
-
-                if hint_chunks:
-                    content_hint = "\n\n".join(hint_chunks[:4])[:3000]
-                    prompt = f"""A lecture on "{topic}" currently covers: {covered_str}.
-Based on the following knowledge base excerpts, list up to 3 additional important topics
-that are clearly present in the source material but NOT already covered.
-
-Knowledge base excerpts:
-{content_hint}
-
-Return ONLY a JSON array of short topic names in Korean (max 5 words each).
-If no important topics are missing, return an empty array [].
-Example: ["추가 주제 1", "추가 주제 2"]"""
-
-                    try:
-                        response = self.invoke_llm(prompt, phase="curriculum_kb_enrichment")
-                        raw = response.content.strip()
-                        if "```json" in raw:
-                            raw = raw.split("```json")[1].split("```")[0].strip()
-                        elif "```" in raw:
-                            raw = raw.split("```")[1].split("```")[0].strip()
-
-                        new_topics = json.loads(raw)
-                        if isinstance(new_topics, list):
-                            # Time budget: remaining after existing sections
-                            used_time = sum(s.estimated_time for s in validated)
-                            intro_time = next(
-                                (s.estimated_time for s in structural if "_intro" in s.id), 5
-                            )
-                            conclusion_time = next(
-                                (s.estimated_time for s in structural if "_conclusion" in s.id), 5
-                            )
-                            remaining = duration - used_time - intro_time - conclusion_time
-                            time_per_new = max(10, remaining // max(1, len(new_topics)))
-
-                            for i, new_title in enumerate(new_topics[:3]):
-                                if new_title.lower() not in existing_titles:
-                                    new_section = Section(
-                                        id=f"section_kb_{i}_{new_title.lower().replace(' ', '_')[:20]}",
-                                        title=new_title,
-                                        topics=[new_title],
-                                        estimated_time=time_per_new,
-                                        difficulty_level="intermediate",
-                                        learning_outcomes=[
-                                            f"{new_title}를 이해한다",
-                                            f"{new_title}를 적용할 수 있다",
-                                        ],
-                                    )
-                                    validated.append(new_section)
-                                    logger.info(
-                                        f"   ✅ CurriculumDesigner: added KB-discovered section '{new_title}'"
-                                    )
-                    except Exception as e:
-                        logger.debug(f"KB enrichment LLM call failed: {e}")
-
+            validated = self._enrich_curriculum_from_full_kb(
+                validated, duration, topic, structural
+            )
         except Exception as e:
             logger.warning(f"KB enrichment step failed (non-critical): {e}")
 
@@ -593,6 +503,87 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
 
         return result
 
+    def _enrich_curriculum_from_full_kb(
+        self,
+        validated: List[Section],
+        duration: int,
+        topic: str,
+        structural: List[Section],
+    ) -> List[Section]:
+        """v0.5.1: Enrich curriculum by sampling the full KB uniformly (30 chunks).
+
+        Replaces the probe_queries approach: instead of 5 fixed queries retrieving ~6 chunks each,
+        we sample the entire KB at equal intervals to capture diverse content that probe queries miss.
+        """
+        try:
+            all_items = self.vector_store.collection.get(include=["documents"])
+            all_docs = all_items.get("documents") or []
+        except Exception as e:
+            logger.debug(f"KB full-sample get failed: {e}")
+            return validated
+
+        if not all_docs:
+            return validated
+
+        # Uniform-interval sampling for diversity
+        step = max(1, len(all_docs) // 30)
+        sampled = [all_docs[i][:300] for i in range(0, len(all_docs), step)][:30]
+        sample_text = "\n---\n".join(sampled)[:6000]
+
+        existing_titles = {s.title.lower() for s in validated}
+        covered_str = ", ".join(s.title for s in validated)
+
+        prompt = f"""강의 주제: "{topic}"
+현재 커리큘럼 섹션: {covered_str}
+
+강의 자료 전체 내용의 대표 샘플:
+{sample_text}
+
+위 자료에 있으나 커리큘럼에서 다루지 않는 중요 기술 토픽을 최대 5개 한국어로 나열.
+없으면 빈 배열. JSON: ["토픽1", "토픽2"]"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="curriculum_kb_enrichment")
+            raw = response.content.strip()
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0].strip()
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0].strip()
+
+            new_topics = json.loads(raw)
+            if isinstance(new_topics, list):
+                used_time = sum(s.estimated_time for s in validated)
+                intro_time = next(
+                    (s.estimated_time for s in structural if "_intro" in s.id), 5
+                )
+                conclusion_time = next(
+                    (s.estimated_time for s in structural if "_conclusion" in s.id), 5
+                )
+                remaining = duration - used_time - intro_time - conclusion_time
+                time_per_new = max(10, remaining // max(1, len(new_topics)))
+
+                for i, new_title in enumerate(new_topics[:5]):
+                    if new_title.lower() not in existing_titles:
+                        new_section = Section(
+                            id=f"section_kb_{i}_{new_title.lower().replace(' ', '_')[:20]}",
+                            title=new_title,
+                            topics=[new_title],
+                            estimated_time=time_per_new,
+                            difficulty_level="intermediate",
+                            learning_outcomes=[
+                                f"{new_title}를 이해한다",
+                                f"{new_title}를 적용할 수 있다",
+                            ],
+                        )
+                        validated.append(new_section)
+                        logger.info(
+                            f"   ✅ CurriculumDesigner: added KB-discovered section '{new_title}'"
+                        )
+        except Exception as e:
+            logger.debug(f"KB enrichment LLM call failed: {e}")
+
+        return validated
+
     def _check_source_coverage(
         self,
         sections: List[Section],
@@ -621,32 +612,3 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
         uncovered = [s for s in source_files if s and s not in covered_sources]
         return uncovered
 
-    def _build_prerequisite_map(
-        self,
-        sections: List[Section],
-        analysis_result: AnalysisResult,
-    ) -> Dict[str, List[str]]:
-        """Build prerequisite map between sections."""
-        prerequisite_map = {}
-
-        # Simple heuristic: earlier sections are prerequisites for later ones
-        # with similar topics
-        for i, section in enumerate(sections):
-            prerequisites = []
-
-            # Check if any earlier section covers prerequisite topics
-            for j, earlier_section in enumerate(sections[:i]):
-                # Check for prerequisite relationships
-                for relation in analysis_result.concept_relations:
-                    if (
-                        relation.relation_type == "prerequisite"
-                        and relation.target in section.topics
-                        and relation.source in earlier_section.topics
-                    ):
-                        prerequisites.append(earlier_section.id)
-                        break
-
-            if prerequisites:
-                prerequisite_map[section.id] = list(set(prerequisites))
-
-        return prerequisite_map

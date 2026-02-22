@@ -1,19 +1,17 @@
 """
-Smoke tests for QualityEvaluatorAgent.
+Smoke tests for QualityEvaluator.
 """
-
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
+from lecture_forge.quality.evaluator import QualityEvaluator
 from lecture_forge.models.lecture import Lecture, SectionContent
 
 
 @pytest.fixture
 def quality_evaluator(test_env_vars, mock_llm):
-    """Create QualityEvaluatorAgent instance."""
-    return QualityEvaluatorAgent()
+    """Create QualityEvaluator instance."""
+    return QualityEvaluator()
 
 
 @pytest.fixture
@@ -42,34 +40,14 @@ def sample_lecture():
 
 
 def test_quality_evaluator_initialization(quality_evaluator):
-    """Test that QualityEvaluatorAgent initializes correctly."""
+    """Test that QualityEvaluator initializes correctly."""
     assert quality_evaluator is not None
-    assert quality_evaluator.agent_name == "QualityEvaluatorAgent"
 
 
-def test_evaluate_lecture(quality_evaluator, sample_lecture, mock_llm):
-    """Test lecture quality evaluation."""
-    with patch.object(quality_evaluator, "llm") as mock_llm_instance:
-        mock_response = MagicMock()
-        mock_response.content = """{
-  "overall_score": 85,
-  "passed": true,
-  "dimension_scores": {
-    "content_completeness": 85,
-    "logical_flow": 80,
-    "time_alignment": 90,
-    "level_appropriateness": 85,
-    "visual_quality": 75,
-    "technical_accuracy": 90
-  },
-  "issues": [],
-  "revision_strategy": "minor_refinements"
-}"""
-        mock_response.response_metadata = {
-            "token_usage": {"prompt_tokens": 300, "completion_tokens": 100, "total_tokens": 400}
-        }
-        mock_llm_instance.invoke.return_value = mock_response
+def test_evaluate_lecture(quality_evaluator, sample_lecture):
+    """Test lecture quality evaluation returns a valid result."""
+    result = quality_evaluator.evaluate(lecture=sample_lecture)
 
-        result = quality_evaluator.evaluate(lecture=sample_lecture)
-
-        assert result is not None
+    assert result is not None
+    assert hasattr(result, "overall_score")
+    assert 0 <= result.overall_score <= 100

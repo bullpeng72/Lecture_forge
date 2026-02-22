@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
+from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.models.lecture import MermaidDiagram, SectionContent
 from lecture_forge.utils import logger
 from lecture_forge.utils.mermaid_validator import MermaidValidator, clean_mermaid_code
@@ -20,12 +21,17 @@ class DiagramGeneratorAgent(BaseAgent):
         self.validator = MermaidValidator()
         logger.info("Initializing Diagram Generator Agent with validator")
 
-    def generate_diagrams(self, section_contents: List[SectionContent]) -> List[SectionContent]:
+    def generate_diagrams(
+        self,
+        section_contents: List[SectionContent],
+        curriculum: Optional[Curriculum] = None,
+    ) -> List[SectionContent]:
         """
         Generate diagrams for sections and add them to section content.
 
         Args:
             section_contents: List of section contents
+            curriculum: Optional curriculum for section topic context (v0.5.0)
 
         Returns:
             Updated list of section contents with diagrams
@@ -37,6 +43,11 @@ class DiagramGeneratorAgent(BaseAgent):
             if "intro" in section.section_id.lower() or "conclusion" in section.section_id.lower():
                 continue
 
+            # v0.5.0: resolve matching Section from curriculum (same index, safe fallback)
+            section_obj: Optional[Section] = None
+            if curriculum and i < len(curriculum.sections):
+                section_obj = curriculum.sections[i]
+
             # v0.4.0: generate multiple diagrams based on section length
             num_diagrams = min(
                 Config.DIAGRAM_MAX_PER_SECTION,
@@ -45,7 +56,9 @@ class DiagramGeneratorAgent(BaseAgent):
             logger.info(f"Generating {num_diagrams} diagram(s) for section: {section.title} ({section.estimated_time} min)")
 
             for diagram_idx in range(num_diagrams):
-                diagram = self._generate_diagram_for_section(section, diagram_idx=diagram_idx)
+                diagram = self._generate_diagram_for_section(
+                    section, diagram_idx=diagram_idx, section_obj=section_obj
+                )
                 if diagram:
                     section.diagrams.append(diagram)
                     logger.info(f"  ✅ Generated {diagram.diagram_type} diagram (#{diagram_idx + 1})")
@@ -55,21 +68,28 @@ class DiagramGeneratorAgent(BaseAgent):
         return section_contents
 
     def _generate_diagram_for_section(
-        self, section: SectionContent, diagram_idx: int = 0
+        self,
+        section: SectionContent,
+        diagram_idx: int = 0,
+        section_obj: Optional[Section] = None,
     ) -> Optional[MermaidDiagram]:
         """Generate a Mermaid diagram with validation and retry.
 
         Args:
-            section: Section to generate diagram for
+            section: Section content to generate diagram for
             diagram_idx: Index within section (0 = primary, 1+ = secondary types)
+            section_obj: Optional curriculum Section for topic/RAG context (v0.5.0)
         """
         max_retries = 3
-        content_preview = section.markdown_content[:3000] if len(section.markdown_content) > 3000 else section.markdown_content
+        content_preview = section.markdown_content[:6000] if len(section.markdown_content) > 6000 else section.markdown_content
 
         for attempt in range(max_retries):
             try:
                 # Generate diagram
-                mermaid_code = self._call_llm_for_diagram(section, content_preview, attempt, diagram_idx=diagram_idx)
+                mermaid_code = self._call_llm_for_diagram(
+                    section, content_preview, attempt,
+                    diagram_idx=diagram_idx, section_obj=section_obj,
+                )
 
                 if not mermaid_code:
                     continue
@@ -120,15 +140,21 @@ class DiagramGeneratorAgent(BaseAgent):
 
         # v0.4.0: All retries failed — use fallback mindmap instead of skipping
         logger.warning(f"  ⚠️ All {max_retries} attempts failed - using template fallback")
-        return self._generate_fallback_diagram(section, diagram_idx=diagram_idx)
+        return self._generate_fallback_diagram(section, diagram_idx=diagram_idx, section_obj=section_obj)
 
     def _call_llm_for_diagram(
-        self, section: SectionContent, content_preview: str, attempt: int, diagram_idx: int = 0
+        self,
+        section: SectionContent,
+        content_preview: str,
+        attempt: int,
+        diagram_idx: int = 0,
+        section_obj: Optional[Section] = None,
     ) -> str:
         """Call LLM to generate diagram with improved prompt.
 
         diagram_idx=0: primary flowchart (existing logic)
         diagram_idx>0: secondary type (sequence or mindmap)
+        section_obj: Optional curriculum Section for topic list and RAG context (v0.5.0)
         """
         # v0.4.0: secondary diagrams use different types
         if diagram_idx > 0:
@@ -157,13 +183,26 @@ class DiagramGeneratorAgent(BaseAgent):
 - Follow the template EXACTLY
 """
 
+        # v0.5.0: enrich prompt with section topics and RAG key chunks
+        topics_text = ""
+        if section_obj and section_obj.topics:
+            topics_text = "\n## 핵심 토픽:\n" + "\n".join(f"- {t}" for t in section_obj.topics)
+
+        rag_context = ""
+        if section.rag_key_chunks:
+            top_chunks = section.rag_key_chunks[:3]
+            rag_context = "\n\n## 원문 참고 자료:\n" + "\n---\n".join(
+                chunk[:400] for chunk in top_chunks
+            )
+
         prompt = f"""Create a DETAILED FLOWCHART using SPECIFIC TERMS from the content.
 
 **Section:** {section.title}
 **Type:** {section_type}
+{topics_text}
 
-**Content (first 3000 chars):**
-{content_preview}
+**Content (first 6000 chars):**
+{content_preview}{rag_context}
 
 **🎯 YOUR TASK: Extract CONCRETE concepts from the content above and show their relationships.**
 
@@ -679,38 +718,45 @@ Return ONLY the mindmap code (no markdown fences, no explanations):"""
         return response.content.strip()
 
     def _generate_fallback_diagram(
-        self, section: SectionContent, diagram_idx: int = 0
+        self,
+        section: SectionContent,
+        diagram_idx: int = 0,
+        section_obj: Optional[Section] = None,
     ) -> Optional[MermaidDiagram]:
         """
-        v0.4.0: LLM 실패 시 키워드 기반 단순 mindmap 생성 (LLM 호출 없음).
+        v0.5.0: LLM 실패 시 키워드/토픽 기반 구조화된 flowchart 생성 (LLM 호출 없음).
 
-        Uses _extract_keywords_simple() since SectionContent has no .topics attribute.
+        Prefers section_obj.topics for node labels; falls back to keyword extraction.
         Returns None only if no usable keywords can be extracted.
         """
         section_type = self._detect_section_type(section.title, section.markdown_content[:500])
-        keywords = self._extract_keywords_simple(section.markdown_content, section.title, section_type)
 
-        if not keywords:
+        # v0.5.0: use curriculum topics if available for meaningful labels
+        if section_obj and section_obj.topics:
+            topics = [self._clean_text_for_mermaid(t)[:30] for t in section_obj.topics if t]
+            topics = [t for t in topics if t]
+        else:
+            topics = self._extract_keywords_simple(section.markdown_content, section.title, section_type)
+
+        if not topics:
             return None
 
-        root = self._clean_text_for_mermaid(section.title)[:20] or "핵심개념"
-        topic_lines = []
-        for topic in keywords[:6]:
-            safe = self._clean_text_for_mermaid(topic)[:15]
-            if safe:
-                topic_lines.append(f"        {safe}")
+        # Build a simple flowchart TD from topics list
+        root = self._clean_text_for_mermaid(section.title)[:25] or "핵심개념"
+        lines = ["flowchart TD", f"    ROOT[{root}]"]
+        for i, topic in enumerate(topics[:6]):
+            node_id = chr(65 + i)  # A, B, C, ...
+            lines.append(f"    {node_id}[{topic}]")
+            lines.append(f"    ROOT --> {node_id}")
 
-        if not topic_lines:
-            return None
-
-        mermaid_code = f"mindmap\n    root(({root}))\n" + "\n".join(topic_lines)
+        mermaid_code = "\n".join(lines)
 
         diagram_suffix = f"_{diagram_idx}_fallback" if diagram_idx > 0 else "_fallback"
         return MermaidDiagram(
             id=f"diagram_{section.section_id}{diagram_suffix}",
             title=f"{section.title} 개념 구조",
             mermaid_code=mermaid_code,
-            diagram_type="mindmap",
+            diagram_type="flowchart",
         )
 
     def _evaluate_sequence_quality(self, mermaid_code: str) -> dict:

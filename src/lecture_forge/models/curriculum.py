@@ -29,3 +29,4 @@ class Curriculum(BaseModel):
     total_estimated_time: int = 0
     prerequisite_map: Dict[str, List[str]] = Field(default_factory=dict)  # section_id -> prerequisite section_ids
     source_files: List[str] = Field(default_factory=list)  # v0.4.0: source file paths for coverage tracking
+    chunk_assignments: Dict[str, List[str]] = Field(default_factory=dict)  # v0.5.1: section_id → pre-assigned chunk texts

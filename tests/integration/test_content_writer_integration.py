@@ -27,10 +27,8 @@ class TestContentWriterIntegration:
         agent = ContentWriterAgent()
 
         assert hasattr(agent, 'image_selector')
-        assert hasattr(agent, 'code_generator')
         assert hasattr(agent, 'content_expander')
         assert isinstance(agent.image_selector, ImageSelector)
-        assert isinstance(agent.code_generator, CodeGenerator)
         assert isinstance(agent.content_expander, ContentExpander)
 
     def test_image_selector_integration(self):
@@ -51,8 +49,6 @@ class TestContentWriterIntegration:
         agent = ContentWriterAgent(vector_store=mock_vector_store)
 
         # Verify components have access to LLM and vector store
-        assert agent.code_generator.llm is not None
-        assert agent.code_generator.vector_store == mock_vector_store
         assert agent.content_expander.llm is not None
         assert agent.content_expander.vector_store == mock_vector_store
 
@@ -201,33 +197,14 @@ console.log("Hello");
         assert blocks[1].language == "javascript"
         assert "Hello, World!" in blocks[0].code
 
-    def test_generate_code_examples_with_context(self):
-        """Test code generation with RAG context."""
-        mock_vector_store = Mock()
-        generator = CodeGenerator(vector_store=mock_vector_store)
-
-        section = Section(
-            id="s1",
-            title="Python Basics",
-            topics=["variables", "functions"],
-            learning_objectives=["Learn Python"],
-            estimated_time=30,
-            difficulty_level="beginner",
-        )
-        curriculum = Curriculum(
-            topic="Programming",
-            duration=60,
-            audience_level="beginner",
-            sections=[section],
-        )
-
-        contexts = ["Python is a programming language", "Functions are reusable code"]
-
-        with patch.object(generator, 'invoke_llm', return_value=Mock(content="```python\nprint('test')\n```")):
-            result = generator.generate_code_examples(section, curriculum, contexts, num_examples=2)
-
-        assert isinstance(result, str)
-        assert len(result) > 0
+    def test_extract_code_blocks_multiple_languages(self):
+        """Test code block extraction with multiple languages."""
+        from lecture_forge.agents.content_writer.code_generator import extract_code_blocks
+        markdown = "```python\nprint('test')\n```\n```bash\necho hello\n```"
+        blocks = extract_code_blocks(markdown)
+        assert len(blocks) == 2
+        assert blocks[0].language == "python"
+        assert blocks[1].language == "bash"
 
 
 class TestContentExpanderIntegration:

@@ -154,8 +154,9 @@ def test_write_all_sections(content_writer, sample_curriculum, mock_llm):
             assert len(content.markdown_content) > 0
 
 
-def test_extract_code_blocks(content_writer):
+def test_extract_code_blocks():
     """Test code block extraction from markdown."""
+    from lecture_forge.agents.content_writer.code_generator import extract_code_blocks
     markdown_with_code = """
 # Title
 
@@ -172,7 +173,7 @@ More text.
 console.log("Hello");
 ```
 """
-    code_blocks = content_writer.extract_code_blocks(markdown_with_code)
+    code_blocks = extract_code_blocks(markdown_with_code)
 
     # Assertions
     assert len(code_blocks) == 2

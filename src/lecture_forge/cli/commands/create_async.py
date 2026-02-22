@@ -19,7 +19,7 @@ from lecture_forge.agents.curriculum_designer import CurriculumDesignerAgent
 from lecture_forge.agents.diagram_generator import DiagramGeneratorAgent
 from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
 from lecture_forge.agents.image_collector import ImageCollectorAgent
-from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
+from lecture_forge.quality.evaluator import QualityEvaluator
 from lecture_forge.agents.revision_agent import RevisionAgent
 from lecture_forge.cli.utils import console, display_token_usage
 from lecture_forge.config import Config
@@ -216,7 +216,6 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
         writer = ContentWriterAgent(
             vector_store=content_agent.vector_store,
-            with_code=inputs.get("with_code", False),
         )
         section_contents = writer.write_all_sections(
             curriculum=curriculum,
@@ -228,7 +227,7 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         # Phase 4b: Diagram Generation
         task4b = progress.add_task("[cyan]📊 Phase 4b: Generating diagrams...", total=None)
         diagram_gen = DiagramGeneratorAgent()
-        section_contents = diagram_gen.generate_diagrams(section_contents)
+        section_contents = diagram_gen.generate_diagrams(section_contents, curriculum=curriculum)
         total_diagrams = sum(len(sc.diagrams) for sc in section_contents)
         progress.update(task4b, completed=True)
         console.print(f"   ✅ Diagrams generated: {total_diagrams}")
@@ -257,9 +256,8 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         )
         max_iterations = Config.MAX_ITERATIONS
 
-        with_code = inputs.get("with_code", False)
-        evaluator = QualityEvaluatorAgent(with_code=with_code)
-        revision_agent = RevisionAgent(with_code=with_code)
+        evaluator = QualityEvaluator()
+        revision_agent = RevisionAgent()
 
         task5 = progress.add_task(
             f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None
@@ -387,7 +385,6 @@ async def _create_async(
     output,
     include_pdf_images,
     auto_describe_images,
-    with_code: bool = False,
     existing_kb=None,
     kb_mode: str = "new",
 ):
@@ -418,7 +415,6 @@ async def _create_async(
     inputs["output_name"] = output
     inputs["include_pdf_images"] = include_pdf_images
     inputs["auto_describe_images"] = auto_describe_images
-    inputs["with_code"] = with_code
     inputs["existing_kb_path"] = existing_kb if existing_kb else inputs.get("existing_kb_path")
     inputs["kb_mode"] = kb_mode if existing_kb else inputs.get("kb_mode", "new")
 

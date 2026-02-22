@@ -148,7 +148,7 @@ flowchart TD
 6. **ContentWriterAgent** - Write content using RAG (refactored)
 7. **DiagramGeneratorAgent** - Generate Mermaid diagrams
 8. **HTMLAssemblerAgent** - Assemble final HTML
-9. **QualityEvaluatorAgent** - Evaluate quality (6 dimensions)
+9. **QualityEvaluator** - Evaluate quality (6 dimensions)
 10. **RevisionAgent** - Improve content
 11. **QAAgent** - Interactive Q&A with RAG
 
@@ -233,7 +233,7 @@ CurriculumDesigner (structure planning)
     ↓
 ContentWriter (RAG query → write sections)
     ├─ ImageSelector (select relevant images)
-    ├─ CodeGenerator (generate code examples)
+    ├─ CodeGenerator (code block extraction)
     ├─ ContentExpander (improve quality)
     └─ [RMC] _review_content_with_rmc: conceptual leaps, clarity, flow, repetition
     ↓
@@ -531,5 +531,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-02-19
-**Version**: 0.3.8
+**Last Updated**: 2026-02-22
+**Version**: 0.4.0

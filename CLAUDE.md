@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.3.8 | **최종 수정**: 2026-02-20
+> **버전**: 0.4.0 | **최종 수정**: 2026-02-22
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -20,12 +20,13 @@
 8. **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 9. **자동 품질 보증**: 6차원 평가 + 반복적 개선 (최대 3회)
 10. **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 이미지/다이어그램 클릭 확대
-11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (`--to-slides`, `--with-notes`, `--slide-rewrite`)
-12. **사용자 친화적 디렉토리**: `~/Documents/LectureForge/` + `home` 커맨드로 빠른 접근
-13. **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
-14. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿
-15. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
-16. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
+11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (`--to-slides`, `--with-notes`) — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음)
+12. **KB 기반 재평가·보충**: 기존 강의 품질 재평가 + 미반영 청크 보충 추가 (`--re-evaluate`, `→ *_enhanced.html`)
+13. **사용자 친화적 디렉토리**: `~/Documents/LectureForge/` + `home` 커맨드로 빠른 접근
+14. **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
+15. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿
+16. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
+17. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -88,7 +89,7 @@ flowchart TD
 |---------|------|----------|
 | **Content Collector** 📚 | 텍스트 수집 | PDF 파싱, 웹 크롤링, 검색, 벡터화 |
 | **Image Collector** 🖼️ | 이미지 수집 | PDF/웹 이미지 추출, API 검색, 중복 제거 |
-| **Content Analyzer** 🔍 | 컨텐츠 분석 | 엔티티 추출, 지식 그래프, 난이도 분석 |
+| **Content Analyzer** 🔍 | 컨텐츠 분석 | 엔티티 추출, 토픽 클러스터, 난이도 분석 |
 | **Curriculum Designer** 📋 | 강의 설계 | 학습 목표, 섹션 분할, 시간 배분, RMC 검토 |
 | **Content Writer** ✍️ | 컨텐츠 생성 | RAG 기반 섹션별 작성, 이미지 배치, RMC 검토 |
 | **Diagram Generator** 📊 | 다이어그램 | Mermaid 코드 자동 생성 |
@@ -179,7 +180,7 @@ prompt = load_prompt(
 )
 ```
 
-3개 템플릿: `content_generation`, `content_expansion`, `code_examples_generation`
+2개 템플릿: `content_generation`, `content_expansion`
 
 ---
 
@@ -269,8 +270,9 @@ lecture-forge edit-images <html_path> -o output   # 출력 파일 지정
 # ===== IMPROVE: 강의 향상 =====
 lecture-forge improve <html_path> --to-slides              # 슬라이드 변환
 lecture-forge improve <html_path> --to-slides --with-notes # 발표자 노트 포함
-lecture-forge improve <html_path> --to-slides --slide-rewrite  # 슬라이드 최적화 재작성
-lecture-forge improve <html_path> --enhance-pdf-images --source-pdf <pdf>  # PDF 이미지 보강 (레거시)
+lecture-forge improve <html_path> --re-evaluate            # KB 기반 재평가 + 보충 (→ *_enhanced.html)
+lecture-forge improve <html_path> --re-evaluate --quality-level strict  # 엄격한 기준
+lecture-forge improve <html_path> --re-evaluate --kb <vector_db_path>   # KB 수동 지정
 
 # ===== CLEANUP: 지식베이스 정리 =====
 lecture-forge cleanup                             # 대화형 선택
@@ -355,7 +357,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (827개+ 테스트, ~48% 커버리지)
+A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 
 ---
 
@@ -380,7 +382,7 @@ A: `pytest tests/ -v` (827개+ 테스트, ~48% 커버리지)
 | 에이전트 | 10개 |
 | 도구 | 9개 |
 | CLI 명령어 | 7개 |
-| 테스트 | 827개+, ~48% 커버리지 |
+| 테스트 | 1,356+, ~48% 커버리지 |
 | Type Hints | 71% (207/292 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -391,6 +393,16 @@ A: `pytest tests/ -v` (827개+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
+
+- 🔍 **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
+- 📊 **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`)
+  - `_compute_updated_stats()`: 보강 완료 soup에서 단어수·이미지수·다이어그램수 재계산
+  - `_update_stats_in_html()`: 사이드바·헤더 배지·푸터 통계 수치 교체
+  - 🕐 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
+- 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
+- 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
 
 ### v0.3.8 (2026-02-20) - 🧠 RMC 자기검토
 

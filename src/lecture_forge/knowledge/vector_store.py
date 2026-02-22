@@ -118,3 +118,39 @@ class VectorStore:
             "document_count": count,
             "db_path": str(self.db_path),
         }
+
+    def get_total_chunk_count(self) -> int:
+        """Return total number of chunks stored in the collection."""
+        return self.collection.count()
+
+    def get_unused_chunks(self, used_ids: set, n: int = 50) -> tuple:
+        """
+        Return chunks that have not been used in content generation.
+
+        Args:
+            used_ids: Set of chunk IDs already referenced during writing
+            n: Maximum number of unused chunks to return
+
+        Returns:
+            Tuple of (documents, metadatas) for unused chunks
+        """
+        try:
+            all_items = self.collection.get(include=["documents", "metadatas"])
+        except Exception as e:
+            logger.warning(f"get_unused_chunks failed: {e}")
+            return [], []
+
+        all_docs = all_items.get("documents") or []
+        all_metas = all_items.get("metadatas") or []
+        all_ids = all_items.get("ids") or []
+
+        unused_docs = []
+        unused_metas = []
+        for doc, meta, cid in zip(all_docs, all_metas, all_ids):
+            if cid not in used_ids:
+                unused_docs.append(doc)
+                unused_metas.append(meta)
+                if len(unused_docs) >= n:
+                    break
+
+        return unused_docs, unused_metas

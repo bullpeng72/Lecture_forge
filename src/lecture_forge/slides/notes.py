@@ -129,20 +129,22 @@ class SlideNotesGenerator:
                 aside.string = notes_text
                 sec.append(aside)
 
+        # BeautifulSoup's str() encodes text-node '>' as '&gt;', which breaks
+        # Mermaid syntax (e.g. 'A --> B' becomes 'A --&gt; B').
+        # Fix: stash each mermaid div's text behind a plain-ASCII placeholder
+        # BEFORE serialisation, then restore after.  O(n) — no regex backtracking.
+        mermaid_store: dict[str, str] = {}
+        for idx, mdiv in enumerate(soup.find_all("div", class_="mermaid")):
+            placeholder = f"MERMAIDPLACEHOLDER{idx}END"
+            mermaid_store[placeholder] = mdiv.get_text()
+            mdiv.clear()
+            mdiv.string = placeholder   # ASCII-only → BS4 won't alter it
+
         result = str(soup)
 
-        # BeautifulSoup's str() encodes text-node '>' as '&gt;', which breaks
-        # Mermaid syntax (e.g. 'A --> B' becomes 'A --&gt; B').  Decode HTML
-        # entities inside every .mermaid div so Mermaid.js sees correct syntax.
-        def _decode_mermaid(m: re.Match) -> str:
-            return m.group(1) + _html.unescape(m.group(2)) + m.group(3)
+        for placeholder, raw_text in mermaid_store.items():
+            result = result.replace(placeholder, raw_text)
 
-        result = re.sub(
-            r'(<div[^>]*class="mermaid"[^>]*>)(.*?)(</div>)',
-            _decode_mermaid,
-            result,
-            flags=re.DOTALL,
-        )
         return result
 
     @staticmethod

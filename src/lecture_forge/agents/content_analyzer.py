@@ -9,7 +9,6 @@ from lecture_forge.agents.base import BaseAgent
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.analysis import (
     AnalysisResult,
-    ConceptRelation,
     Entity,
     TopicCluster,
 )
@@ -72,17 +71,9 @@ class ContentAnalyzerAgent(BaseAgent):
         logger.info("Assessing difficulty levels...")
         difficulty_scores = self._assess_difficulty(key_topics, all_text)
 
-        # 4. Build concept relationships
-        logger.info("Building concept relationships...")
-        concept_relations = self._build_relationships(entities, all_text)
-
-        # 5. Create topic clusters
+        # 4. Create topic clusters
         logger.info("Creating topic clusters...")
-        topic_clusters = self._create_clusters(entities, concept_relations)
-
-        # 6. Recommend images for concepts
-        logger.info("Recommending images...")
-        image_recommendations = self._recommend_images(key_topics, entities, image_result)
+        topic_clusters = self._create_clusters(entities)
 
         # v0.4.0: collect source file paths for coverage tracking
         source_files = list({doc.get("source", "") for doc in documents if doc.get("source")})
@@ -91,9 +82,7 @@ class ContentAnalyzerAgent(BaseAgent):
             entities=entities,
             key_topics=key_topics,
             topic_clusters=topic_clusters,
-            concept_relations=concept_relations,
             difficulty_scores=difficulty_scores,
-            image_recommendations=image_recommendations,
             metadata={
                 "total_documents": len(documents),
                 "total_chunks": total_chunks,
@@ -300,46 +289,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         return difficulty_scores
 
-    def _build_relationships(self, entities: List[Entity], text: str) -> List[ConceptRelation]:
-        """Build relationships between concepts."""
-        relations = []
-
-        # Create prerequisite relationships (simple heuristic)
-        # Basic concepts should be prerequisites for advanced ones
-        beginner_entities = [e for e in entities if "basic" in e.name.lower() or "introduction" in e.name.lower()]
-        advanced_entities = [e for e in entities if "advanced" in e.name.lower() or "optimization" in e.name.lower()]
-
-        for beginner in beginner_entities:
-            for advanced in advanced_entities:
-                relations.append(
-                    ConceptRelation(
-                        source=beginner.name,
-                        target=advanced.name,
-                        relation_type="prerequisite",
-                        strength=0.7,
-                    )
-                )
-
-        # Create related_to relationships for entities in same domain
-        for i, e1 in enumerate(entities):
-            for e2 in entities[i + 1 :]:
-                # Simple heuristic: if they share words, they're related
-                words1 = set(e1.name.lower().split())
-                words2 = set(e2.name.lower().split())
-
-                if words1 & words2:  # Has common words
-                    relations.append(
-                        ConceptRelation(
-                            source=e1.name,
-                            target=e2.name,
-                            relation_type="related_to",
-                            strength=0.5,
-                        )
-                    )
-
-        return relations
-
-    def _create_clusters(self, entities: List[Entity], relations: List[ConceptRelation]) -> List[TopicCluster]:
+    def _create_clusters(self, entities: List[Entity]) -> List[TopicCluster]:
         """Create topic clusters from entities and relations."""
         clusters = []
 
@@ -367,28 +317,3 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
 
         return clusters
 
-    def _recommend_images(
-        self,
-        topics: List[str],
-        entities: List[Entity],
-        image_result: Dict = None,
-    ) -> Dict[str, List[str]]:
-        """Recommend image keywords for each concept."""
-        recommendations = {}
-
-        # For each topic, suggest image search keywords
-        for topic in topics:
-            keywords = [topic]
-
-            # Add related terms
-            topic_lower = topic.lower()
-            if "machine learning" in topic_lower:
-                keywords.extend(["neural network", "data science", "AI"])
-            elif "deep learning" in topic_lower:
-                keywords.extend(["neural network", "AI", "artificial intelligence"])
-            elif "neural network" in topic_lower:
-                keywords.extend(["deep learning", "AI", "neurons"])
-
-            recommendations[topic] = list(set(keywords))[:3]  # Max 3 keywords
-
-        return recommendations

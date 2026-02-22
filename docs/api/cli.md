@@ -254,7 +254,6 @@ lecture-forge create [OPTIONS]
 - `--include-pdf-images/--no-include-pdf-images`: Extract images from PDFs with location-based matching (default: enabled)
 - `--auto-describe-images/--no-auto-describe-images`: Auto-generate GPT-4o-mini descriptions for PDF images (default: enabled, requires `--include-pdf-images`)
 - `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
-- `--with-code`: Include code examples in lecture content (default: excluded)
 - `--existing-kb PATH`: Reuse or extend an existing knowledge base directory instead of building a new one
 - `--kb-mode [reuse_only|extend]`: How to use `--existing-kb` — `reuse_only` (read-only, default) or `extend` (add new sources to the KB)
 
@@ -275,7 +274,6 @@ result = generate_lecture({
     "quality_level": "balanced",
     "include_pdf_images": True,
     "auto_describe_images": True,
-    "with_code": False,
     # Optional: reuse an existing knowledge base
     # "existing_kb_path": "/path/to/vector_db/my_kb",
     # "kb_mode": "reuse_only",  # or "extend"
@@ -352,7 +350,7 @@ cleanup(['--all'])
 
 **Location**: `lecture_forge/cli/commands/improve.py`
 
-Improve existing lectures or convert to slides.
+Improve existing lectures: convert to slides or re-evaluate and supplement content from KB.
 
 #### Command
 
@@ -364,11 +362,11 @@ lecture-forge improve LECTURE_PATH [OPTIONS]
 - `LECTURE_PATH`: Path to lecture HTML file
 
 **Options:**
-- `--enhance-pdf-images`: (Legacy) Re-generate descriptions for PDF images using page text. Mainly useful for lectures created before v0.2.4 when auto-describe was not the default.
-- `--source-pdf PATH`: Source PDF file (required with `--enhance-pdf-images`)
-- `--to-slides`: Convert lecture HTML to a Reveal.js presentation (creates `*_slides.html`)
+- `--to-slides`: Convert lecture HTML to a Reveal.js presentation (creates `*_slides.html`); includes per-section LLM rewrite by default — concise bullets ≤35자, no truncation
 - `--with-notes`: Auto-generate presenter notes for each slide using LLM (requires `--to-slides`; press **S** in browser to view speaker notes)
-- `--slide-rewrite`: Per-section LLM rewrite for slide optimization — eliminates truncated bullets ending in "…", produces concise complete bullets ≤35자 (requires `--to-slides`; adds ~15 seconds)
+- `--re-evaluate`: KB 기반 품질 재평가 후 미반영 내용을 각 섹션 말미에 추가 → `*_enhanced.html` 생성 (v0.4.0+)
+- `--quality-level [lenient|balanced|strict]`: 재평가 품질 기준 — lenient(70), balanced(80), strict(90) (기본값: `balanced`, `--re-evaluate`와 함께 사용)
+- `--kb PATH`: 지식 DB 경로 — HTML에 `lf:vector_db_path` 메타데이터가 없는 기존 파일에 대한 fallback (v0.4.0+)
 
 #### Python API
 
@@ -378,11 +376,18 @@ from lecture_forge.cli.commands.improve import improve
 # Convert to slides
 improve(['lecture.html', '--to-slides'])
 
-# Enhance PDF images
+# Convert with presenter notes
+improve(['lecture.html', '--to-slides', '--with-notes'])
+
+# Re-evaluate and supplement (v0.4.0+)
+improve(['lecture.html', '--re-evaluate'])
+
+# Re-evaluate with strict threshold + manual KB path
 improve([
     'lecture.html',
-    '--enhance-pdf-images',
-    '--source-pdf', 'book.pdf'
+    '--re-evaluate',
+    '--quality-level', 'strict',
+    '--kb', '/path/to/vector_db/MyTopic_...',
 ])
 ```
 
@@ -478,7 +483,6 @@ result = generate_lecture({
     "quality_level": "balanced",
     "include_pdf_images": True,
     "auto_describe_images": True,
-    "with_code": True,
     # "existing_kb_path": "/path/to/vector_db/existing_kb",
     # "kb_mode": "reuse_only",
 })
@@ -621,5 +625,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-19
-**Version**: 0.3.8
+**Last Updated**: 2026-02-22
+**Version**: 0.4.0

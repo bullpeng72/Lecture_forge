@@ -35,6 +35,227 @@ class ImageSelector:
         """Select images for a section (wrapper for compatibility)."""
         return self._select_images(section, available_images, context_metadatas)
 
+    def select_images_for_subsection(
+        self,
+        subsection_heading: str,
+        subsection_content: str,
+        section: Section,
+        available_images: List[dict],
+        context_metadatas: List[dict] = None,
+        max_images: int = 1,
+    ) -> List[ImageReference]:
+        """
+        v0.5.0: Select images for a single subsection based on its text content.
+
+        Uses subsection heading + first 200 chars of content to extract keywords,
+        then matches against location-based (RAG context pages) and search images.
+
+        Args:
+            subsection_heading: Heading text of the subsection (without ## prefix)
+            subsection_content: Body text of the subsection
+            section: Parent Section object (for topic context)
+            available_images: Images not yet used in prior subsections
+            context_metadatas: RAG chunk metadatas for location-based matching
+            max_images: Maximum images to return (default 1)
+
+        Returns:
+            List of selected ImageReference objects
+        """
+        selected: List[ImageReference] = []
+        selected_ids: set = set()
+
+        if not available_images:
+            return selected
+
+        # Extract keywords specific to this subsection
+        keywords = self._extract_subsection_keywords(subsection_heading, subsection_content, section)
+
+        # Phase 0: location-based matching (PDF images from RAG context pages)
+        pdf_images = [img for img in available_images if img.get("source", "").endswith(".pdf")]
+        if context_metadatas and pdf_images and len(selected) < max_images:
+            loc_imgs = self._match_images_by_location_for_subsection(
+                context_metadatas, pdf_images, keywords, max_images - len(selected)
+            )
+            for img_ref in loc_imgs:
+                if img_ref.image_id not in selected_ids:
+                    selected.append(img_ref)
+                    selected_ids.add(img_ref.image_id)
+
+        # Phase 1: keyword-based matching against search images
+        search_images = [img for img in available_images if not img.get("source", "").endswith(".pdf")]
+        if len(selected) < max_images:
+            kw_imgs = self._match_search_images_by_keywords(
+                search_images, keywords, max_images - len(selected), selected_ids
+            )
+            for img_ref in kw_imgs:
+                if img_ref.image_id not in selected_ids:
+                    selected.append(img_ref)
+                    selected_ids.add(img_ref.image_id)
+
+        return selected[:max_images]
+
+    def _extract_subsection_keywords(
+        self,
+        heading: str,
+        content: str,
+        section: Section,
+    ) -> List[str]:
+        """
+        Extract search keywords from subsection heading + content preview.
+
+        Combines heading words, first 200 chars of body, and parent section topics,
+        then expands via _expand_keywords() for Korean-English coverage.
+        """
+        keyword_map = self._get_keyword_translations()
+        raw_keywords: List[str] = []
+
+        # 1. Words from the heading (strip ## markers)
+        clean_heading = heading.lstrip("#").strip()
+        if clean_heading:
+            raw_keywords.append(clean_heading)
+            # Also add individual words if heading is multi-word
+            words = clean_heading.split()
+            if len(words) > 1:
+                raw_keywords.extend(words[:3])
+
+        # 2. First 200 chars of body text for extra signal
+        body_preview = content[:200] if content else ""
+        # Extract words longer than 3 chars (skip filler)
+        import re as _re
+        body_words = _re.findall(r"[가-힣]{2,}|[A-Za-z]{4,}", body_preview)
+        raw_keywords.extend(body_words[:5])
+
+        # 3. Parent section topics as fallback
+        raw_keywords.extend(section.topics[:2])
+
+        # 4. Expand each keyword with Korean-English mapping
+        expanded: List[str] = []
+        seen = set()
+        for kw in raw_keywords:
+            for expanded_kw in self._expand_keywords(kw, keyword_map):
+                lower = expanded_kw.lower()
+                if lower not in seen:
+                    seen.add(lower)
+                    expanded.append(expanded_kw)
+
+        return expanded[:20]  # cap to avoid O(n^2) matching
+
+    def _match_search_images_by_keywords(
+        self,
+        search_images: List[dict],
+        keywords: List[str],
+        max_results: int,
+        exclude_ids: set = None,
+    ) -> List[ImageReference]:
+        """
+        Match search images (Pexels/Unsplash) by keyword presence in description/query/alt text.
+
+        Args:
+            search_images: Available non-PDF images
+            keywords: Keywords to match against
+            max_results: Maximum matches to return
+            exclude_ids: Image IDs to skip
+
+        Returns:
+            List of matched ImageReference objects
+        """
+        exclude_ids = exclude_ids or set()
+        results: List[ImageReference] = []
+
+        for img in search_images:
+            if len(results) >= max_results:
+                break
+
+            img_id = img.get("id", "")
+            if img_id in exclude_ids:
+                continue
+
+            img_text = " ".join([
+                img.get("description", ""),
+                img.get("query", ""),
+                img.get("alt_text", ""),
+            ]).lower()
+
+            if not img_text.strip():
+                continue
+
+            for kw in keywords:
+                if kw.lower() in img_text:
+                    results.append(ImageReference(
+                        image_id=img_id,
+                        path=img.get("path", ""),
+                        description=img.get("description", "") or img.get("query", ""),
+                        caption=kw,
+                        attribution=img.get("attribution", ""),
+                    ))
+                    break
+
+        return results
+
+    def _match_images_by_location_for_subsection(
+        self,
+        context_metadatas: List[dict],
+        pdf_images: List[dict],
+        keywords: List[str],
+        max_results: int,
+    ) -> List[ImageReference]:
+        """
+        Location-based matching for a single subsection.
+
+        Reuses page importance from context_metadatas, then filters by keyword
+        presence in the image description (if available).
+
+        Args:
+            context_metadatas: RAG chunk metadatas
+            pdf_images: Available PDF images
+            keywords: Subsection keywords for relevance filtering
+            max_results: Maximum images to return
+
+        Returns:
+            List of matched ImageReference objects
+        """
+        page_importance = self._calculate_page_importance(context_metadatas)
+        if not page_importance:
+            return []
+
+        image_page_map = self._load_image_page_map()
+        if not image_page_map:
+            return []
+
+        candidates = []
+        for source, page_scores in page_importance.items():
+            if source not in image_page_map:
+                continue
+            for page_num, importance_score in page_scores:
+                page_str = str(page_num)
+                if page_str not in image_page_map[source]:
+                    continue
+                for img_info in image_page_map[source][page_str]:
+                    full_img = next((i for i in pdf_images if i.get("id") == img_info["id"]), None)
+                    if not full_img:
+                        continue
+                    quality = self._evaluate_image_quality_simple(full_img)
+                    if quality < Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
+                        continue
+                    # Optional: boost score if description matches keywords
+                    desc = full_img.get("description", "").lower()
+                    keyword_match = any(kw.lower() in desc for kw in keywords) if desc else False
+                    final_score = importance_score * 0.7 + quality * 0.3 + (0.1 if keyword_match else 0.0)
+                    candidates.append({"image": full_img, "score": final_score})
+
+        candidates.sort(key=lambda x: x["score"], reverse=True)
+        results = []
+        for c in candidates[:max_results]:
+            img = c["image"]
+            results.append(ImageReference(
+                image_id=img.get("id", ""),
+                path=img.get("path", ""),
+                description=img.get("description", ""),
+                caption=img.get("alt_text", ""),
+                attribution=f"Source: {Path(img.get('source', '')).name}",
+            ))
+        return results
+
     def _select_images(
         self, section: Section, available_images: List[dict], context_metadatas: List[dict] = None
     ) -> List[ImageReference]:

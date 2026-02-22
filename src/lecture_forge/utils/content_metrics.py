@@ -34,16 +34,6 @@ def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict
 
     target_words = int(estimated_time * base_words_per_minute * multiplier)
 
-    # Code examples calculation (from Config)
-    code_examples_per_time = {
-        "beginner": Config.CODE_EXAMPLES_PER_TIME_BEGINNER,
-        "intermediate": Config.CODE_EXAMPLES_PER_TIME_INTERMEDIATE,
-        "advanced": Config.CODE_EXAMPLES_PER_TIME_ADVANCED,
-    }
-
-    time_per_example = code_examples_per_time.get(difficulty_level.lower(), Config.CODE_EXAMPLES_PER_TIME_INTERMEDIATE)
-    target_code_examples = max(1, estimated_time // time_per_example)
-
     # Practice problems (from Config)
     practice_per_time = {
         "beginner": Config.PRACTICE_PER_TIME_BEGINNER,
@@ -65,8 +55,6 @@ def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict
         "target_words": target_words,
         "min_words": int(target_words * Config.MIN_WORDS_RATIO),
         "max_words": int(target_words * Config.MAX_WORDS_RATIO),
-        "target_code_examples": target_code_examples,
-        "min_code_examples": max(1, target_code_examples - 1),
         "target_practice_problems": target_practice_problems,
         "target_subsections": target_subsections,
         "min_subsections": max(2, target_subsections - 1),
@@ -77,7 +65,6 @@ def calculate_target_metrics(estimated_time: int, difficulty_level: str) -> Dict
 def evaluate_content_quality(
     content: str,
     targets: Dict[str, int],
-    code_block_count: int = 0,
     image_count: int = 0,
 ) -> Dict[str, any]:
     """
@@ -86,7 +73,6 @@ def evaluate_content_quality(
     Args:
         content: Markdown content
         targets: Target metrics from calculate_target_metrics
-        code_block_count: Number of code blocks
         image_count: Number of images
 
     Returns:
@@ -121,12 +107,6 @@ def evaluate_content_quality(
 
     word_score = calculate_score(word_count, targets["target_words"], targets["min_words"])
 
-    code_score = calculate_score(
-        code_block_count,
-        targets["target_code_examples"],
-        targets.get("min_code_examples", 0),
-    )
-
     structure_score = calculate_score(
         subsection_count,
         targets["target_subsections"],
@@ -139,9 +119,8 @@ def evaluate_content_quality(
 
     # Calculate overall score with weights
     overall_score = (
-        word_score * 0.40  # 40% - content length
-        + code_score * 0.25  # 25% - code examples
-        + structure_score * 0.25  # 25% - structure
+        word_score * 0.55  # 55% - content length
+        + structure_score * 0.35  # 35% - structure
         + practice_score * 0.00  # 0% - practice problems (disabled)
         + visual_score * 0.10  # 10% - visuals
     )
@@ -151,8 +130,6 @@ def evaluate_content_quality(
         "meets_requirements": overall_score >= Config.QUALITY_THRESHOLD_SECTION,
         "word_count": word_count,
         "word_score": round(word_score, 1),
-        "code_block_count": code_block_count,
-        "code_score": round(code_score, 1),
         "subsection_count": subsection_count,
         "structure_score": round(structure_score, 1),
         "practice_count": practice_count,
@@ -176,9 +153,6 @@ Detailed Metrics:
 📝 Word Count: {evaluation['word_count']:,} / {evaluation['targets']['target_words']:,}
    Score: {evaluation['word_score']}/100
    Range: {evaluation['targets']['min_words']:,} - {evaluation['targets']['max_words']:,}
-
-💻 Code Examples: {evaluation['code_block_count']} / {evaluation['targets']['target_code_examples']}
-   Score: {evaluation['code_score']}/100
 
 🏗️  Structure (Subsections): {evaluation['subsection_count']} / {evaluation['targets']['target_subsections']}
    Score: {evaluation['structure_score']}/100

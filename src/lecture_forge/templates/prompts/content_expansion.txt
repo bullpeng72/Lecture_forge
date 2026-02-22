@@ -34,7 +34,9 @@ YOU MUST ADD: {word_gap:,}+ WORDS RIGHT NOW!
      * 시각적 설명 (어떻게 생겼는지, 어떻게 작동하는지)
      * 역사적 배경 (누가, 언제, 왜 만들었는지)
 
-{code_section_text}
+2. **추가 설명 보강** (add ~{depth_words} words):
+   - 개념 설명을 더 다양한 방식으로 추가하세요 (비유, 역사적 배경, 실생활 예시)
+   - 각 개념마다 새로운 관점에서 재해석
 
 3. **흔한 실수와 주의사항** (add ~{pitfall_words} words):
    - 초보자가 자주 하는 실수 3-5가지

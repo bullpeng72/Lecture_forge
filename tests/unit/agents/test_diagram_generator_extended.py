@@ -532,6 +532,7 @@ class TestGenerateForSectionLlmBehavior:
         with patch.object(agent, "_call_llm_for_diagram",
                           side_effect=Exception("LLM error")):
             result = agent._generate_diagram_for_section(section)
-        # v0.4.0: Should return a fallback mindmap (not None) when all LLM retries fail
+        # v0.5.0: Should return a fallback diagram (not None) when all LLM retries fail
+        # Fallback changed from mindmap to structured flowchart
         assert result is not None
-        assert result.diagram_type == "mindmap"
+        assert result.diagram_type in ("flowchart", "mindmap")

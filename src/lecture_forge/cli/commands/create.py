@@ -20,8 +20,8 @@ from lecture_forge.agents.curriculum_designer import CurriculumDesignerAgent
 from lecture_forge.agents.diagram_generator import DiagramGeneratorAgent
 from lecture_forge.agents.html_assembler import HTMLAssemblerAgent
 from lecture_forge.agents.image_collector import ImageCollectorAgent
-from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
 from lecture_forge.agents.revision_agent import RevisionAgent
+from lecture_forge.quality.evaluator import QualityEvaluator
 from lecture_forge.cli.commands.create_async import _create_async  # Async version
 from lecture_forge.cli.utils import (
     collect_inputs_interactive,
@@ -323,7 +323,6 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
         writer = ContentWriterAgent(
             vector_store=content_agent.vector_store,
-            with_code=inputs.get("with_code", False),
         )
         section_contents = writer.write_all_sections(
             curriculum=curriculum,
@@ -340,7 +339,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Phase 4b: Diagram Generation
         task4b = progress.add_task("[cyan]📊 Phase 4b: Generating diagrams...", total=None)
         diagram_gen = DiagramGeneratorAgent()
-        section_contents = diagram_gen.generate_diagrams(section_contents)
+        section_contents = diagram_gen.generate_diagrams(section_contents, curriculum=curriculum)
         progress.update(task4b, completed=True)
         total_diagrams = sum(len(s.diagrams) for s in section_contents)
         console.print(f"   ✅ Diagrams generated: {total_diagrams}")
@@ -374,13 +373,10 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         quality_threshold = {"lenient": 70, "balanced": 80, "strict": 90}.get(inputs.get("quality_level", "balanced"), 80)
         max_iterations = Config.MAX_ITERATIONS
 
-        # Import quality agents
-        from lecture_forge.agents.quality_evaluator import QualityEvaluatorAgent
         from lecture_forge.agents.revision_agent import RevisionAgent
 
-        with_code = inputs.get("with_code", False)
-        evaluator = QualityEvaluatorAgent(with_code=with_code)
-        revision_agent = RevisionAgent(with_code=with_code)
+        evaluator = QualityEvaluator()
+        revision_agent = RevisionAgent()
 
         task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None)
 
@@ -520,12 +516,6 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     help="🚀 Use async I/O for faster content collection (70% speedup, experimental)",
 )
 @click.option(
-    "--with-code",
-    is_flag=True,
-    default=False,
-    help="Include code examples in lecture content (default: excluded)",
-)
-@click.option(
     "--existing-kb",
     type=click.Path(exists=True),
     default=None,
@@ -547,7 +537,6 @@ def create(
     include_pdf_images: bool,
     auto_describe_images: bool,
     async_mode: bool,
-    with_code: bool,
     existing_kb: Optional[str],
     kb_mode: str,
 ) -> None:
@@ -594,9 +583,6 @@ def create(
       # High quality with image search (recommended)
       $ lecture-forge create --quality-level strict --image-search
 
-      # Include code examples in lecture
-      $ lecture-forge create --with-code
-
       # Reuse an existing knowledge base (read-only)
       $ lecture-forge create --existing-kb data/vector_db/MyLecture_20260219 --kb-mode reuse_only
 
@@ -616,7 +602,6 @@ def create(
       keywords:
         - "machine learning basics"
         - "supervised learning"
-      with_code: false
 
     \b
     Quality Levels:
@@ -652,7 +637,6 @@ def create(
                 output=output,
                 include_pdf_images=include_pdf_images,
                 auto_describe_images=auto_describe_images,
-                with_code=with_code,
                 existing_kb=existing_kb,
                 kb_mode=kb_mode,
             )
@@ -712,7 +696,6 @@ def create(
     inputs["output_name"] = output
     inputs["include_pdf_images"] = include_pdf_images
     inputs["auto_describe_images"] = auto_describe_images
-    inputs["with_code"] = with_code
     inputs["existing_kb_path"] = existing_kb if existing_kb else inputs.get("existing_kb_path")
     inputs["kb_mode"] = kb_mode if existing_kb else inputs.get("kb_mode", "new")
 

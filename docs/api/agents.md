@@ -20,7 +20,7 @@ Complete reference for all agents in the LectureForge multi-agent system (10 tas
    - [DiagramGeneratorAgent](#diagramgeneratoragent)
    - [HTMLAssemblerAgent](#htmlassembleragent)
 6. [Quality Assurance](#quality-assurance)
-   - [QualityEvaluatorAgent](#qualityevaluatoragent)
+   - [QualityEvaluator](#qualityevaluatoragent)
    - [RevisionAgent](#revisionagent)
 7. [Interactive Q&A](#interactive-qa)
    - [QAAgent](#qaagent)
@@ -42,7 +42,7 @@ BaseAgent (abstract)
 ├── ContentWriterAgent (refactored into 4 components)
 ├── DiagramGeneratorAgent
 ├── HTMLAssemblerAgent
-├── QualityEvaluatorAgent
+├── QualityEvaluator  (alias: QualityEvaluatorAgent)
 ├── RevisionAgent
 └── QAAgent
 
@@ -558,9 +558,11 @@ html_path = agent.assemble(
 
 ## Quality Assurance
 
-### QualityEvaluatorAgent
+### QualityEvaluator
 
-**Location**: `lecture_forge/agents/quality_evaluator.py`
+**Location**: `lecture_forge/quality/evaluator.py`
+
+> **Note**: `QualityEvaluatorAgent` (from `lecture_forge.agents.quality_evaluator`) is a backward-compatible alias for this class.
 
 Evaluates lecture quality across 6 dimensions.
 
@@ -722,7 +724,9 @@ writer = ContentWriterAgent(content["vector_store"])
 sections = writer.write_all_sections(curriculum, images["images"])
 
 # Step 6: Evaluate
-evaluator = QualityEvaluatorAgent()
+from lecture_forge.quality.evaluator import QualityEvaluator
+
+evaluator = QualityEvaluator()
 evaluation = evaluator.evaluate(lecture, curriculum)
 
 # Step 7: Revise if needed
@@ -747,5 +751,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-02-19
-**Version**: 0.3.8
+**Last Updated**: 2026-02-22
+**Version**: 0.4.0

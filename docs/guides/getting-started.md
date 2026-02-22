@@ -228,7 +228,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.3.8 - Lecture Material Generator
+📚 LectureForge Pro v0.4.0 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -319,7 +319,6 @@ Section 1/5: Introduction to Machine Learning
 📊 Statistics:
    • Sections: 5
    • Words: 4,250
-   • Code blocks: 8
    • Diagrams: 3
    • Images: 12
    • Quality score: 85.2/100
@@ -459,17 +458,11 @@ lecture-forge edit-images outputs/your_lecture.html
 Convert your lecture to presentation slides:
 
 ```bash
-# Basic conversion
+# Basic conversion (per-section LLM rewrite included by default: ≤35자, no truncation)
 lecture-forge improve outputs/your_lecture.html --to-slides
 
 # With auto-generated presenter notes (LLM writes 2-4 sentences per slide)
 lecture-forge improve outputs/your_lecture.html --to-slides --with-notes
-
-# With slide-optimized content (eliminates truncated bullets, ≤35자 per bullet)
-lecture-forge improve outputs/your_lecture.html --to-slides --slide-rewrite
-
-# Combine both enhancements
-lecture-forge improve outputs/your_lecture.html --to-slides --with-notes --slide-rewrite
 ```
 
 This creates a Reveal.js presentation with:
@@ -478,17 +471,7 @@ This creates a Reveal.js presentation with:
 - Speaker notes (S) — press S to open speaker view (requires `--with-notes`)
 - Full screen (F)
 
-### 5. Enhance PDF Images (Optional)
-
-If you have PDF images without descriptions:
-
-```bash
-lecture-forge improve outputs/your_lecture.html \
-  --enhance-pdf-images \
-  --source-pdf "your_textbook.pdf"
-```
-
-### 6. Manage Storage
+### 5. Manage Storage
 
 Delete old knowledge bases to free space:
 
@@ -627,7 +610,7 @@ lecture-forge home outputs
 ---
 
 **Last Updated**: 2026-02-19
-**Version**: 0.3.8
+**Version**: 0.4.0
 
 **Ready to create amazing lectures? Start with:**
 ```bash

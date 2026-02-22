@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.3.8 ✅ **배포 완료**
-> **최종 수정**: 2026-02-20
+> **최신 버전**: 0.4.0 ✅ **배포 완료**
+> **최종 수정**: 2026-02-22
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 버전 확인
-grep -r "0.3.8" pyproject.toml setup.py src/lecture_forge/__version__.py
+grep -r "0.4.0" pyproject.toml setup.py src/lecture_forge/__version__.py
 
 # 2. 테스트 실행
 pytest tests/ -v
@@ -916,7 +916,17 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.3.8 (2026-02-20) ✅ **최신**
+### v0.4.0 (2026-02-22) ✅ **최신**
+
+- **상태**: 배포 완료
+- **PyPI**: https://pypi.org/project/lecture-forge/0.4.0/
+- **주요 변경사항**:
+  - ✅ **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 전체 섹션 인덱싱 (기존 ~15% → 100%)
+  - ✅ **`--re-evaluate` HTML 통계 업데이트**: 사이드바·헤더 배지·푸터 자동 갱신 (`content_enhancer.py`)
+  - ✅ **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
+  - ✅ **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 해결
+
+### v0.3.8 (2026-02-20) ✅
 
 - **상태**: 배포 완료
 - **PyPI**: https://pypi.org/project/lecture-forge/0.3.8/
@@ -1055,7 +1065,7 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.4.0: 새로운 기능 추가 (웹 UI, 다국어 확장 등)
+- v0.5.0: 새로운 기능 추가 예정
 - v1.0.0: 안정 버전 릴리스
 
 ---
@@ -1136,7 +1146,6 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-18 (v0.3.7 개발 완료, 배포 준비 중)
-**버전**: 2.5.0
+**최종 업데이트**: 2026-02-22
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: 🔄 v0.3.7 배포 대기 (UI & 슬라이드 개선)
+**상태**: ✅ v0.4.0 배포 완료

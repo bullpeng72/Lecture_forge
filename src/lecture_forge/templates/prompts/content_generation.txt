@@ -2,9 +2,8 @@
 
 ⚠️⚠️⚠️ CRITICAL FAILURE CONDITIONS (ANY = AUTO REJECT):
 1. ❌ WORD COUNT < {min_words:,} words → REJECTED AND YOU WILL BE FIRED
-{code_fail_condition}
 {practice_fail_condition}
-4. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
+3. ❌ CONTENT TOO SHORT → REJECTED AND YOU WILL BE FIRED
 
 ⚠️ You MUST satisfy ALL requirements or your output will be REJECTED.
 ⚠️ This is NOT negotiable. Write AT LEAST {min_words:,} words or FAIL.
@@ -50,8 +49,6 @@
    - Main content in {target_subsections} detailed subsections (70%)
    - {summary_label} (20%)
 
-{code_requirement_section}
-
 {practice_requirement_section}
 
 **🚨 CRITICAL FORMATTING RULES:**
@@ -79,14 +76,7 @@
      * 각 단계마다 "왜 이렇게 하는가" 설명
      * 시각적으로 상상할 수 있도록 묘사
 
-2. **Give 3-4 examples for EACH major point (NOT 1, but 3-4!)**:
-   - 초급 예제 (기본 개념 설명)
-   - 중급 예제 (실무 시나리오)
-   - 고급 예제 (복잡한 활용)
-   - 안티패턴 예제 (이렇게 하면 안 됨)
-   - **각 예제마다 50-100 단어로 설명**
-
-3. **Include detailed analogies (50-100 words per analogy)**:
+2. **Include detailed analogies (50-100 words per analogy)**:
    - 일상생활 비유 (예: "이것은 마치 ~와 같습니다")
    - 비유를 구체적으로 확장 (어떤 점이 비슷한가, 어떤 점이 다른가)
    - 비유를 통해 이해했을 때의 인사이트
@@ -133,8 +123,6 @@ For each main concept:
 - Discuss common pitfalls (주의사항)
 - Provide best practices (모범 사례)
 
-{code_template_section}
-
 **📝 WRITING STYLE:**
 - Conversational but professional
 - Use analogies and metaphors
@@ -153,8 +141,6 @@ Before you submit, verify EVERY requirement:
    - Introduction: {intro_words:,}+ words
    - Each subsection: {words_per_subsection:,}+ words
    - Summary: {summary_words:,}+ words
-
-{code_checklist_item}
 
 {practice_checklist_item}
 

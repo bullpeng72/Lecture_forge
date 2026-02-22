@@ -54,7 +54,7 @@ def init(path: Optional[str]) -> None:
       • OpenAI API Key
         - Get from: https://platform.openai.com
         - Used for: Content generation, analysis, embeddings
-        - Cost: Pay-per-use (~$0.10 per 60-min lecture)
+        - Cost: Pay-per-use (~$0.035 per 60-min lecture, actual measured)
 
       • Serper API Key
         - Get from: https://serper.dev
@@ -145,7 +145,7 @@ def init(path: Optional[str]) -> None:
     console.print("[bold]1. OpenAI API Key[/bold]")
     console.print("   • Get from: [link]https://platform.openai.com[/link]")
     console.print("   • Used for: LLM generation, embeddings")
-    console.print("   • Cost: ~$0.10 per 60-min lecture (GPT-4o-mini)\n")
+    console.print("   • Cost: ~$0.035 per 60-min lecture (GPT-4o-mini, actual measured)\n")
 
     openai_key = prompt_masked_input(
         console, "   [cyan]Enter your OpenAI API Key[/cyan] (starts with sk-):"

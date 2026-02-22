@@ -48,6 +48,8 @@ class SectionContent(BaseModel):
     difficulty_level: str = "intermediate"  # Default: intermediate
     # v0.4.0: subsection-level image distribution (heading → images)
     subsection_images: Dict[str, List[ImageReference]] = Field(default_factory=dict)
+    # v0.5.0: top RAG chunks preserved for DiagramGenerator context
+    rag_key_chunks: List[str] = Field(default_factory=list)
 
 
 class Lecture(BaseModel):

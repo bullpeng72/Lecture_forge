@@ -31,22 +31,16 @@ class QualityMetrics:
         if lecture.learning_objectives:
             score += 10
 
-        # 2. Check for code examples (30점)
-        total_code_blocks = sum(len(s.code_blocks) for s in lecture.sections)
-        expected_code_blocks = max(1, lecture.duration // Config.CONTENT_CODE_PER_MINUTES)
-        code_ratio = min(1.0, total_code_blocks / expected_code_blocks)
-        score += 30 * code_ratio
-
-        # 3. Check word count sufficiency (40점)
+        # 2. Check word count sufficiency (60점)
         if lecture.total_word_count > 0:
             # 예상: 250 words/minute reading speed
             expected_words = lecture.duration * Config.CONTENT_READING_WPM * Config.CONTENT_TIME_COVERAGE
             word_ratio = min(1.0, lecture.total_word_count / expected_words)
-            score += 40 * word_ratio
+            score += 60 * word_ratio
 
-        # 4. Check section coverage (20점)
+        # 3. Check section coverage (30점)
         if len(lecture.sections) >= Config.CONTENT_MIN_SECTIONS:  # At least intro, content, conclusion
-            score += 20
+            score += 30
 
         return min(100.0, score)
 

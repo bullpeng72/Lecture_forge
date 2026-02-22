@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.8-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.3.8 Beta Release** | RMC Self-Review 🧠 (hallucination detection, curriculum logic check, content quality review)
+> 🚀 **v0.4.0** | 검색 커버리지 수정 🔍 + `--re-evaluate` HTML 통계 자동 업데이트 📊
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 827개+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 1,356+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 827개+ 테스트 함수 (81개 파일, ~48% 커버리지)
+- 🧪 **테스트 커버리지**: 1,356+ 테스트 함수 (81개 파일, ~48% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -68,22 +68,15 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.3.8)
+## 🚀 최근 개선사항 (v0.4.0)
 
-**에이전트 내부 자기반성 시스템 (RMC - Reflective Meta-Cognition)**:
-- **CurriculumDesigner**: 섹션 순서 난이도 계단식, 학습목표 커버리지, 선수 내용 배치 자동 수정
-- **ContentWriter**: 개념 비약, 설명 모호성, 코드-설명 연결, 중복 내용 의미론적 검토 후 수정
-- **QAAgent**: 각 주장 ✓/~/✗ 분류 → 소스 미지원(✗) 항목 제거 또는 경고 표시
-- Non-critical 설계: RMC 실패 시 원본 반환, 기존 파이프라인 영향 없음
-
-**LLM 거부 응답 수정** (`content_writer/agent.py`):
-- 결론/도입 섹션 전용 안전 프롬프트 (`_build_structural_section_prompt()`)
-- 거부 패턴 감지 시 안전 프롬프트로 자동 재시도
-
-**Mermaid 슬라이드 버그 수정** (`--with-notes`):
-- `SlideNotesGenerator`: BeautifulSoup `str(soup)` 시 `-->` → `--&gt;` 인코딩 문제 수정
-
-**Python 3.13 검증**: 전체 의존성 호환 확인
+**검색 커버리지 수정 & `--re-evaluate` HTML 통계 자동 업데이트**:
+- **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
+- **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`):
+  - 보강 완료 후 사이드바·헤더 배지·푸터의 단어수·이미지수·다이어그램수 재계산값으로 교체
+  - 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
+- **`--to-slides` 기본 LLM 재작성**: `--to-slides` 실행 시 항상 섹션별 LLM 재작성 포함 (≤35자, 말줄임표 없음)
+- **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -246,7 +239,7 @@ lecture-forge create
 | **create** | 강의 생성 | `--image-search`, `--quality-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit-images** | 이미지 편집 | `--output` |
-| **improve** | 강의 향상 | `--to-slides` |
+| **improve** | 강의 향상 / 재평가 | `--to-slides`, `--re-evaluate` |
 | **cleanup** | 지식베이스 관리 | `--all` |
 | **home** | 폴더 열기 (v0.3.1+) | `outputs`, `data`, `kb`, `env` |
 
@@ -332,11 +325,14 @@ lecture-forge create
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
 | `--config FILE` | YAML 설정 파일 사용 | `--config lecture.yaml` |
-| `--image-search` | 웹 이미지 검색 활성화 (Pexels/Unsplash) | `--image-search` |
+| `--image-search` | 웹 이미지 검색 활성화 Pexels (기본 활성화) | `--no-image-search` |
 | `--quality-level LEVEL` | 품질 기준 설정 | `--quality-level strict` |
-| `--output FILE` | 출력 파일명 지정 | `--output my_lecture.html` |
+| `--output FILE` | 출력 파일명 지정 (확장자 제외) | `--output my_lecture` |
 | `--async-mode` | Async I/O 사용 (70% 빠름, 실험적) | `--async-mode` |
-| `--include-pdf-images` | PDF 이미지 포함 (비권장, Location-based가 더 좋음) | `--include-pdf-images` |
+| `--include-pdf-images` | PDF 이미지 추출 및 location-based 자동 배치 (기본 활성화) | `--no-include-pdf-images` |
+| `--auto-describe-images` | PDF 이미지 GPT-4o-mini 설명 자동 생성 (기본 활성화) | `--no-auto-describe-images` |
+| `--existing-kb PATH` | 기존 지식베이스 재사용 또는 확장 | `--existing-kb data/vector_db/...` |
+| `--kb-mode MODE` | KB 사용 방식: `reuse_only`(읽기 전용, 기본값) / `extend`(확장) | `--kb-mode extend` |
 
 **품질 레벨:**
 - `lenient` (70점): 빠른 초안
@@ -436,13 +432,11 @@ lecture-forge improve outputs/lecture.html --to-slides
 
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
-| `--to-slides` | Reveal.js 슬라이드 변환 | `--to-slides` |
+| `--to-slides` | Reveal.js 슬라이드 변환 (`*_slides.html`) — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음) | `--to-slides` |
 | `--with-notes` | 슬라이드별 발표자 노트 자동 생성 (LLM) | `--with-notes` |
-| `--slide-rewrite` | 슬라이드 최적화 LLM 재작성 (말줄임표 제거, ≤35자) | `--slide-rewrite` |
-| `--enhance-pdf-images` | PDF 이미지 설명 추가 (레거시) | `--enhance-pdf-images` |
-| `--source-pdf FILE` | 원본 PDF 경로 (레거시용) | `--source-pdf doc.pdf` |
-
-⚠️ **주의**: `--enhance-pdf-images`는 레거시 기능입니다. v0.2.0부터는 Location-based 매칭이 자동으로 적용됩니다.
+| `--re-evaluate` | KB 기반 품질 재평가 + 미반영 내용 보충 추가 (`*_enhanced.html`) | `--re-evaluate` |
+| `--quality-level LEVEL` | 재평가 품질 기준: `lenient`(70) / `balanced`(80) / `strict`(90) | `--quality-level strict` |
+| `--kb PATH` | KB 경로 수동 지정 (HTML 메타데이터 없는 기존 파일용 fallback) | `--kb /path/to/vector_db/...` |
 
 **예제:**
 ```bash
@@ -452,11 +446,17 @@ lecture-forge improve outputs/lecture.html --to-slides
 # 발표자 노트 포함 (브라우저에서 S키)
 lecture-forge improve outputs/lecture.html --to-slides --with-notes
 
-# 슬라이드 최적화 재작성 (말줄임표 없는 완결된 bullet)
-lecture-forge improve outputs/lecture.html --to-slides --slide-rewrite
+# KB 기반 품질 재평가 + 보충 (→ *_enhanced.html)
+lecture-forge improve outputs/lecture.html --re-evaluate
 
-# PDF 이미지 보강 (레거시)
-lecture-forge improve outputs/lecture.html --enhance-pdf-images --source-pdf original.pdf
+# 엄격한 기준으로 재평가
+lecture-forge improve outputs/lecture.html --re-evaluate --quality-level strict
+
+# 기존 파일 (메타데이터 없음) — KB 경로 수동 지정
+lecture-forge improve outputs/lecture.html --re-evaluate --kb ~/Documents/LectureForge/data/vector_db/MyTopic_...
+
+# 재평가 + 슬라이드 변환 동시 적용
+lecture-forge improve outputs/lecture.html --re-evaluate --to-slides
 ```
 
 ---
@@ -636,7 +636,7 @@ flowchart TD
 |---|---------|------|------|
 | 1 | **Content Collector** 📚 | 텍스트 수집 및 벡터화 | content_collector.py |
 | 2 | **Image Collector** 🖼️ | 이미지 수집 및 Vision AI 분석 | image_collector.py |
-| 3 | **Content Analyzer** 🔍 | 내용 분석 및 지식 그래프 | content_analyzer.py |
+| 3 | **Content Analyzer** 🔍 | 내용 분석 및 토픽 클러스터 | content_analyzer.py |
 | 4 | **Curriculum Designer** 📋 | 강의 구조 설계 | curriculum_designer.py |
 | 5 | **Content Writer** ✍️ | RAG 기반 컨텐츠 생성 | content_writer.py |
 | 6 | **Diagram Generator** 📊 | Mermaid 다이어그램 생성 | diagram_generator.py |
@@ -850,6 +850,16 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
+
+- 🔍 **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
+- 📊 **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`)
+  - 사이드바·헤더 배지: 단어수·이미지수·다이어그램수 보강 후 재계산값으로 교체
+  - 🕐 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
+  - 푸터: "Generated by LectureForge · {보강 시각}" 업데이트
+- 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
+- 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
 
 ### v0.3.8 (2026-02-20) - 🧠 RMC 자기검토
 

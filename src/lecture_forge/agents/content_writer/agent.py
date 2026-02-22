@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List
 
 from lecture_forge.agents.base import BaseAgent
-from lecture_forge.agents.content_writer.code_generator import CodeGenerator
+from lecture_forge.agents.content_writer.code_generator import extract_code_blocks
 from lecture_forge.agents.content_writer.content_expander import (
     ContentExpander,
     _format_context_with_metadata,
@@ -66,85 +66,6 @@ def parse_markdown_subsections(markdown: str) -> list:
     return subsections
 
 
-def _build_code_fail_condition(with_code: bool) -> str:
-    if with_code:
-        return "2. ❌ NO CODE EXAMPLES (0 code blocks) → REJECTED AND YOU WILL BE FIRED"
-    return "2. ℹ️ Code examples are not required for this lecture."
-
-
-def _build_code_requirement_section(with_code: bool, target_code_examples: int) -> str:
-    if with_code:
-        return f"""3. **🚨 Code Examples: MINIMUM {target_code_examples} examples 🚨**
-   - ⚠️ **CRITICAL: NO CODE = AUTOMATIC FAIL AND REJECTION**
-   - **Each example: 30-80 lines MINIMUM (NOT 10-20, but 30-80!)**
-   - **Include detailed Korean comments (주석이 코드의 50%를 차지해야 함)**
-   - Show complete, runnable, real-world examples
-   - Include setup, execution, and output
-   - Both basic AND advanced examples
-
-   **🚨 MANDATORY CODE EXAMPLE FORMAT (COPY THIS EXACTLY):**
-   ```python
-   # ========================================
-   # 예제 #N: [예제 제목]
-   # ========================================
-   # 목적: [이 예제가 무엇을 보여주는가 - 2-3 문장]
-   # 난이도: [쉬움/보통/어려움]
-   # ========================================
-
-   # Step 1: [첫 번째 단계 설명 - 왜 이것이 필요한가]
-   variable1 = "example"
-
-   # Step 2: [두 번째 단계 설명]
-   variable2 = process(variable1)
-
-   # Step 3: [세 번째 단계 설명]
-   result = finalize(variable2)
-
-   # ... (continue for 30-80 lines)
-
-   # 예상 출력:
-   # 결과: ...
-   ```
-
-   **After EACH code block, add 100-150 words explaining:**
-   - 코드가 무엇을 하는가
-   - 각 단계의 의미
-   - 실무에서 어떻게 활용하는가
-   - 주의할 점"""
-    return "3. **Code Examples**: Not required for this lecture. Do NOT include code blocks."
-
-
-def _build_code_template_section(with_code: bool) -> str:
-    if with_code:
-        return """**💻 CODE EXAMPLE TEMPLATE (MANDATORY - COPY THIS STRUCTURE):**
-
-### 코드 예제 1: [기본 사용법]
-
-다음은 [개념]의 기본적인 사용 예제입니다.
-
-```python
-# 예제 설명: [이 예제가 무엇을 보여주는가]
-
-# 1단계: [무엇을 하는가]
-code_here = "example"
-
-# 2단계: [다음 단계 설명]
-result = process(code_here)
-
-# 3단계: [최종 단계]
-print(f"결과: {result}")
-
-# 예상 출력:
-# 결과: example processed
-```
-
-**설명:**
-- 첫 번째 단계에서는...
-- 두 번째 단계에서는...
-- 최종적으로..."""
-    return ""
-
-
 def _build_practice_fail_condition(require_practice: bool) -> str:
     if require_practice:
         return "3. ❌ NO PRACTICE PROBLEMS → REJECTED AND YOU WILL BE FIRED"
@@ -171,16 +92,6 @@ def _build_practice_checklist_item(require_practice: bool, target_practice_probl
             "   - Each 100-150 words with hints and requirements"
         )
     return "✅ **Practice Problems**: N/A (not required for this section)"
-
-
-def _build_code_checklist_item(with_code: bool, target_code_examples: int) -> str:
-    if with_code:
-        return (
-            f"✅ **Code Examples**: I included {target_code_examples}+ code blocks\n"
-            "   - Each 30-80 lines with detailed Korean comments\n"
-            "   - Followed by 100-150 word explanation"
-        )
-    return "✅ **Code Examples**: N/A (not required for this lecture)"
 
 
 def _filter_chunks_by_similarity(
@@ -317,34 +228,29 @@ Write the complete {section_type} section now:"""
 class ContentWriterAgent(BaseAgent):
     """Agent for writing lecture content with RAG."""
 
-    def __init__(self, vector_store: VectorStore = None, with_code: bool = False) -> None:
+    def __init__(self, vector_store: VectorStore = None) -> None:
         """
         Initialize Content Writer Agent.
 
         Args:
             vector_store: Vector store for RAG queries
-            with_code: Whether to include code examples in generated content
         """
         super().__init__()
         logger.info("Initializing Content Writer Agent")
         self.vector_store = vector_store
-        self.with_code = with_code
 
         # Global image tracking for deduplication across sections
         self.used_image_ids = set()
         self.image_usage_count = {}
+        # Coverage tracking: chunk IDs referenced across all sections
+        self.used_chunk_ids: set = set()
 
         # Initialize helper components
         self.image_selector = ImageSelector(
             keyword_expander=self._expand_keywords,
             keyword_translator=self._get_keyword_translations
         )
-        self.code_generator = CodeGenerator(vector_store=vector_store)
-        self.content_expander = ContentExpander(vector_store=vector_store, with_code=with_code)
-
-    def extract_code_blocks(self, markdown: str) -> List:
-        """Delegate to CodeGenerator.extract_code_blocks()."""
-        return self.code_generator.extract_code_blocks(markdown)
+        self.content_expander = ContentExpander(vector_store=vector_store)
 
     def write_all_sections(
         self,
@@ -365,9 +271,14 @@ class ContentWriterAgent(BaseAgent):
 
         section_contents = []
 
-        # Initialize global image tracking
+        # Initialize global tracking
         self.used_image_ids.clear()
         self.image_usage_count.clear()
+        self.used_chunk_ids.clear()
+
+        # v0.5.1: Pre-assign all KB chunks to sections (Push strategy)
+        if self.vector_store:
+            self._pre_assign_chunks_to_sections(curriculum)
 
         for i, section in enumerate(curriculum.sections):
             logger.info(f"\n{'='*60}")
@@ -396,6 +307,29 @@ class ContentWriterAgent(BaseAgent):
             logger.info(f"   📊 Total unique images used so far: {len(self.used_image_ids)}")
 
             section_contents.append(content)
+
+        # ── Coverage sweep: expand under-represented sections with unused KB chunks ──
+        if self.vector_store:
+            try:
+                total_chunks = int(self.vector_store.get_total_chunk_count())
+            except (TypeError, ValueError):
+                total_chunks = 0
+            if total_chunks > 0:
+                coverage_ratio = len(self.used_chunk_ids) / total_chunks
+                logger.info(f"\n📊 KB Coverage: {len(self.used_chunk_ids)}/{total_chunks} chunks used "
+                            f"({coverage_ratio:.1%}) — target ≥ {Config.RAG_COVERAGE_MIN_RATIO:.0%}")
+
+                for _round in range(2):
+                    coverage_ratio = len(self.used_chunk_ids) / max(1, total_chunks)
+                    if coverage_ratio >= Config.RAG_COVERAGE_MIN_RATIO:
+                        break
+                    logger.info(
+                        f"   ⚡ Coverage sweep round {_round + 1} "
+                        f"(current: {coverage_ratio:.1%}, target: {Config.RAG_COVERAGE_MIN_RATIO:.0%})..."
+                    )
+                    self._expand_sections_for_coverage(section_contents, curriculum)
+                    new_coverage = len(self.used_chunk_ids) / max(1, total_chunks)
+                    logger.info(f"   📈 Sweep round {_round + 1}: coverage = {new_coverage:.1%}")
 
         # Final statistics
         logger.info(f"\n{'='*60}")
@@ -430,30 +364,49 @@ class ContentWriterAgent(BaseAgent):
         # 1. RAG query to get relevant context
         contexts, context_metadatas = self._query_knowledge(section, curriculum)
 
-        # 2. Select relevant images FIRST (for accurate quality evaluation)
-        images = self.image_selector.select_images(section, available_images or [], context_metadatas)
-        logger.info(f"   🖼️  Selected {len(images)} images for quality evaluation")
+        # 2. Estimate image count for quality evaluation (section-level upper bound)
+        max_section_images = max(3, section.estimated_time // 8)
+        pre_image_count = min(max_section_images, len(available_images or []))
 
-        # 3. Generate markdown content with LLM (pass image count for quality evaluation)
+        # 3. Generate markdown content with LLM
         markdown_content = self._generate_content(
             section=section,
             curriculum=curriculum,
             contexts=contexts,
-            available_image_count=len(images),  # Pass actual image count
-            context_metadatas=context_metadatas,  # K2: pass metadata for source-aware context
+            available_image_count=pre_image_count,
+            context_metadatas=context_metadatas,
         )
 
         # 4. Extract code blocks (if any)
-        code_blocks = self.code_generator.extract_code_blocks(markdown_content)
+        code_blocks = extract_code_blocks(markdown_content)
 
         # 5. Count words
         word_count = len(markdown_content.split())
 
-        # v0.4.0: Distribute images across subsections for inline placement
+        # 6. v0.5.0: Subsection-level image selection
         subsections = parse_markdown_subsections(markdown_content)
-        subsection_images = self._distribute_images_to_subsections(images, subsections)
+        subsection_images: dict = {s["heading"]: [] for s in subsections}
+        all_images: List = []
+        remaining_images = list(available_images or [])
+
+        for sub in subsections:
+            sub_imgs = self.image_selector.select_images_for_subsection(
+                subsection_heading=sub["heading_text"],
+                subsection_content=sub["content"],
+                section=section,
+                available_images=remaining_images,
+                context_metadatas=context_metadatas,
+                max_images=Config.IMAGE_MAX_PER_SUBSECTION,
+            )
+            if sub_imgs:
+                subsection_images[sub["heading"]] = sub_imgs
+                all_images.extend(sub_imgs)
+                used_sub_ids = {img.image_id for img in sub_imgs}
+                remaining_images = [img for img in remaining_images if img.get("id") not in used_sub_ids]
+
         logger.info(
-            f"   🖼️  Distributed {len(images)} images across {len(subsections)} subsections"
+            f"   🖼️  Subsection-level selection: {len(all_images)} images "
+            f"across {len(subsections)} subsections"
         )
 
         content = SectionContent(
@@ -461,15 +414,16 @@ class ContentWriterAgent(BaseAgent):
             title=section.title,
             markdown_content=markdown_content,
             code_blocks=code_blocks,
-            images=images,
+            images=all_images,
             diagrams=[],  # Diagrams will be added by DiagramGenerator
             word_count=word_count,
             estimated_time=section.estimated_time,
             difficulty_level=section.difficulty_level,
             subsection_images=subsection_images,
+            rag_key_chunks=contexts[:8],  # v0.5.0: preserve top chunks for DiagramGenerator
         )
 
-        logger.info(f"Section '{section.title}': {word_count} words, {len(code_blocks)} code blocks, {len(images)} images")
+        logger.info(f"Section '{section.title}': {word_count} words, {len(code_blocks)} code blocks, {len(all_images)} images")
 
         return content
 
@@ -533,6 +487,7 @@ class ContentWriterAgent(BaseAgent):
     ) -> dict:
         """
         v0.4.0: Distribute selected images to subsections using round-robin assignment.
+        Kept as fallback; primary path is subsection-level selection in write_section().
 
         Returns:
             Dict mapping heading → List[ImageReference]
@@ -546,6 +501,195 @@ class ContentWriterAgent(BaseAgent):
             result[target_heading].append(img)
 
         return result
+
+    def _pre_assign_chunks_to_sections(self, curriculum: Curriculum) -> None:
+        """v0.5.1: Pre-assign all KB chunks to sections (Push strategy).
+
+        Performs one collection.get() call and routes each chunk to the content section
+        whose title+topics keywords overlap most. Chunks with zero overlap are round-robin
+        distributed. Result stored in curriculum.chunk_assignments (section_id → chunk texts).
+        No LLM calls.
+        """
+        try:
+            all_items = self.vector_store.collection.get(include=["documents", "ids"])
+        except Exception as e:
+            logger.debug(f"Pre-assign KB get failed: {e}")
+            return
+
+        all_docs = all_items.get("documents") or []
+        all_ids  = all_items.get("ids") or []
+
+        content_sections = [
+            s for s in curriculum.sections
+            if not s.id.lower().endswith(("_intro", "_conclusion"))
+        ]
+        if not content_sections:
+            return
+
+        # Build keyword sets per section (title + all topics)
+        section_kw = {
+            s.id: set(
+                w.lower()
+                for t in ([s.title] + s.topics)
+                for w in t.split()
+                if len(w) > 1
+            )
+            for s in content_sections
+        }
+
+        assignments: dict = {s.id: [] for s in content_sections}
+        tie_counter = 0
+
+        for doc, doc_id in zip(all_docs, all_ids):
+            if doc_id in self.used_chunk_ids:
+                continue  # already used by RAG pull
+
+            doc_words = set(w.lower() for w in doc.split() if len(w) > 1)
+            scores = {sid: len(doc_words & kw) for sid, kw in section_kw.items()}
+            max_score = max(scores.values(), default=0)
+
+            if max_score == 0:
+                # No keyword overlap → round-robin to ensure no chunk is abandoned
+                best_sid = content_sections[tie_counter % len(content_sections)].id
+                tie_counter += 1
+            else:
+                best_sid = max(scores, key=scores.get)
+
+            assignments[best_sid].append(doc)
+
+        curriculum.chunk_assignments = assignments
+        total_assigned = sum(len(v) for v in assignments.values())
+        logger.info(
+            f"   📋 Pre-assigned {total_assigned}/{len(all_docs)} chunks "
+            f"to {len(content_sections)} sections"
+        )
+
+    def _expand_sections_for_coverage(
+        self,
+        section_contents: List[SectionContent],
+        curriculum: "Curriculum",
+    ) -> None:
+        """
+        v0.5.1: Coverage sweep — append supplementary content from unused KB chunks.
+
+        Retrieves chunks not yet referenced in this writing pass, groups them by
+        similarity to existing sections (simple keyword overlap), and appends a
+        short supplementary paragraph to the best-matching section's markdown.
+
+        The sections list is modified in-place.
+        """
+        if not self.vector_store:
+            return
+
+        try:
+            result = self.vector_store.get_unused_chunks(self.used_chunk_ids, n=2000)
+            unused_docs, unused_metas = result
+        except (TypeError, ValueError, Exception):
+            return
+        if not unused_docs:
+            logger.info("   ✅ No unused chunks found — KB fully covered")
+            return
+
+        logger.info(f"   📦 {len(unused_docs)} unused chunks to distribute across sections")
+
+        # Skip structural sections (intro/conclusion) for expansion
+        content_indices = [
+            i for i, sc in enumerate(section_contents)
+            if not sc.section_id.lower().endswith("_intro")
+            and not sc.section_id.lower().endswith("_conclusion")
+        ]
+        if not content_indices:
+            return
+
+        # v0.5.1: Use chunk_assignments for precise routing when available
+        has_assignments = (
+            hasattr(curriculum, "chunk_assignments") and curriculum.chunk_assignments
+        )
+
+        if has_assignments:
+            # chunk_assignments path: each section pulls its own pre-assigned unused chunks
+            for sec_idx in content_indices:
+                sc = section_contents[sec_idx]
+                sec_obj = curriculum.sections[sec_idx] if sec_idx < len(curriculum.sections) else None
+                if not sec_obj:
+                    continue
+                pre_set = set(curriculum.chunk_assignments.get(sec_obj.id, []))
+                unused_for_sec = [d for d in unused_docs if d in pre_set][:5]
+                if not unused_for_sec:
+                    continue
+                supp = self._generate_supplementary_content(sc, unused_for_sec)
+                if supp:
+                    sc.markdown_content = sc.markdown_content.rstrip() + "\n\n" + supp
+                    sc.word_count = len(sc.markdown_content.split())
+                    logger.info(
+                        f"   📝 Expanded '{sc.title}' with {len(unused_for_sec)} supplementary chunks"
+                    )
+        else:
+            # Fallback: keyword-overlap routing (legacy)
+            section_topic_sets = [
+                set(" ".join(sc.title.lower().split() + [t.lower() for t in (
+                    curriculum.sections[i].topics if i < len(curriculum.sections) else []
+                )]))
+                for i, sc in enumerate(section_contents)
+            ]
+            section_chunks: dict = {i: [] for i in content_indices}
+            for doc, meta in zip(unused_docs, unused_metas):
+                doc_words = set(doc.lower().split())
+                best_idx = max(
+                    content_indices,
+                    key=lambda i: len(doc_words & section_topic_sets[i]),
+                )
+                section_chunks[best_idx].append(doc)
+                if meta and meta.get("id"):
+                    self.used_chunk_ids.add(meta["id"])
+
+            for sec_idx, chunks in section_chunks.items():
+                if not chunks:
+                    continue
+                sc = section_contents[sec_idx]
+                supp = self._generate_supplementary_content(sc, chunks)
+                if supp:
+                    sc.markdown_content = sc.markdown_content.rstrip() + "\n\n" + supp
+                    sc.word_count = len(sc.markdown_content.split())
+                    logger.info(
+                        f"   📝 Expanded '{sc.title}' with {len(chunks)} supplementary chunks"
+                    )
+
+    def _generate_supplementary_content(
+        self,
+        section_content: SectionContent,
+        extra_chunks: List[str],
+    ) -> str:
+        """
+        Generate a short supplementary paragraph from unused KB chunks.
+
+        Uses a lightweight LLM call to produce 150–300 words of additional depth
+        for the given section, grounded in the extra_chunks context.
+        """
+        context = "\n\n---\n\n".join(chunk[:400] for chunk in extra_chunks[:5])
+        prompt = f"""다음은 '{section_content.title}' 섹션에 아직 다루지 않은 보충 자료입니다.
+
+**보충 자료:**
+{context}
+
+위 자료를 바탕으로, 이미 작성된 섹션 내용을 깊이 있게 보완하는 **150~300단어** 분량의 보충 내용을 한국어로 작성하세요.
+- 기존 내용과 중복 없이 새로운 관점이나 세부사항 추가
+- ### 소제목으로 시작 (예: ### 추가 고려사항 또는 ### 심화 개념)
+- 핵심 개념은 **굵게** 강조
+- 간결하고 교육적으로 작성
+
+보충 내용만 출력하세요 (제목 포함, 다른 설명 불필요):"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="coverage_expansion")
+            content = response.content.strip()
+            # Strip accidental markdown fences
+            if content.startswith("```"):
+                content = content.split("```")[1].split("```")[0].strip()
+            return content
+        except Exception as e:
+            logger.debug(f"Coverage expansion LLM call failed: {e}")
+            return ""
 
     def _query_knowledge(self, section: Section, curriculum: "Curriculum | None" = None) -> tuple:
         """Query vector DB with per-subtopic, cross-lingual, and fallback queries.
@@ -743,6 +887,18 @@ class ContentWriterAgent(BaseAgent):
                             )
                     except Exception:
                         pass  # where filter not supported by this ChromaDB version
+        # v0.5.1: Inject pre-assigned chunks not yet pulled by RAG (Push補완)
+        if curriculum and hasattr(curriculum, "chunk_assignments") and curriculum.chunk_assignments:
+            pre_chunks = curriculum.chunk_assignments.get(section.id, [])
+            injected = 0
+            for chunk in pre_chunks:
+                if chunk not in all_docs and len(all_docs) < cap * 2:
+                    all_docs.append(chunk)
+                    all_metas.append({})
+                    injected += 1
+            if injected:
+                logger.info(f"   💉 Injected {injected} pre-assigned chunks for '{section.title}'")
+
         capped_docs  = all_docs[:cap]
         capped_metas = all_metas[:cap]
         trimmed_docs, trimmed_metas = _trim_contexts_by_tokens(
@@ -752,6 +908,12 @@ class ContentWriterAgent(BaseAgent):
             f"   📚 Final context: {len(trimmed_docs)}/{len(all_docs)} chunks "
             f"(cap={cap}, token_limit={Config.RAG_MAX_CONTEXT_TOKENS})"
         )
+        # Coverage tracking: record which chunk IDs were used
+        for meta in trimmed_metas:
+            if meta and meta.get("id"):
+                self.used_chunk_ids.add(meta["id"])
+        # Also track via seen_ids (already deduped by the query loop above)
+        self.used_chunk_ids.update(seen_ids)
         return trimmed_docs, trimmed_metas
 
 
@@ -774,11 +936,6 @@ class ContentWriterAgent(BaseAgent):
         """
         # Calculate target metrics
         targets = calculate_target_metrics(section.estimated_time, section.difficulty_level)
-
-        # Override code targets when --with-code is not set
-        if not self.with_code:
-            targets["target_code_examples"] = 0
-            targets["min_code_examples"] = 0
 
         # Structural sections (intro/conclusion) should not require practice problems
         _section_id = section.id.lower()
@@ -813,7 +970,6 @@ class ContentWriterAgent(BaseAgent):
             "target_words": targets['target_words'],
             "max_words": targets['max_words'],
             "target_subsections": targets['target_subsections'],
-            "target_code_examples": targets['target_code_examples'],
             "target_practice_problems": targets['target_practice_problems'],
             # Word count breakdown (using Config constants)
             "intro_words": int(targets['target_words'] * Config.CONTENT_INTRO_RATIO),
@@ -825,15 +981,6 @@ class ContentWriterAgent(BaseAgent):
             "summary_label": summary_label,
             # Context
             "context_text": context_text,
-            # Code section variables (controlled by --with-code flag)
-            "code_fail_condition": _build_code_fail_condition(self.with_code),
-            "code_requirement_section": _build_code_requirement_section(
-                self.with_code, targets['target_code_examples']
-            ),
-            "code_template_section": _build_code_template_section(self.with_code),
-            "code_checklist_item": _build_code_checklist_item(
-                self.with_code, targets['target_code_examples']
-            ),
             # Practice problems variables (disabled for intro/conclusion sections)
             "practice_fail_condition": _build_practice_fail_condition(
                 targets['target_practice_problems'] > 0
@@ -909,41 +1056,13 @@ class ContentWriterAgent(BaseAgent):
             content = self._review_content_with_rmc(content, section, curriculum, targets)
 
             # Validate content quality (use actual image count from selected images)
-            code_blocks = self.code_generator.extract_code_blocks(content)
             quality = evaluate_content_quality(
                 content=content,
                 targets=targets,
-                code_block_count=len(code_blocks),
-                image_count=available_image_count,  # Use actual selected images count
+                image_count=available_image_count,
             )
 
             logger.info(f"  📊 Initial quality score: {quality['overall_score']}/100 (with {available_image_count} images)")
-
-            # CRITICAL: If NO code examples, generate them separately
-            if len(code_blocks) == 0 and targets["target_code_examples"] > 0:
-                logger.warning(
-                    f"  ❌ CRITICAL: No code examples found! Generating {targets['target_code_examples']} code examples..."
-                )
-
-                code_examples_content = self.code_generator.generate_code_examples(
-                    section=section, curriculum=curriculum, contexts=contexts, num_examples=targets["target_code_examples"]
-                )
-
-                # Append code examples to content
-                content += "\n\n" + code_examples_content
-
-                # Re-extract code blocks
-                code_blocks = self.code_generator.extract_code_blocks(content)
-                logger.info(f"  ✅ Added {len(code_blocks)} code examples")
-
-                # Re-evaluate (use actual image count)
-                quality = evaluate_content_quality(
-                    content=content,
-                    targets=targets,
-                    code_block_count=len(code_blocks),
-                    image_count=available_image_count,  # Use actual selected images count
-                )
-                logger.info(f"  📊 Quality after adding code: {quality['overall_score']}/100")
 
             # If quality is too low, try to expand with multiple iterations
             if not quality["meets_requirements"]:
@@ -973,12 +1092,10 @@ class ContentWriterAgent(BaseAgent):
                             content = expanded_content
 
                             # Re-evaluate (use actual image count)
-                            code_blocks = self.code_generator.extract_code_blocks(content)
                             quality = evaluate_content_quality(
                                 content=content,
                                 targets=targets,
-                                code_block_count=len(code_blocks),
-                                image_count=available_image_count,  # Use actual selected images count
+                                image_count=available_image_count,
                             )
 
                             logger.info(f"  📊 Quality after expansion {iteration + 1}: {quality['overall_score']}/100")
@@ -1007,12 +1124,6 @@ class ContentWriterAgent(BaseAgent):
                     except Exception as e:
                         logger.error(f"  ❌ Expansion {iteration + 1} failed: {e}")
                         break
-
-            # Post-process: strip fenced code blocks if --with-code is not set
-            if not self.with_code and "```" in content:
-                import re
-                content = re.sub(r"```[\s\S]*?```", "", content)
-                content = re.sub(r"\n{3,}", "\n\n", content).strip()
 
             return content
 

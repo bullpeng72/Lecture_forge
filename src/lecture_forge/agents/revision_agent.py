@@ -2,7 +2,6 @@
 Revision Agent - Revises lecture based on evaluation.
 """
 
-import re
 from copy import deepcopy
 
 from lecture_forge.agents.base import BaseAgent
@@ -12,35 +11,11 @@ from lecture_forge.models.lecture import Lecture, SectionContent, MermaidDiagram
 from lecture_forge.utils import logger
 
 
-def _build_expansion_code_section(with_code: bool, target_gap: int) -> str:
-    """Return expansion-prompt code section only when with_code is enabled."""
-    if not with_code:
-        return ""
-    return f"""2. **추가 코드 예제** (~{int(target_gap * 0.3)} words):
-   ```python
-   # 새로운 시나리오의 예제 (기존과 다른)
-   # 최소 20-30줄
-   # 상세한 주석 포함
-   ```
-   - 예제 전: 무엇을 보여주는가 설명
-   - 예제 후: 각 라인 설명
-   - 실행 결과 예측
-
-"""
-
-
-def _strip_code_blocks(text: str) -> str:
-    """Remove fenced code blocks and clean up blank lines."""
-    text = re.sub(r"```[\s\S]*?```", "", text)
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
-
-
 class RevisionAgent(BaseAgent):
     """Agent for revising lecture content."""
 
-    def __init__(self, with_code: bool = False):
+    def __init__(self):
         super().__init__()
-        self.with_code = with_code
         logger.info("Initializing Revision Agent")
 
     def revise(self, lecture: Lecture, evaluation: EvaluationResult) -> Lecture:
@@ -88,16 +63,7 @@ class RevisionAgent(BaseAgent):
         logger.debug(f"Handling {issue.severity} issue in {issue.dimension}: {issue.description}")
 
         if issue.dimension == "content_completeness":
-            # PRIORITY 1: Code examples (only when --with-code is enabled)
-            if ("code" in issue.description.lower() or "NO code" in issue.description) and self.with_code:
-                logger.info(f"  🚨 Handling critical code example shortage")
-                self._add_code_examples(lecture, issue)
-            # PRIORITY 2: Content length
-            elif "short" in issue.description.lower():
-                self._expand_content(lecture, issue)
-            # PRIORITY 3: General completeness
-            else:
-                self._expand_content(lecture, issue)
+            self._expand_content(lecture, issue)
 
         elif issue.dimension == "logical_flow":
             if "intro" in issue.description.lower():
@@ -116,88 +82,6 @@ class RevisionAgent(BaseAgent):
                 self._expand_content(lecture, issue)
             elif "long" in issue.description.lower():
                 logger.info("Content reduction requires manual review")
-
-    def _add_code_examples(self, lecture: Lecture, issue: Issue) -> None:
-        """Add code examples to sections that lack them."""
-        # Find sections without code blocks
-        sections_without_code = [
-            s
-            for s in lecture.sections
-            if len(s.code_blocks) == 0 and "intro" not in s.section_id.lower() and "conclusion" not in s.section_id.lower()
-        ]
-
-        if not sections_without_code:
-            return
-
-        logger.info(f"Adding code examples to {len(sections_without_code)} section(s)")
-
-        # Add code examples to up to 3 sections
-        for section in sections_without_code[:3]:
-            prompt = f"""🚨 CRITICAL: Generate code examples for lecture section
-
-**Section:** {section.title}
-**Audience:** {lecture.audience_level}
-
-**REQUIREMENTS:**
-- Generate 1-2 complete, runnable Python code examples
-- Each example: 20-50 lines MINIMUM
-- Include Korean comments explaining EVERY important line
-- Show practical, real-world usage
-- Include expected output
-
-**FORMAT (MANDATORY):**
-
-### 코드 예제 1: [제목]
-
-[예제 설명 1-2 문장]
-
-```python
-# [예제가 보여주는 것]
-
-# 코드 (20-50 lines)
-# 각 라인에 한글 주석
-
-# 예상 출력:
-# [결과]
-```
-
-**설명:**
-- [각 단계 설명]
-
-Generate the code examples NOW (in Korean):"""
-
-        try:
-            response = self.invoke_llm(prompt, phase="revision")
-            code_examples_content = response.content.strip()
-
-            # Clean up outer markdown fences only
-            if code_examples_content.startswith("```markdown"):
-                code_examples_content = code_examples_content.split("```markdown")[1].split("```")[0].strip()
-            elif code_examples_content.startswith("```") and "```python" not in code_examples_content[:20]:
-                # Only remove outer fence if it's wrapping the whole content
-                parts = code_examples_content.split("```")
-                if len(parts) >= 3:
-                    code_examples_content = "```".join(parts[1:-1])
-
-            # Append to section
-            section.markdown_content += "\n\n" + code_examples_content
-
-            # Re-extract code blocks
-            from lecture_forge.agents.content_writer import ContentWriterAgent
-
-            temp_writer = ContentWriterAgent()
-            new_code_blocks = temp_writer._extract_code_blocks(section.markdown_content)
-
-            # Update code blocks list (keep only newly extracted ones)
-            section.code_blocks = new_code_blocks
-
-            # Recalculate word count
-            section.word_count = len(section.markdown_content.split())
-
-            logger.info(f"  ✅ Added {len(new_code_blocks) - len(section.code_blocks)} code example(s) to '{section.title}'")
-
-        except Exception as e:
-            logger.error(f"  ❌ {ContentGenerationError(f'Failed to generate code example: {e}')}")
 
     def _expand_content(self, lecture: Lecture, issue: Issue) -> None:
         """Strategic content expansion - analyzes all sections and expands intelligently."""
@@ -287,13 +171,13 @@ Expand this section by adding {target_gap:,}+ NEW words.
 
 **EXPANSION STRATEGY (add content in these areas):**
 
-1. **더 깊이 있는 설명** (~{int(target_gap * (0.4 if self.with_code else 0.7))} words):
+1. **더 깊이 있는 설명** (~{int(target_gap * 0.7)} words):
    - 각 개념을 3-4 문단으로 자세히 설명
    - 실생활 비유와 메타포 사용
    - 역사적 맥락이나 발전 과정 추가
    - "왜 그런가?"에 대한 답변
 
-{_build_expansion_code_section(self.with_code, target_gap)}2. **고급 주제/응용** (~{int(target_gap * 0.2)} words):
+2. **고급 주제/응용** (~{int(target_gap * 0.2)} words):
    - 실전 팁 5-7가지
    - 성능 최적화 기법
    - 트러블슈팅 가이드
@@ -356,11 +240,6 @@ WRITE {target_gap:,}+ WORDS NOW (NOT {added_words}):
                 if "```markdown" in additional_content:
                     additional_content = additional_content.split("```markdown")[1].split("```")[0].strip()
 
-                added_words = len(additional_content.split())
-
-            # Strip code blocks when --with-code is not set
-            if not self.with_code and "```" in additional_content:
-                additional_content = _strip_code_blocks(additional_content)
                 added_words = len(additional_content.split())
 
             # Check for duplication (simple check)

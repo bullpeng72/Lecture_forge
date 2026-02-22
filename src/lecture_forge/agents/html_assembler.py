@@ -191,13 +191,13 @@ class HTMLAssemblerAgent(BaseAgent):
         toc_html = self._generate_toc(lecture.sections)
         objectives_html = self._generate_objectives_html(lecture.learning_objectives)
 
-        # Build search data (first 500 chars of content for snippet preview)
+        # Build search data (full content for search; preview truncation is handled in search.js)
         search_data = {
             "sections": [
                 {
                     "section_id": self._sanitize_section_id(section.section_id),
                     "title": section.title,
-                    "markdown_content": section.markdown_content[:500],
+                    "markdown_content": section.markdown_content,
                 }
                 for section in lecture.sections
             ]
@@ -205,7 +205,7 @@ class HTMLAssemblerAgent(BaseAgent):
         search_data_json = json.dumps(search_data, ensure_ascii=False)
 
         template = self.jinja_env.get_template("lecture_html.html")
-        return template.render(
+        html_content = template.render(
             title=lecture.title,
             lang=self._detect_lang(lecture),
             duration=lecture.duration,
@@ -219,6 +219,14 @@ class HTMLAssemblerAgent(BaseAgent):
             total_diagrams=lecture.total_diagrams,
             search_data_json=search_data_json,
         )
+        # v0.5.2: 재평가 기능을 위해 메타데이터를 HTML 상단에 주석으로 내장
+        metadata_comments = (
+            f"<!-- lf:vector_db_path: {lecture.vector_db_path or ''} -->\n"
+            f"<!-- lf:topic: {lecture.topic} -->\n"
+            f"<!-- lf:duration: {lecture.duration} -->\n"
+            f"<!-- lf:audience_level: {lecture.audience_level} -->\n"
+        )
+        return metadata_comments + html_content
 
     def _sanitize_section_id(self, section_id: str) -> str:
         """

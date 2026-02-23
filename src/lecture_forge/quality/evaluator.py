@@ -2,6 +2,8 @@
 Quality evaluator implementation.
 """
 
+from lecture_forge.config import Config
+from lecture_forge.constants import QualitySeverity
 from lecture_forge.models.evaluation import EvaluationResult
 from lecture_forge.models.lecture import Lecture
 from lecture_forge.quality.metrics import QualityMetrics
@@ -71,19 +73,19 @@ class QualityEvaluator:
         issues = []
 
         for dimension, score in dimension_scores.items():
-            if score < 60:
+            if score < QualitySeverity.HIGH:
                 # High severity
                 issue = self._create_issue_for_dimension(dimension, score, lecture, severity="high")
                 if issue:
                     issues.append(issue)
 
-            elif score < 70:
+            elif score < QualitySeverity.MEDIUM:
                 # Medium severity
                 issue = self._create_issue_for_dimension(dimension, score, lecture, severity="medium")
                 if issue:
                     issues.append(issue)
 
-            elif score < 80:
+            elif score < QualitySeverity.LOW:
                 # Low severity
                 issue = self._create_issue_for_dimension(dimension, score, lecture, severity="low")
                 if issue:
@@ -96,7 +98,7 @@ class QualityEvaluator:
         from lecture_forge.models.evaluation import Issue
 
         if dimension == "content_completeness":
-            if lecture.total_word_count < lecture.duration * 150:
+            if lecture.total_word_count < lecture.duration * Config.CONTENT_WPM_MIN:
                 return Issue(
                     dimension=dimension,
                     severity=severity,
@@ -146,15 +148,15 @@ class QualityEvaluator:
                 )
 
         elif dimension == "time_alignment":
-            if lecture.total_word_count < lecture.duration * 150:
+            if lecture.total_word_count < lecture.duration * Config.CONTENT_WPM_MIN:
                 return Issue(
                     dimension=dimension,
                     severity=severity,
                     location="overall",
                     description=f"Content too short for {lecture.duration} minutes",
-                    suggestion=f"Add approximately {lecture.duration * 150 - lecture.total_word_count} more words",
+                    suggestion=f"Add approximately {lecture.duration * Config.CONTENT_WPM_MIN - lecture.total_word_count} more words",
                 )
-            elif lecture.total_word_count > lecture.duration * 250:
+            elif lecture.total_word_count > lecture.duration * Config.CONTENT_WPM_MAX:
                 return Issue(
                     dimension=dimension,
                     severity=severity,
@@ -189,13 +191,13 @@ class QualityEvaluator:
                     description=f"Insufficient diagrams ({lecture.total_diagrams} found)",
                     suggestion=f"Add {len(lecture.sections) // 2 - lecture.total_diagrams} more diagrams to key sections",
                 )
-            elif lecture.total_images < lecture.duration // 20:
+            elif lecture.total_images < lecture.duration // Config.DIAGRAM_MINUTES_PER:
                 return Issue(
                     dimension=dimension,
                     severity=severity,
                     location="overall",
                     description=f"Insufficient images ({lecture.total_images} found)",
-                    suggestion=f"Add {lecture.duration // 20 - lecture.total_images} more relevant images",
+                    suggestion=f"Add {lecture.duration // Config.DIAGRAM_MINUTES_PER - lecture.total_images} more relevant images",
                 )
             else:
                 return Issue(
@@ -219,11 +221,11 @@ class QualityEvaluator:
 
     def _determine_strategy(self, overall_score: float, issues: list) -> str:
         """Determine revision strategy based on score and issues."""
-        if overall_score >= 80:
+        if overall_score >= QualitySeverity.LOW:
             return "none"
-        elif overall_score >= 70 and len(issues) <= 3:
+        elif overall_score >= QualitySeverity.MEDIUM and len(issues) <= 3:
             return "auto"
-        elif overall_score >= 60:
+        elif overall_score >= QualitySeverity.HIGH:
             return "consult"
         else:
             return "major"

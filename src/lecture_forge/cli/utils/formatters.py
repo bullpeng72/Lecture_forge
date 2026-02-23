@@ -92,7 +92,7 @@ def print_basic_help() -> None:
             "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + " [green](Beta)[/green]\n\n"
             "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
             "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-            "[dim]10 Agents | 9 Tools | 89 Tests (50%+) | ~$0.035 per 60min lecture[/dim]",
+            "[dim]10 Agents | 9 Tools | 8 Commands | 1,356+ Tests | ~$0.035 per 60min lecture[/dim]",
             border_style="cyan",
         )
     )
@@ -119,11 +119,12 @@ def print_basic_help() -> None:
         "--path"
     )
     table.add_row("create", "Generate lecture materials", "--image-search")
+    table.add_row("translate", "Translate English PDF to Korean HTML", "--no-translate")
     table.add_row("chat", "Interactive Q&A (RAG-based)", "-kb PATH")
     table.add_row("edit-images", "Edit lecture images", "-o FILE")
     table.add_row("improve", "Enhance or convert lecture", "--to-slides")
     table.add_row("cleanup", "Manage knowledge bases", "--all")
-    table.add_row("[bold green]home[/bold green]", "[bold]Open folders[/bold] in file manager [cyan](NEW!)[/cyan]", "outputs/data/env")
+    table.add_row("[bold green]home[/bold green]", "[bold]Open folders[/bold] in file manager", "outputs/data/env")
     console.print(table)
 
     # Common Options (for create command)
@@ -164,6 +165,9 @@ def print_basic_help() -> None:
     console.print()
     console.print("  [dim]# Fast mode with async I/O (70% faster, v0.3.4+)[/dim]")
     console.print("  $ [cyan]lecture-forge create --async-mode[/cyan]")
+    console.print()
+    console.print("  [dim]# Translate English PDF to Korean lecture material[/dim]")
+    console.print("  $ [cyan]lecture-forge translate paper.pdf[/cyan]")
     console.print()
     console.print("  [dim]# Convert lecture to presentation slides[/dim]")
     console.print("  $ [cyan]lecture-forge improve outputs/lecture.html --to-slides[/cyan]")

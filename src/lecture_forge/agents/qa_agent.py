@@ -18,6 +18,7 @@ from rich.table import Table
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config
+from lecture_forge.constants import QAConfig
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.utils import detect_language, get_language_name, logger, translate_to_english, translate_to_korean
 
@@ -139,7 +140,7 @@ class QAAgent(BaseAgent):
             answer_language = "한국어" if query_language == "ko" else "English"
 
             num_contexts = len(merged_results)
-            min_refs = min(num_contexts, 4)
+            min_refs = min(num_contexts, QAConfig.MIN_CONTEXT_REFS)
 
             # Comprehensive, structured answer prompt with explicit length / format requirements
             prompt = f"""You are an expert educational assistant. Produce a **comprehensive, well-structured answer** in {answer_language} using the provided context.
@@ -152,7 +153,7 @@ class QAAgent(BaseAgent):
 
 ## Mandatory Answer Requirements
 
-**Length:** Write at least **400 words**. Depth and completeness are more important than brevity.
+**Length:** Write at least **{QAConfig.MIN_ANSWER_WORDS} words**. Depth and completeness are more important than brevity.
 
 **Structure — use Markdown headings and lists:**
 1. `## 개요` (or `## Overview`) — 2–3 sentence summary of the direct answer
@@ -198,7 +199,7 @@ class QAAgent(BaseAgent):
 
             return {
                 "answer": answer,
-                "sources": list(dict.fromkeys(sources))[:5],  # Top 5 unique sources
+                "sources": list(dict.fromkeys(sources))[:QAConfig.MAX_SOURCES_RETURNED],
                 "confidence": confidence,
                 "query_language": query_language,
                 "translated_query": translated_query,
@@ -261,7 +262,7 @@ class QAAgent(BaseAgent):
                 # Language matching bonus
                 chunk_language = metadata.get("language", "unknown")
                 if query_language == chunk_language:
-                    similarity += 0.1  # 10% bonus for same language
+                    similarity += QAConfig.SAME_LANG_BONUS  # 10% bonus for same language
 
                 all_results.append(
                     {
@@ -294,12 +295,12 @@ class QAAgent(BaseAgent):
                 similarity = max(0.0, 1 - distance / 2)
 
                 # Small penalty for translated query (-5%)
-                similarity -= 0.05
+                similarity -= QAConfig.TRANSLATED_PENALTY
 
                 # Language matching bonus (for different language)
                 chunk_language = metadata.get("language", "unknown")
                 if query_language != chunk_language and chunk_language in ["ko", "en"]:
-                    similarity += 0.05  # 5% bonus for cross-lingual match
+                    similarity += QAConfig.CROSS_LINGUAL_BONUS  # 5% bonus for cross-lingual match
 
                 all_results.append(
                     {
@@ -688,7 +689,7 @@ However, the context does not directly address: [missing aspects]
         except Exception as e:
             logger.warning(f"Failed to write exchange to conversation log: {e}")
 
-    def start_chat(self):
+    def start_chat(self) -> None:
         """Start interactive chat mode."""
         logger.info("Starting Q&A chat mode")
 

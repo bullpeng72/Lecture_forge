@@ -512,7 +512,7 @@ class ContentWriterAgent(BaseAgent):
         """
         try:
             all_items = self.vector_store.collection.get(include=["documents", "ids"])
-        except Exception as e:
+        except (RuntimeError, ValueError, AttributeError) as e:
             logger.debug(f"Pre-assign KB get failed: {e}")
             return
 
@@ -687,7 +687,7 @@ class ContentWriterAgent(BaseAgent):
             if content.startswith("```"):
                 content = content.split("```")[1].split("```")[0].strip()
             return content
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             logger.debug(f"Coverage expansion LLM call failed: {e}")
             return ""
 
@@ -734,7 +734,7 @@ class ContentWriterAgent(BaseAgent):
                     # M: token-aware trimming for structural sections too
                     docs, metas = _trim_contexts_by_tokens(docs, metas, Config.RAG_MAX_CONTEXT_TOKENS)
                     return docs, metas
-            except Exception as e:
+            except (RuntimeError, ValueError, AttributeError) as e:
                 logger.warning(f"Error querying vector DB for structural section: {e}")
             return [], []
 
@@ -777,7 +777,7 @@ class ContentWriterAgent(BaseAgent):
                             seen_ids.add(cid)
                             all_docs.append(doc)
                             all_metas.append(meta)
-                except Exception as e:
+                except (RuntimeError, ValueError, AttributeError) as e:
                     logger.debug(f"Sub-topic query failed for '{query_str}': {e}")
 
         logger.info(
@@ -813,7 +813,7 @@ class ContentWriterAgent(BaseAgent):
                         added += 1
                 if added:
                     logger.info(f"   🌐 Cross-lingual ({cross_label}) query added {added} chunks")
-        except Exception as e:
+        except (RuntimeError, ValueError, AttributeError) as e:
             logger.debug(f"Cross-lingual query failed (non-critical): {e}")
 
         # ── Step 3: Sparse fallback queries (I) ──────────────────────────────
@@ -842,7 +842,7 @@ class ContentWriterAgent(BaseAgent):
                         logger.info(f"   🔄 Fallback '{fq[:50]}' added {added} chunks")
                     if len(all_docs) >= Config.RAG_SPARSE_THRESHOLD:
                         break
-                except Exception as e:
+                except (RuntimeError, ValueError, AttributeError) as e:
                     logger.debug(f"Fallback query failed for '{fq}': {e}")
 
             if len(all_docs) < Config.RAG_SPARSE_THRESHOLD:
@@ -885,8 +885,8 @@ class ContentWriterAgent(BaseAgent):
                                 f"   📎 Source-diversity: +{added} chunks from "
                                 f"'{_Path(source_path).name}'"
                             )
-                    except Exception:
-                        pass  # where filter not supported by this ChromaDB version
+                    except (RuntimeError, ValueError) as e:
+                        logger.debug(f"Source-diversity where-filter skipped for '{source_path}': {e}")
         # v0.5.1: Inject pre-assigned chunks not yet pulled by RAG (Push補완)
         if curriculum and hasattr(curriculum, "chunk_assignments") and curriculum.chunk_assignments:
             pre_chunks = curriculum.chunk_assignments.get(section.id, [])
@@ -1121,14 +1121,14 @@ class ContentWriterAgent(BaseAgent):
                             logger.warning(f"  ⚠️ Expansion {iteration + 1} produced no change - stopping")
                             break
 
-                    except Exception as e:
+                    except (RuntimeError, ValueError) as e:
                         logger.error(f"  ❌ Expansion {iteration + 1} failed: {e}")
                         break
 
             return content
 
         except Exception as e:
-            logger.error(f"Error generating content: {e}")
+            logger.error(f"Error generating content: {e}", exc_info=True)
             return f"# {section.title}\n\n*Content generation error: {str(e)}*"
 
 
@@ -1343,7 +1343,7 @@ class ContentWriterAgent(BaseAgent):
             )
             return revised
 
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             logger.warning(f"RMC content review failed (returning original): {e}")
             return content
 

@@ -9,6 +9,7 @@ from lecture_forge.cli.commands.edit_images import edit_images
 from lecture_forge.cli.commands.home import home
 from lecture_forge.cli.commands.improve import improve
 from lecture_forge.cli.commands.init import init
+from lecture_forge.cli.commands.translate import translate
 
 __all__ = [
     "chat",
@@ -18,4 +19,5 @@ __all__ = [
     "home",
     "improve",
     "init",
+    "translate",
 ]

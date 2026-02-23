@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.4.0** | 검색 커버리지 수정 🔍 + `--re-evaluate` HTML 통계 자동 업데이트 📊
+> 🚀 **v0.4.1** | `translate` 명령어 품질 개선 🌐 + `--with-diagrams` 옵션 🎛️ + 코드 품질 향상 🔧
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 7개 CLI 명령 | 1,356+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 8개 CLI 명령 | 1,356+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -68,15 +68,19 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.4.0)
+## 🚀 최근 개선사항 (v0.4.1)
 
-**검색 커버리지 수정 & `--re-evaluate` HTML 통계 자동 업데이트**:
-- **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
-- **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`):
-  - 보강 완료 후 사이드바·헤더 배지·푸터의 단어수·이미지수·다이어그램수 재계산값으로 교체
-  - 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
-- **`--to-slides` 기본 LLM 재작성**: `--to-slides` 실행 시 항상 섹션별 LLM 재작성 포함 (≤35자, 말줄임표 없음)
-- **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
+**`translate` 명령어 품질 대폭 개선 + `--with-diagrams` 옵션**:
+- **`translate` 명령어** (영문 PDF → 한국어 강의자료):
+  - PDF 아티팩트 제거: 단독 페이지 번호·도메인 워터마크·짧은 단편 줄 자동 제거
+  - TOC 감지·필터: 차례 페이지 자동 감지 및 제외 (점선+숫자 패턴 >40%)
+  - 빈 섹션 제거: 30 단어 미만 섹션 자동 제외
+  - AI/ML 용어 사전 (`_TERM_GLOSSARY`): 25개 표준 용어 일관 번역
+  - 할루시네이션 가드: 번역 청크에 `⛔ 절대 금지` 규칙 추가
+  - 이미지 중복 제거: 크로스 섹션 globally_used_ids 집합으로 중복 이미지 방지
+- **`--with-diagrams` 플래그**: Mermaid 다이어그램 생성 opt-in (기본 OFF, PDF 이미지 우선)
+- **콘텐츠 메타 주석 제거**: "이제 X단어를 달성하였습니다" 등 AI 메타 주석 자동 삭제
+- **코드 품질**: `constants.py` 상수 모듈, 예외 처리 세분화, 타입 힌트 보완
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -237,6 +241,7 @@ lecture-forge create
 |--------|------|----------|
 | **init** | 초기 설정 | `--path` |
 | **create** | 강의 생성 | `--image-search`, `--quality-level` |
+| **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit-images** | 이미지 편집 | `--output` |
 | **improve** | 강의 향상 / 재평가 | `--to-slides`, `--re-evaluate` |
@@ -257,6 +262,10 @@ lecture-forge create --image-search --quality-level strict
 
 # 💬 Q&A 모드 (자동으로 최신 지식베이스 선택)
 lecture-forge chat
+
+# 🌐 영문 PDF 번역 (한국어 강의자료 생성)
+lecture-forge translate paper.pdf
+lecture-forge translate paper.pdf --no-translate   # 원문 구조 확인 (번역 없음)
 
 # 🎨 슬라이드 변환
 lecture-forge improve outputs/lecture.html --to-slides
@@ -417,6 +426,59 @@ lecture-forge edit-images outputs/my_lecture.html
 
 # 출력 파일 지정
 lecture-forge edit-images outputs/my_lecture.html -o outputs/final.html
+```
+
+---
+
+#### 🌐 `translate` - 영문 PDF → 한국어 강의자료 (v0.4.1+)
+
+**기본 사용:**
+```bash
+lecture-forge translate paper.pdf
+```
+영어 PDF에서 챕터 구조를 추출하고, 한국어로 번역하여 HTML 강의자료를 생성합니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------|
+| `--output FILE` | 출력 파일명 지정 (확장자 제외) | `-o my_lecture_ko` |
+| `--quality-level LEVEL` | 품질 기준: `lenient`(70) / `balanced`(80) / `strict`(90) | `--quality-level strict` |
+| `--audience-level LEVEL` | 대상 수준: `beginner` / `intermediate` / `advanced` | `--audience-level beginner` |
+| `--no-translate` | 번역 없이 원문 구조만 추출 (구조 디버깅용, 빠름) | `--no-translate` |
+| `--with-slides` | 슬라이드 변환도 함께 수행 | `--with-slides` |
+| `--with-diagrams` | Mermaid 다이어그램 자동 생성 (기본 OFF) | `--with-diagrams` |
+
+**구조 추출 우선순위:**
+1. **PDF TOC** — 가장 정확, 학술 PDF 80%+ 적용
+2. **폰트 크기 분석** — 본문보다 큰 폰트 자동 감지
+3. **페이지 그룹** (폴백) — 균등 페이지 범위 분할
+
+**번역 특징:**
+- 기술 용어: `한국어(English)` 형식 유지 (예: `신경망(Neural Network)`)
+- 코드 블록: `__CODE_BLOCK_N__` 플레이스홀더로 원문 보존
+- AI/ML 표준 용어 사전 25개 적용 (일관된 번역)
+- PDF 아티팩트 자동 제거 (페이지 번호, 워터마크 등)
+
+**예제:**
+```bash
+# 기본 번역 (→ paper_ko.html)
+lecture-forge translate paper.pdf
+
+# 출력 파일명 지정
+lecture-forge translate paper.pdf -o my_lecture_ko
+
+# 원문 구조 확인 (번역 없음, 빠름)
+lecture-forge translate paper.pdf --no-translate
+
+# 고품질 + 슬라이드 변환
+lecture-forge translate paper.pdf --quality-level strict --with-slides
+
+# 초급 대상 번역
+lecture-forge translate paper.pdf --audience-level beginner
+
+# Mermaid 다이어그램 생성 포함 (기본 OFF)
+lecture-forge translate paper.pdf --with-diagrams
 ```
 
 ---
@@ -850,6 +912,24 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
+
+- 🌐 **`translate` 명령어 품질 대폭 개선** (`pdf_translator.py`)
+  - `_TERM_GLOSSARY` 클래스 상수: AI/ML 표준 용어 25개 일관 번역 (본문에만 적용)
+  - `_clean_raw_text()`: PDF 아티팩트 자동 제거 (페이지 번호, 도메인 워터마크, 짧은 단편)
+  - `_is_toc_content()` + `_filter_chapters()`: 차례 페이지 및 30단어 미만 섹션 자동 제외
+  - `_translate_title()` 수정: 접두어 제거 ("제목:", "타이틀:" 등), 단순 예제 추가
+  - `_translate_chunk()` 개선: 할루시네이션 가드 (`⛔ 절대 금지`) 추가
+  - `build_curriculum()`: 영어 챕터 제목 기반 학습 목표 → 고정 한국어 학습 목표로 교체
+  - `assign_images_to_sections()`: `globally_used_ids` 집합으로 크로스 섹션 이미지 중복 방지
+- 🎛️ **`--with-diagrams` 플래그**: `translate` 명령어에 Mermaid 다이어그램 생성 opt-in (기본 OFF)
+- 📝 **콘텐츠 메타 주석 제거** (`content_expander.py`): `_strip_meta_commentary()` — "이제 X단어를 달성하였습니다" 등 AI 상태 보고 자동 삭제
+- 📄 **프롬프트 개선**: `content_generation.txt`, `content_expansion.txt` — 메타 주석 생성 금지 규칙 명시
+- 🔢 **`constants.py` 상수 모듈**: 12개 명명된 상수 클래스 — 품질 평가 임계값, 이미지 품질 점수, RAG 파라미터, 코드 복잡도 등 magic number 제거
+- 🔍 **예외 처리 세분화**: `html_assembler`, `curriculum_designer`, `content_writer`, `image_extractor` — 광범위한 `except Exception` → 구체적 예외 타입
+- 🔷 **타입 힌트 보완**: `token_tracker`, `retriever`, `qa_agent` 함수 반환 타입 (`-> None`, `Dict[str, Any]`)
+- 🧪 **테스트 수정**: macOS `/tmp` → `/private/tmp` symlink 처리, 예외 mock 타입 일치
 
 ### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
 

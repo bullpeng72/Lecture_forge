@@ -9,6 +9,16 @@ import numpy as np
 from PIL import Image
 
 from lecture_forge.config import Config
+from lecture_forge.constants import (
+    ColorDiversityScore,
+    ContentEntropyScore,
+    EDGE_PIXEL_THRESHOLD,
+    ImageAspectScore,
+    ImageCompressionScore,
+    ImageFileSizeScore,
+    ImageSizeScore,
+    StdDevScore,
+)
 from lecture_forge.models.curriculum import Section
 from lecture_forge.models.lecture import ImageReference
 from lecture_forge.utils import logger
@@ -699,13 +709,13 @@ class ImageSelector:
         img_path = image.get("path", "")
 
         # 1. Size evaluation (25 points)
-        if width >= 800 and height >= 600:
+        if width >= ImageSizeScore.LARGE_W and height >= ImageSizeScore.LARGE_H:
             score += 0.25
-        elif width >= 600 and height >= 400:
+        elif width >= ImageSizeScore.MEDIUM_W and height >= ImageSizeScore.MEDIUM_H:
             score += 0.20
-        elif width >= 400 and height >= 300:
+        elif width >= ImageSizeScore.SMALL_W and height >= ImageSizeScore.SMALL_H:
             score += 0.15
-        elif width >= 200 and height >= 200:
+        elif width >= ImageSizeScore.TINY_W and height >= ImageSizeScore.TINY_H:
             score += 0.08
         else:
             return 0.0  # Too small - reject immediately
@@ -715,21 +725,21 @@ class ImageSelector:
             aspect_ratio = width / height
 
             # Normal range: 0.5 ~ 2.0 (portrait 2:1 ~ landscape 2:1)
-            if 0.7 <= aspect_ratio <= 1.5:
+            if ImageAspectScore.IDEAL_MIN <= aspect_ratio <= ImageAspectScore.IDEAL_MAX:
                 score += 0.20  # Ideal ratio
-            elif 0.5 <= aspect_ratio <= 2.0:
+            elif ImageAspectScore.OK_MIN <= aspect_ratio <= ImageAspectScore.OK_MAX:
                 score += 0.15  # Acceptable range
-            elif 0.3 <= aspect_ratio <= 3.0:
+            elif Config.IMAGE_ASPECT_RATIO_MIN <= aspect_ratio <= Config.IMAGE_ASPECT_RATIO_MAX:
                 score += 0.08  # Slightly extreme
             else:
                 return 0.0  # Too extreme - reject
 
         # 3. File size evaluation (15 points)
-        if size_bytes >= 100_000:  # >= 100KB
+        if size_bytes >= ImageFileSizeScore.HIGH:    # >= 100 KB
             score += 0.15
-        elif size_bytes >= 50_000:  # >= 50KB
+        elif size_bytes >= ImageFileSizeScore.MEDIUM:  # >= 50 KB
             score += 0.12
-        elif size_bytes >= 10_000:  # >= 10KB
+        elif size_bytes >= ImageFileSizeScore.LOW:   # >= 10 KB
             score += 0.08
         else:
             score += 0.0  # Very small file (likely icon/logo)
@@ -740,13 +750,13 @@ class ImageSelector:
             pixels = width * height
             bytes_per_pixel = size_bytes / pixels
 
-            # Good range: 0.1 ~ 2.0 bytes per pixel
+            # Good range: ImageCompressionScore.OK_MIN ~ OK_MAX bytes per pixel
             # Too low = solid color or empty, Too high = uncompressed/bloated
-            if 0.2 <= bytes_per_pixel <= 1.5:
+            if ImageCompressionScore.GOOD_MIN <= bytes_per_pixel <= ImageCompressionScore.GOOD_MAX:
                 score += 0.15
-            elif 0.1 <= bytes_per_pixel <= 2.0:
+            elif ImageCompressionScore.OK_MIN <= bytes_per_pixel <= ImageCompressionScore.OK_MAX:
                 score += 0.10
-            elif bytes_per_pixel < 0.05:
+            elif bytes_per_pixel < ImageCompressionScore.SOLID_COLOR:
                 # Very low bytes per pixel = likely solid color box
                 logger.debug(f"           ⏭️  Low compression ratio: {bytes_per_pixel:.4f} bpp - likely empty/solid")
                 return 0.0  # Reject solid color images
@@ -820,8 +830,8 @@ class ImageSelector:
             if img.mode != "RGB":
                 img = img.convert("RGB")
 
-            # Resize for faster processing (max 400x400)
-            img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+            # Resize for faster processing
+            img.thumbnail((ImageSizeScore.THUMBNAIL_MAX, ImageSizeScore.THUMBNAIL_MAX), Image.Resampling.LANCZOS)
 
             # Convert to numpy array
             img_array = np.array(img)
@@ -885,21 +895,21 @@ class ImageSelector:
         score = 0.0
 
         # 1. Unique colors (50%)
-        if unique_colors >= 20:  # Many colors
+        if unique_colors >= ColorDiversityScore.MANY:
             score += 0.5
-        elif unique_colors >= 10:
+        elif unique_colors >= ColorDiversityScore.MEDIUM_COLORS:
             score += 0.3
-        elif unique_colors >= 5:
+        elif unique_colors >= ColorDiversityScore.FEW:
             score += 0.15
         else:  # Very few colors - likely solid/gradient
             score += 0.0
 
         # 2. Color concentration (50%)
-        if avg_concentration < 0.3:  # Well distributed
+        if avg_concentration < ColorDiversityScore.CONCENTRATION_GOOD:  # Well distributed
             score += 0.5
-        elif avg_concentration < 0.5:
+        elif avg_concentration < ColorDiversityScore.CONCENTRATION_MEDIUM:
             score += 0.3
-        elif avg_concentration < 0.7:
+        elif avg_concentration < ColorDiversityScore.CONCENTRATION_POOR:
             score += 0.15
         else:  # Highly concentrated - solid color
             return 0.0  # Reject immediately
@@ -928,18 +938,18 @@ class ImageSelector:
             edge_array = np.array(edges)
 
             # Calculate edge density
-            edge_pixels = (edge_array > 30).sum()  # Threshold for edge
+            edge_pixels = (edge_array > EDGE_PIXEL_THRESHOLD).sum()  # Threshold for edge
             total_pixels = edge_array.size
             edge_density = edge_pixels / total_pixels
 
             # Scoring based on edge density
-            if edge_density >= 0.15:  # High detail (diagrams, charts, photos)
+            if edge_density >= Config.IMAGE_EDGE_DENSITY_HIGH:    # High detail (diagrams, charts, photos)
                 return 1.0
-            elif edge_density >= 0.08:  # Moderate detail
+            elif edge_density >= Config.IMAGE_EDGE_DENSITY_MEDIUM:  # Moderate detail
                 return 0.8
-            elif edge_density >= 0.04:  # Some detail
+            elif edge_density >= Config.IMAGE_EDGE_DENSITY_LOW:   # Some detail
                 return 0.5
-            elif edge_density >= 0.02:  # Low detail
+            elif edge_density >= Config.IMAGE_EDGE_DENSITY_MINIMAL:  # Low detail
                 return 0.3
             else:  # Very low - likely blank/solid
                 return 0.0
@@ -982,15 +992,15 @@ class ImageSelector:
 
             # Scoring based on entropy
             # Max entropy for 8-bit image = 8 bits
-            if avg_entropy >= 6.0:  # Very high complexity
+            if avg_entropy >= ContentEntropyScore.VERY_HIGH:
                 return 1.0
-            elif avg_entropy >= 5.0:  # High complexity
+            elif avg_entropy >= ContentEntropyScore.HIGH:
                 return 0.8
-            elif avg_entropy >= 4.0:  # Moderate complexity
+            elif avg_entropy >= ContentEntropyScore.MEDIUM:
                 return 0.6
-            elif avg_entropy >= 3.0:  # Low complexity
+            elif avg_entropy >= ContentEntropyScore.LOW:
                 return 0.4
-            elif avg_entropy >= 2.0:  # Very low
+            elif avg_entropy >= ContentEntropyScore.VERY_LOW:
                 return 0.2
             else:  # Extremely low - likely solid color
                 return 0.0
@@ -1006,13 +1016,13 @@ class ImageSelector:
             avg_std = (std_r + std_g + std_b) / 3.0
 
             # Scoring based on std dev
-            if avg_std >= 60:
+            if avg_std >= StdDevScore.HIGH:
                 return 1.0
-            elif avg_std >= 40:
+            elif avg_std >= StdDevScore.MEDIUM_HIGH:
                 return 0.7
-            elif avg_std >= 20:
+            elif avg_std >= StdDevScore.MEDIUM:
                 return 0.4
-            elif avg_std >= 10:
+            elif avg_std >= StdDevScore.LOW:
                 return 0.2
             else:
                 return 0.0

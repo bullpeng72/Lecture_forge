@@ -111,7 +111,7 @@ class PDFImageExtractorTool:
                             rects = page.get_image_rects(xref)
                             if rects:
                                 page_y0 = float(rects[0].y0)
-                        except Exception:
+                        except (ValueError, RuntimeError):
                             pass  # y0 unavailable for some embedded images
 
                         # Extract image
@@ -204,7 +204,7 @@ class PDFImageExtractorTool:
                         extracted_hashes.add(image_hash)
                         self.stats["extracted"] += 1
 
-                    except Exception as e:
+                    except (ValueError, RuntimeError, OSError) as e:
                         logger.warning(f"Error extracting image {img_index} from page {page_num + 1}: {e}")
                         continue
 
@@ -315,7 +315,7 @@ class PDFImageExtractorTool:
         try:
             content_score = self._analyze_image_content_fast(pil_image)
             score += content_score * 0.30
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             logger.debug(f"      Content analysis skipped: {e}")
             score += 0.10  # Lower benefit of doubt
 
@@ -328,7 +328,7 @@ class PDFImageExtractorTool:
             if meaningful_score >= Config.IMAGE_MEANINGFUL_CONTENT_THRESHOLD:
                 logger.debug(f"      ⭐ High-value content detected (diagram/chart/text)")
                 score += Config.IMAGE_DIAGRAM_BONUS  # Bonus for educational content
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             logger.debug(f"      Meaningful content detection skipped: {e}")
             score += 0.05
 
@@ -376,7 +376,7 @@ class PDFImageExtractorTool:
         except ImportError:
             # numpy not available - skip advanced checks
             return 0.5
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             logger.debug(f"      Fast content analysis error: {e}")
             return 0.5
 
@@ -490,7 +490,7 @@ class PDFImageExtractorTool:
 
             return min(1.0, score)
 
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             logger.debug(f"      Meaningful content detection error: {e}")
             return 0.5  # Neutral score on error
 
@@ -637,7 +637,7 @@ class PDFImageExtractorTool:
 
             return "unknown"
 
-        except Exception as e:
+        except (ValueError, RuntimeError, AttributeError) as e:
             logger.debug(f"      Content type classification error: {e}")
             # Fallback based on quality score only
             if quality_score >= 0.7:
@@ -827,7 +827,7 @@ class WebImageScraperTool:
 
                     extracted_hashes.add(image_hash)
 
-                except Exception as e:
+                except (OSError, IOError, ValueError, RuntimeError) as e:
                     logger.warning(f"Error downloading image {img_url}: {e}")
                     continue
 

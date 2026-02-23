@@ -42,6 +42,12 @@ class PDFParsingError(ContentCollectionError):
     pass
 
 
+class PDFStructureExtractionError(ContentCollectionError):
+    """Error extracting chapter structure from PDF (TOC / font / page groups)."""
+
+    pass
+
+
 class WebScrapingError(ContentCollectionError):
     """Error during web page scraping or HTML parsing."""
 
@@ -150,6 +156,12 @@ class ContentGenerationError(LectureForgeError):
 
 class LLMAPIError(ContentGenerationError):
     """Error during LLM API calls (OpenAI)."""
+
+    pass
+
+
+class TranslationError(ContentGenerationError):
+    """Error during LLM-based text translation (PDF Translator)."""
 
     pass
 

@@ -296,7 +296,7 @@ class HTMLAssemblerAgent(BaseAgent):
                 h3.name = "h4"
 
             return str(soup)
-        except Exception as e:
+        except (ValueError, AttributeError) as e:
             logger.warning(f"Error cleaning up HTML: {e}")
             return html_content
 
@@ -318,7 +318,7 @@ class HTMLAssemblerAgent(BaseAgent):
             for div, lang in zip(highlight_divs, languages):
                 div["data-lang"] = lang
             return str(soup)
-        except Exception:
+        except (ValueError, AttributeError):
             return html_content
 
     def _render_image_html(self, img) -> str:

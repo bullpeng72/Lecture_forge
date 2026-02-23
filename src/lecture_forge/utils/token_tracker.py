@@ -67,7 +67,7 @@ class TokenTracker:
         completion_tokens: int,
         phase: str = "unknown",
         agent: str = "unknown",
-    ):
+    ) -> None:
         """
         Add token usage record.
 
@@ -184,7 +184,7 @@ class TokenTracker:
             "api_calls": len(self.usages),
         }
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset tracker."""
         self.usages = []
 
@@ -218,7 +218,7 @@ def track_tokens(
     completion_tokens: int,
     phase: str = "unknown",
     agent: str = "unknown",
-):
+) -> None:
     """
     Convenience function to track tokens.
 

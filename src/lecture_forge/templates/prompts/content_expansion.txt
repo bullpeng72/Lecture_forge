@@ -98,7 +98,13 @@ After (충분함 ✅):
 Write the FULLY EXPANDED version with {target_words:,}+ words.
 Use KOREAN (한국어) and be EXTREMELY detailed.
 
+⛔ **OUTPUT RULES — STRICTLY ENFORCED:**
+⛔ Do NOT include any meta-commentary about word counts or the expansion process.
+⛔ Do NOT write sentences like "이제 추가된 내용으로 인해 전체 글의 길이가 X단어를 초과하였고".
+⛔ Do NOT write sentences like "이제 X단어를 달성하였습니다" or "총 X단어가 포함되었습니다".
+⛔ Output ONLY the educational Markdown content — no status reports, no summaries of what you added.
+
 CONTENT TO EXPAND:
 {previous_content}
 
-WRITE {word_gap:,}+ MORE WORDS NOW:
+WRITE {word_gap:,}+ MORE WORDS NOW (educational content only):

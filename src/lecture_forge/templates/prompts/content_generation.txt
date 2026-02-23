@@ -135,22 +135,19 @@ For each main concept:
 
 **🚨🚨🚨 FINAL CRITICAL REQUIREMENTS CHECKLIST 🚨🚨🚨**
 
-Before you submit, verify EVERY requirement:
+⛔ **MENTAL CHECK ONLY — Do NOT write any of the following in your output:**
+⛔ Do NOT include checkmarks, word count confirmations, or compliance statements.
+⛔ Do NOT write sentences like "이제 X단어를 달성하였습니다" or "총 X단어를 초과하였고".
+⛔ Your output must contain ONLY educational Markdown content — nothing else.
 
-✅ **Word Count**: My content has AT LEAST {min_words:,} words
-   - Introduction: {intro_words:,}+ words
-   - Each subsection: {words_per_subsection:,}+ words
-   - Summary: {summary_words:,}+ words
-
+Before submitting, mentally verify:
+- Word count is AT LEAST {min_words:,} words
+- Subsections: {target_subsections}+
+- Language: KOREAN (한국어)
+- Depth: every concept explained in extreme detail with examples
 {practice_checklist_item}
 
-✅ **Structure**: I have {target_subsections}+ subsections (### headers)
-
-✅ **Language**: ALL content in KOREAN (한국어)
-
-✅ **Depth**: I explained EVERY concept in extreme detail with examples
-
-🚨 **IF ANY CHECKBOX IS UNCHECKED, YOUR CONTENT WILL BE REJECTED!**
+🚨 **IF ANY REQUIREMENT IS NOT MET, YOUR CONTENT WILL BE REJECTED!**
 
 🎯 **TARGET**: Write {target_words:,} words (MINIMUM {min_words:,} words)
 🎯 **STRATEGY**: Write LONG paragraphs, MANY examples, DETAILED explanations

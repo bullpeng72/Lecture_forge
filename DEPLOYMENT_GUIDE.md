@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.4.0 ✅ **배포 완료**
-> **최종 수정**: 2026-02-22
+> **최신 버전**: 0.4.1 ✅ **배포 준비 완료**
+> **최종 수정**: 2026-02-23
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 버전 확인
-grep -r "0.4.0" pyproject.toml setup.py src/lecture_forge/__version__.py
+grep -r "0.4.1" pyproject.toml setup.py src/lecture_forge/__version__.py
 
 # 2. 테스트 실행
 pytest tests/ -v
@@ -916,7 +916,18 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.4.0 (2026-02-22) ✅ **최신**
+### v0.4.1 (2026-02-23) 🔜 **배포 준비 완료**
+
+- **상태**: 배포 대기
+- **주요 변경사항**:
+  - ✅ **`translate` 명령어 품질 개선**: PDF 아티팩트 제거, TOC 감지, 빈 섹션 필터, AI/ML 용어 사전, 이미지 중복 방지
+  - ✅ **`--with-diagrams` 플래그**: translate 명령어에 Mermaid 다이어그램 생성 opt-in
+  - ✅ **콘텐츠 메타 주석 제거**: AI 상태 보고 자동 삭제 (`_strip_meta_commentary()`)
+  - ✅ **`constants.py`**: 12개 명명된 상수 클래스 (magic number 제거)
+  - ✅ **예외 처리 세분화**: 광범위한 `except Exception` → 구체적 예외 타입
+  - ✅ **타입 힌트 보완**: 반환 타입 추가 (`-> None`, `Dict[str, Any]`)
+
+### v0.4.0 (2026-02-22) ✅
 
 - **상태**: 배포 완료
 - **PyPI**: https://pypi.org/project/lecture-forge/0.4.0/
@@ -1146,6 +1157,6 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-22
+**최종 업데이트**: 2026-02-23
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: ✅ v0.4.0 배포 완료
+**상태**: 🔜 v0.4.1 배포 준비 완료

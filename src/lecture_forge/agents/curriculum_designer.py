@@ -122,7 +122,7 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
                 logger.warning(f"Unexpected objectives format: {objectives}")
                 return [f"Understand the fundamentals of {topic}"]
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
             logger.error(f"Error generating learning objectives: {e}")
             return [
                 f"Understand the fundamentals of {topic}",
@@ -357,7 +357,7 @@ Rules:
 
             logger.info(f"RMC curriculum review applied: {review.get('reasoning', '')[:100]}")
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, KeyError, RuntimeError) as e:
             logger.warning(f"RMC curriculum review failed (returning original): {e}")
 
         return curriculum
@@ -386,7 +386,7 @@ Rules:
             stats = self.vector_store.get_stats()
             if stats.get("document_count", 0) == 0:
                 return sections
-        except Exception:
+        except (RuntimeError, ValueError, AttributeError):
             return sections
 
         # ── Step 1: validate existing sections ──────────────────────────────
@@ -413,7 +413,7 @@ Rules:
                         f"'{section.title}' — keeping anyway (may be derivable)"
                     )
                     validated.append(section)  # keep; LLM may still generate useful content
-            except Exception as e:
+            except (RuntimeError, ValueError, AttributeError) as e:
                 logger.debug(f"KB validation query failed for '{section.title}': {e}")
                 validated.append(section)
 
@@ -422,7 +422,7 @@ Rules:
             validated = self._enrich_curriculum_from_full_kb(
                 validated, duration, topic, structural
             )
-        except Exception as e:
+        except (RuntimeError, ValueError, AttributeError, json.JSONDecodeError) as e:
             logger.warning(f"KB enrichment step failed (non-critical): {e}")
 
         # ── Step 3: v0.4.0 — source file coverage check ──────────────────────
@@ -485,9 +485,9 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
                                         logger.info(
                                             f"   ✅ CurriculumDesigner: added source-coverage section '{new_title}'"
                                         )
-                        except Exception as src_e:
+                        except (RuntimeError, ValueError, json.JSONDecodeError) as src_e:
                             logger.debug(f"Source coverage enrichment failed for '{src_path}': {src_e}")
-            except Exception as cov_e:
+            except (RuntimeError, ValueError, AttributeError) as cov_e:
                 logger.debug(f"Source coverage check failed (non-critical): {cov_e}")
 
         # Rebuild with structural sections (intro first, conclusion last)
@@ -518,7 +518,7 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
         try:
             all_items = self.vector_store.collection.get(include=["documents"])
             all_docs = all_items.get("documents") or []
-        except Exception as e:
+        except (RuntimeError, ValueError, AttributeError) as e:
             logger.debug(f"KB full-sample get failed: {e}")
             return validated
 
@@ -579,7 +579,7 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
                         logger.info(
                             f"   ✅ CurriculumDesigner: added KB-discovered section '{new_title}'"
                         )
-        except Exception as e:
+        except (RuntimeError, ValueError, json.JSONDecodeError) as e:
             logger.debug(f"KB enrichment LLM call failed: {e}")
 
         return validated
@@ -606,8 +606,8 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
                     src = meta.get("source", "")
                     if src:
                         covered_sources.add(src)
-            except Exception:
-                pass
+            except (RuntimeError, ValueError, AttributeError) as e:
+                logger.debug(f"Coverage query failed for '{section.title}': {e}")
 
         uncovered = [s for s in source_files if s and s not in covered_sources]
         return uncovered

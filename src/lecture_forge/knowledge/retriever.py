@@ -6,7 +6,7 @@ import hashlib
 import shelve
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
@@ -156,7 +156,7 @@ class RAGRetriever:
         self._cache_hits = 0
         self._cache_misses = 0
 
-    def get_cache_stats(self) -> Dict[str, any]:
+    def get_cache_stats(self) -> Dict[str, Any]:
         """
         Get cache statistics.
 

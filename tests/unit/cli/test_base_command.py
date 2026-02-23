@@ -83,7 +83,7 @@ class TestResolvePath:
 
         result = cmd.resolve_path("/tmp/test")
 
-        assert result == Path("/tmp/test")
+        assert result == Path("/tmp/test").resolve()  # resolve() dereferences symlinks (e.g. /tmp → /private/tmp on macOS)
         assert result.is_absolute()
 
     def test_resolve_relative_path(self):

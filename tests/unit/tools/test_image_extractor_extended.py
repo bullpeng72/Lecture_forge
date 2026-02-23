@@ -178,7 +178,7 @@ class TestEvaluateImageQuality:
     def test_content_analysis_exception_handled(self, extractor):
         """Exceptions in content analysis are handled gracefully."""
         mock_img = MagicMock()
-        with patch.object(extractor, "_analyze_image_content_fast", side_effect=Exception("numpy error")):
+        with patch.object(extractor, "_analyze_image_content_fast", side_effect=RuntimeError("numpy error")):
             with patch.object(extractor, "_detect_meaningful_content", return_value=0.5):
                 result = extractor._evaluate_image_quality(mock_img, 800, 600, 50000)
         assert isinstance(result, float)

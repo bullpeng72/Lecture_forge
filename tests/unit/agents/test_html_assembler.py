@@ -360,7 +360,7 @@ class TestCleanupContentException:
     def test_exception_returns_original_html(self, html_assembler):
         from unittest.mock import patch
         bad_html = "<broken>content</broken>"
-        with patch("lecture_forge.agents.html_assembler.BeautifulSoup", side_effect=Exception("parse error")):
+        with patch("lecture_forge.agents.html_assembler.BeautifulSoup", side_effect=ValueError("parse error")):
             result = html_assembler._cleanup_content(bad_html)
         assert result == bad_html
 

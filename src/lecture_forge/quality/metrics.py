@@ -5,6 +5,7 @@ Quality metrics for lecture evaluation.
 from typing import Dict
 
 from lecture_forge.config import Config
+from lecture_forge.constants import CodeComplexity, SectionBalance, WordCountExpected
 from lecture_forge.models.lecture import Lecture
 from lecture_forge.utils import logger
 
@@ -72,8 +73,8 @@ class QualityMetrics:
             word_counts = [s.word_count for s in lecture.sections if s.word_count > 0]
             if word_counts:
                 avg_words = sum(word_counts) / len(word_counts)
-                # Check if most sections are within 50% of average
-                balanced = sum(1 for wc in word_counts if abs(wc - avg_words) / avg_words < 0.5)
+                # Check if most sections are within SectionBalance.TOLERANCE of average
+                balanced = sum(1 for wc in word_counts if abs(wc - avg_words) / avg_words < SectionBalance.TOLERANCE)
                 balance_ratio = balanced / len(word_counts)
                 score += 25 * balance_ratio
 
@@ -130,8 +131,11 @@ class QualityMetrics:
             if section_words:
                 avg_words = sum(section_words) / len(section_words)
                 # Check variance - sections shouldn't be too different
-                # Allow 2x variation
-                balanced_sections = sum(1 for wc in section_words if 0.5 * avg_words <= wc <= 2 * avg_words)
+                # Allow SectionBalance.MAX_RATIO x variation
+                balanced_sections = sum(
+                    1 for wc in section_words
+                    if SectionBalance.MIN_RATIO * avg_words <= wc <= SectionBalance.MAX_RATIO * avg_words
+                )
                 balance_ratio = balanced_sections / len(section_words)
                 score += 40 * balance_ratio
 
@@ -156,22 +160,15 @@ class QualityMetrics:
 
         # 2. Check word count per section matches level (40점)
         # Beginner needs more explanation, Advanced can be more concise
-        expected_words = {
-            "beginner": 2500,
-            "intermediate": 2000,
-            "advanced": 1800,
-        }
-
         appropriate_sections = 0
         for section in lecture.sections:
             if section.word_count == 0:
                 continue
 
             section_level = getattr(section, "difficulty_level", lecture.audience_level)
-            expected = expected_words.get(section_level, 2000)
+            expected = WordCountExpected.BY_LEVEL.get(section_level, WordCountExpected.BY_LEVEL["intermediate"])
 
-            # Allow 30% variation
-            if 0.7 * expected <= section.word_count <= 1.3 * expected:
+            if WordCountExpected.VARIATION_MIN * expected <= section.word_count <= WordCountExpected.VARIATION_MAX * expected:
                 appropriate_sections += 1
 
         if lecture.sections:
@@ -189,11 +186,11 @@ class QualityMetrics:
         if total_code_blocks > 0:
             avg_lines = total_code_lines / total_code_blocks
 
-            if lecture.audience_level == "beginner" and avg_lines <= 30:
+            if lecture.audience_level == "beginner" and avg_lines <= CodeComplexity.BEGINNER_MAX:
                 score += 30
-            elif lecture.audience_level == "intermediate" and 20 <= avg_lines <= 50:
+            elif lecture.audience_level == "intermediate" and CodeComplexity.INTERMEDIATE_MIN <= avg_lines <= CodeComplexity.INTERMEDIATE_MAX:
                 score += 30
-            elif lecture.audience_level == "advanced" and avg_lines >= 30:
+            elif lecture.audience_level == "advanced" and avg_lines >= CodeComplexity.ADVANCED_MIN:
                 score += 30
             else:
                 # Partial credit based on closeness

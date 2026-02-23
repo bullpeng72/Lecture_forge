@@ -209,7 +209,7 @@ class ContentExpander(BaseAgent):
             logger.debug(f"     Sending expansion prompt ({len(prompt)} chars)")
 
             response = self.invoke_llm(prompt, phase="content_expansion")
-            expanded = response.content.strip()
+            expanded = self._strip_meta_commentary(response.content.strip())
 
             # Validate expansion actually happened
             if len(expanded) <= len(previous_content):
@@ -240,6 +240,25 @@ class ContentExpander(BaseAgent):
             logger.debug(traceback.format_exc())
             return previous_content  # Return original on error
 
+
+    def _strip_meta_commentary(self, content: str) -> str:
+        """Remove LLM meta-commentary about word counts or expansion status from output."""
+        import re
+        patterns = [
+            r'이제\s+추가된\s+내용으로\s+인해[^\n]*\n?',
+            r'이제\s+[\d,]+\s*단어[^\n]*\n?',
+            r'총\s+[\d,]+\s*단어[^\n]*초과[^\n]*\n?',
+            r'전체\s+글의?\s*길이가[^\n]*\n?',
+            r'추가된\s+내용[^\n]*단어[^\n]*\n?',
+            r'단어\s*수가[^\n]*초과[^\n]*\n?',
+        ]
+        stripped = content
+        for pat in patterns:
+            stripped = re.sub(pat, '', stripped, flags=re.MULTILINE | re.IGNORECASE)
+        stripped = stripped.strip()
+        if stripped != content:
+            logger.debug("     🧹 Stripped meta-commentary from expanded content")
+        return stripped
 
     def _count_images(self, markdown: str) -> int:
         """Count the number of images in markdown content."""

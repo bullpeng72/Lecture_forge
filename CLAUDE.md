@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.4.0 | **최종 수정**: 2026-02-22
+> **버전**: 0.4.1 | **최종 수정**: 2026-02-23
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -22,11 +22,12 @@
 10. **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 이미지/다이어그램 클릭 확대
 11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (`--to-slides`, `--with-notes`) — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음)
 12. **KB 기반 재평가·보충**: 기존 강의 품질 재평가 + 미반영 청크 보충 추가 (`--re-evaluate`, `→ *_enhanced.html`)
-13. **사용자 친화적 디렉토리**: `~/Documents/LectureForge/` + `home` 커맨드로 빠른 접근
-14. **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
-15. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿
-16. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
-17. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
+13. **영문 PDF 번역** (v0.4.1+): 영어 PDF → 한국어 강의자료 (`translate` 명령어) — TOC 감지, 아티팩트 제거, 용어 사전, 이미지 자동 배치
+14. **사용자 친화적 디렉토리**: `~/Documents/LectureForge/` + `home` 커맨드로 빠른 접근
+15. **예외 처리 시스템**: 구조화된 예외 계층 (9개 카테고리)
+16. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿
+17. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
+18. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -263,6 +264,14 @@ lecture-forge create --async-mode                 # Async I/O (70% 빠름, 실�
 lecture-forge chat                                # 자동 선택
 lecture-forge chat -kb <path>                     # 지식베이스 지정
 
+# ===== TRANSLATE: 영문 PDF → 한국어 강의자료 =====
+lecture-forge translate paper.pdf                                    # 기본 번역
+lecture-forge translate paper.pdf -o my_lecture_ko                  # 출력명 지정
+lecture-forge translate paper.pdf --no-translate                     # 원문 구조만 (번역 없음, 빠름)
+lecture-forge translate paper.pdf --audience-level beginner          # 초급 수준 번역
+lecture-forge translate paper.pdf --quality-level strict --with-slides  # 고품질 + 슬라이드
+lecture-forge translate paper.pdf --with-diagrams                    # Mermaid 다이어그램 생성 (opt-in)
+
 # ===== EDIT-IMAGES: 이미지 편집 =====
 lecture-forge edit-images <html_path>             # 대화형 이미지 편집
 lecture-forge edit-images <html_path> -o output   # 출력 파일 지정
@@ -381,7 +390,7 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 |------|------|
 | 에이전트 | 10개 |
 | 도구 | 9개 |
-| CLI 명령어 | 7개 |
+| CLI 명령어 | 8개 |
 | 테스트 | 1,356+, ~48% 커버리지 |
 | Type Hints | 71% (207/292 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
@@ -393,6 +402,25 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
+
+- 🌐 **`translate` 명령어 품질 개선** (`pdf_translator.py`)
+  - `_TERM_GLOSSARY` 클래스 상수: AI/ML 표준 용어 25개 (본문 번역에만 적용)
+  - PDF 아티팩트 제거: `_clean_raw_text()` — 단독 페이지 번호, 도메인 워터마크, 짧은 단편 줄 제거
+  - TOC 감지 및 필터: `_is_toc_content()` — 점선+숫자 패턴 비율 >40% 시 차례 페이지 제외
+  - 빈 섹션 제거: `_filter_chapters()` — 30 단어 미만 섹션 자동 제외
+  - 번역 품질: `_translate_chunk()`에 `⛔ 절대 금지` 할루시네이션 가드 추가
+  - 제목 번역 수정: `_translate_title()` 접두어 제거 ("제목:", "타이틀:" 등)
+  - 한국어 학습 목표: `build_curriculum()`에서 영어 챕터 제목 기반 객관 → 고정 한국어 객관으로 교체
+  - 크로스 섹션 이미지 중복 제거: `assign_images_to_sections()`에 `globally_used_ids` 집합 추가
+- 🎛️ **`--with-diagrams` 플래그** (`translate` 명령어): Mermaid 다이어그램 생성 opt-in (기본 OFF)
+- 📝 **콘텐츠 메타 주석 제거** (`content_expander.py`): `_strip_meta_commentary()` — 단어 수 보고 문장 자동 삭제
+- 📄 **프롬프트 개선**: `content_generation.txt`, `content_expansion.txt` — 메타 주석 생성 금지 규칙 추가
+- 🔢 **상수 모듈** (`constants.py`): 12개 명명된 상수 클래스 — 품질 평가, 이미지 점수, RAG, 코드 복잡도 등
+- 🔍 **예외 처리 개선**: `html_assembler`, `curriculum_designer`, `content_writer`, `image_extractor` — 광범위한 `except Exception` → 구체적 예외 타입
+- 🔷 **타입 힌트 보완**: `token_tracker`, `retriever`, `qa_agent` 함수 반환 타입 추가
+- 🧪 **테스트 수정**: macOS `/tmp` → `/private/tmp` symlink 수정, 예외 mock 타입 정렬
 
 ### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
 

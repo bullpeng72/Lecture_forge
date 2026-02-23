@@ -36,6 +36,7 @@ cli/
     ├── init_helpers.py - Init helpers (file copy, env template)
     ├── create.py - Lecture generation (sync)
     ├── create_async.py - Lecture generation (async, --async-mode)
+    ├── translate.py - PDF translation (English PDF → Korean HTML)
     ├── chat.py - Q&A mode
     ├── cleanup.py - KB management
     ├── cleanup_helpers.py - Cleanup helpers
@@ -288,6 +289,105 @@ print(f"KB: {result['vector_db_path']}")
 def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     """Generate lecture using multi-agent pipeline."""
 ```
+
+---
+
+### translate
+
+**Location**: `lecture_forge/cli/commands/translate.py`
+**Added**: v0.4.1
+
+Translate an English PDF into a Korean lecture material (HTML). Extracts chapter structure from the PDF, translates each chapter to Korean, assigns PDF images by page location, and assembles a fully formatted HTML file.
+
+#### Command
+
+```bash
+lecture-forge translate PDF_PATH [OPTIONS]
+```
+
+**Arguments:**
+- `PDF_PATH`: Path to the English PDF file
+
+**Options:**
+- `-o, --output TEXT`: Output filename without extension (auto-generated if omitted: `<stem>_ko.html`)
+- `--quality-level [lenient|balanced|strict]`: Quality threshold — lenient(70), balanced(80), strict(90) (default: `balanced`)
+- `--audience-level [beginner|intermediate|advanced]`: Target audience level affecting content depth (default: `intermediate`)
+- `--with-slides`: Also convert result to Reveal.js presentation slides
+- `--no-translate`: Skip translation — keep original English text (for structure debugging, much faster)
+- `--with-diagrams`: Generate Mermaid diagrams (disabled by default; PDF images are used instead)
+
+#### Pipeline Phases
+
+| Phase | Description |
+|-------|-------------|
+| 1 | Extract PDF chapter structure (TOC → font size → page groups) |
+| 2 | Collect PDF images with GPT-4o Vision descriptions |
+| 3 | Build curriculum from PDF order (bypasses CurriculumDesigner) |
+| 4 | Translate chapters to Korean (or keep original if `--no-translate`) |
+| 5 | Assign images to sections by page range |
+| 6 | Generate Mermaid diagrams (only if `--with-diagrams`) |
+| 7 | Assemble HTML |
+| 8 | Quality assurance loop (max 3 iterations) |
+
+#### Python API
+
+```python
+from lecture_forge.cli.commands.translate import translate_lecture
+
+result = translate_lecture(
+    pdf_path="paper.pdf",
+    output_name=None,           # auto-generated: paper_ko.html
+    quality_level="balanced",
+    audience_level="intermediate",
+    with_slides=False,
+    no_translate=False,
+    with_diagrams=False,        # Mermaid diagrams opt-in
+)
+
+print(f"HTML: {result['html_path']}")
+print(f"Sections: {result['sections_count']}")
+print(f"Words: {result['total_words']:,}")
+print(f"Images: {result['images']}")
+print(f"Quality: {result['quality_score']:.1f}/100")
+```
+
+**Function Signature:**
+```python
+def translate_lecture(
+    pdf_path: str,
+    output_name: Optional[str],
+    quality_level: str,
+    audience_level: str,
+    with_slides: bool,
+    no_translate: bool,
+    with_diagrams: bool = False,
+) -> dict:
+    """Core translate pipeline."""
+```
+
+**Returns:**
+```python
+{
+    "html_path": str,           # Path to generated HTML file
+    "sections_count": int,      # Number of sections
+    "total_words": int,         # Total word count
+    "diagrams": int,            # Number of Mermaid diagrams
+    "images": int,              # Number of images assigned
+    "quality_score": float,     # Final quality score (0-100)
+    "token_usage": dict,        # Token usage summary
+}
+```
+
+#### Translation Features
+
+- **Technical terms**: Korean + English parenthetical (e.g., `신경망(Neural Network)`)
+- **Code blocks**: Preserved unchanged using `__CODE_BLOCK_N__` placeholder method
+- **AI/ML terminology**: 25 standard terms in `_TERM_GLOSSARY` (consistent translation)
+- **Hallucination guard**: `⛔ 절대 금지` rules in translation prompts
+- **PDF artifact removal**: Page numbers, domain watermarks, short fragment lines
+- **TOC detection**: Table of contents pages automatically excluded (>40% dot-leader pattern)
+- **Empty section filtering**: Sections with <30 words automatically excluded
+- **Cross-section image deduplication**: `globally_used_ids` set prevents duplicate images
 
 ---
 
@@ -625,5 +725,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-22
-**Version**: 0.4.0
+**Last Updated**: 2026-02-23
+**Version**: 0.4.1

@@ -228,6 +228,14 @@ def translate_lecture(
                     console.print(f"   ❌ Quality degraded. Keeping previous version.")
                     break
 
+            # translate 파이프라인: PDF 원본 구조 보존 — intro/conclusion 자동 삽입 차단
+            evaluation.issues = [
+                i for i in evaluation.issues
+                if not (
+                    i.dimension == "logical_flow"
+                    and any(kw in i.description.lower() for kw in ["intro", "conclusion"])
+                )
+            ]
             revised_lecture = revision_agent.revise(improved_lecture, evaluation)
             re_eval = evaluator.evaluate(revised_lecture, quality_threshold)
             actual_improvement = re_eval.overall_score - evaluation.overall_score

@@ -535,8 +535,24 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
   HyDE, REFRAG, CAG, GRPO, ReAct, vLLM, Opik, Reveal.js, PyTorch, TensorFlow
 """
 
+    # LLM이 제목 대신 반환하는 대화형 응답 패턴 (원본 제목으로 폴백)
+    _TITLE_FILLER_PATTERNS = [
+        "입력해 주세요",
+        "제공해 주시면",
+        "번역해 드리겠습니다",
+        "알려 주세요",
+        "주시면 번역",
+    ]
+
     def _translate_title(self, title: str) -> str:
         """Translate a single section title to Korean (concise)."""
+        clean_title = title.strip()
+
+        # Input guard: 비어있거나 의미있는 문자(alphanumeric)가 2개 미만이면 LLM 호출 불필요
+        alnum_count = sum(1 for c in clean_title if c.isalnum())
+        if alnum_count < 2:
+            return title  # 장식 문자 전용(✦ ◆ 등) 또는 공백 — 번역 불가
+
         prompt = (
             f"다음 영어 챕터 제목을 한국어로 번역하세요.\n"
             f"번역 결과 텍스트만 출력하세요. '제목:', '타이틀:' 같은 접두어를 붙이지 마세요.\n"
@@ -553,6 +569,10 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
                     translated = translated[len(prefix):].strip()
             # Remove surrounding markdown bold markers if present
             translated = translated.strip("*").strip()
+            # Output guard: LLM이 번역 대신 대화형 응답을 반환한 경우 원본 유지
+            if any(p in translated for p in self._TITLE_FILLER_PATTERNS):
+                logger.debug(f"  ⚠️  Title filler response detected for '{title}' — keeping original")
+                return title
             return translated if translated else title
         except Exception:
             return title  # Fallback: keep original
@@ -687,6 +707,11 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
     @staticmethod
     def _slugify(text: str) -> str:
         """Convert text to a safe ASCII slug for use in section IDs."""
+        import hashlib
+
         slug = re.sub(r"[^a-zA-Z0-9]+", "_", text)
         slug = slug.strip("_").lower()
-        return (slug[:30] if slug else "section")
+        if slug:
+            return slug[:30]
+        # 비ASCII 제목(한국어 등): 결정론적 해시로 고유 ID 생성 (section 중복 방지)
+        return "s" + hashlib.md5(text.encode("utf-8", errors="replace")).hexdigest()[:7]

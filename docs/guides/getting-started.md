@@ -228,7 +228,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.4.0 - Lecture Material Generator
+📚 LectureForge Pro v0.4.2 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -370,11 +370,20 @@ lecture-forge create --quality-level strict
 # Custom output name
 lecture-forge create --output "ML_Introduction"
 
+# Enable interactive Q&A mode during generation (-i)
+lecture-forge create --interactive
+
 # Web images only (faster)
 lecture-forge create --no-include-pdf-images
 
 # Async mode (70% faster content collection, v0.3.4+)
 lecture-forge create --async-mode
+
+# Reuse an existing knowledge base (read-only)
+lecture-forge create --existing-kb data/vector_db/MyTopic_...
+
+# Extend an existing knowledge base with new sources
+lecture-forge create --existing-kb data/vector_db/MyTopic_... --kb-mode extend
 ```
 
 ---
@@ -471,7 +480,28 @@ This creates a Reveal.js presentation with:
 - Speaker notes (S) — press S to open speaker view (requires `--with-notes`)
 - Full screen (F)
 
-### 5. Manage Storage
+### 5. Translate English PDF (Optional)
+
+Convert an English PDF directly into Korean lecture material (v0.4.1+):
+
+```bash
+# Basic translation (→ paper_ko.html)
+lecture-forge translate paper.pdf
+
+# Specify output name
+lecture-forge translate paper.pdf -o my_lecture_ko
+
+# Keep original English (structure debug, fast)
+lecture-forge translate paper.pdf --no-translate
+
+# Beginner-level Korean + slides
+lecture-forge translate paper.pdf --audience-level beginner --with-slides
+
+# Include Mermaid diagrams (opt-in; PDF images used by default)
+lecture-forge translate paper.pdf --with-diagrams
+```
+
+### 6. Manage Storage
 
 Delete old knowledge bases to free space:
 
@@ -479,7 +509,7 @@ Delete old knowledge bases to free space:
 # Interactive selection
 lecture-forge cleanup
 
-# Delete all (dangerous!)
+# Delete all (dangerous!) — also available as -a
 lecture-forge cleanup --all
 ```
 
@@ -609,8 +639,8 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-02-19
-**Version**: 0.4.0
+**Last Updated**: 2026-02-24
+**Version**: 0.4.2
 
 **Ready to create amazing lectures? Start with:**
 ```bash

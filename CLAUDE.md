@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.4.1 | **최종 수정**: 2026-02-23
+> **버전**: 0.4.2 | **최종 수정**: 2026-02-24
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -254,11 +254,14 @@ lecture-forge chat -kb ./data/vector_db/AI_Engineering_20260207_094851
 ```bash
 # ===== CREATE: 강의 생성 =====
 lecture-forge create                              # 기본 대화형
-lecture-forge create --config config.yaml         # 설정 파일
+lecture-forge create --config config.yaml         # 설정 파일 (-c)
+lecture-forge create --interactive                # 생성 중 대화형 Q&A (-i)
 lecture-forge create --image-search               # 이미지 검색
 lecture-forge create --quality-level strict       # 품질 레벨 (lenient/balanced/strict)
-lecture-forge create --output my_lecture          # 출력 파일명
+lecture-forge create --output my_lecture          # 출력 파일명 (-o)
 lecture-forge create --async-mode                 # Async I/O (70% 빠름, 실험적)
+lecture-forge create --existing-kb <path>         # 기존 지식베이스 재사용
+lecture-forge create --existing-kb <path> --kb-mode extend  # 기존 KB 확장
 
 # ===== CHAT: Q&A 모드 =====
 lecture-forge chat                                # 자동 선택
@@ -432,35 +435,11 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 - 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
 - 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
 
-### v0.3.8 (2026-02-20) - 🧠 RMC 자기검토
+### v0.3.x (2026-02-12 ~ 2026-02-20) - 기반 기능 구축
 
-- 🧠 **RMC (Reflective Meta-Cognition)** 3개 에이전트 적용
-  - `CurriculumDesigner._review_with_rmc()`: 섹션 순서·학습목표·선수 내용 자동 수정
-  - `ContentWriter._review_content_with_rmc()`: 개념 비약·흐름 단절·중복 의미론적 수정
-  - `QAAgent._review_answer_with_rmc()`: ✓/~/✗ 분류 → 할루시네이션 항목 제거
-- 🐛 결론/도입 섹션 LLM 거부 응답 수정 (안전 프롬프트 + 자동 재시도)
-- 🐛 `--with-notes` Mermaid `-->` → `--&gt;` 인코딩 버그 수정
-- ✅ Python 3.13 전체 의존성 호환 검증
-
-### v0.3.7 (2026-02-18) - 🖼️ UI & 슬라이드 개선
-
-- 🖼️ Lightbox: 이미지·Mermaid 다이어그램 클릭 확대
-- 🔍 검색: Lunr.js → 서브스트링 검색 (한국어 완벽 지원)
-- 📊 슬라이드 Mermaid 전체 너비: ~300px → ~1180px
-- 🐛 Mermaid 10 API: `contentLoaded()` → `mermaid.run()`
-
-### v0.3.6 (2026-02-18) - 🔧 코드 품질
-
-- 🔧 `utils/retry.py`: `make_api_retry()` 공통 팩토리 (중복 4곳 제거)
-- 🏗️ `BaseImageSearchTool`: Unsplash/Pexels 공통 로직 추출
-- ⚙️ RAG 파라미터 환경변수화 (`RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`)
-- 🐛 `BaseAgent.temperature=0.0` falsy 버그 수정
-
-### v0.3.5 (2026-02-18) - 🎯 RAG 품질 향상
-
-- 🎯 400단어 구조화 답변 (5개 Markdown 섹션 강제)
-- 🔍 n_results 10→15, top_k 8→12 (+50%)
-- 🐛 ChromaDB L2 신뢰도 버그 수정 (`max(0, 1 - distance/2)`)
-- 🎨 Rich Markdown Panel 렌더링
+- 🧠 **RMC 자기검토** (v0.3.8): CurriculumDesigner·ContentWriter·QAAgent 2단계 자기반성, 할루시네이션 항목 제거, Python 3.13 검증
+- 🖼️ **UI & 슬라이드** (v0.3.7): Lightbox 클릭 확대, 한국어 서브스트링 검색, Mermaid 전체 너비, API 수정
+- 🔧 **코드 품질** (v0.3.6): `make_api_retry()` 팩토리, `BaseImageSearchTool`, RAG 파라미터 환경변수화, Chat 로그
+- 🎯 **RAG 품질** (v0.3.5): 400단어 구조화 답변, 15+15 듀얼쿼리(top-12), ChromaDB 신뢰도 수정, Rich 렌더링
 
 **End of CLAUDE.md**

@@ -102,6 +102,51 @@ class ImageSelector:
                     selected.append(img_ref)
                     selected_ids.add(img_ref.image_id)
 
+        # Phase 2: keyword matching against PDF image descriptions (fallback)
+        if len(selected) < max_images and pdf_images:
+            for img in pdf_images:
+                if len(selected) >= max_images:
+                    break
+                img_id = img.get("id", "")
+                if img_id in selected_ids:
+                    continue
+                img_desc = img.get("description", "").lower()
+                img_alt = img.get("alt_text", "").lower()
+                img_text = f"{img_desc} {img_alt}"
+                if not img_text.strip():
+                    continue
+                if any(kw.lower() in img_text for kw in keywords):
+                    selected.append(ImageReference(
+                        image_id=img_id,
+                        path=img.get("path", ""),
+                        description=img.get("description", ""),
+                        caption=img.get("alt_text", ""),
+                        attribution=f"Source: {Path(img.get('source', '')).name}",
+                    ))
+                    selected_ids.add(img_id)
+
+        # Phase 3: quality-based fallback — include best available PDF image if still empty
+        if len(selected) < max_images and pdf_images:
+            scored = []
+            for img in pdf_images:
+                img_id = img.get("id", "")
+                if img_id in selected_ids:
+                    continue
+                quality = self._evaluate_image_quality_simple(img)
+                if quality >= Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
+                    scored.append((quality, img))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            for quality, img in scored[:max_images - len(selected)]:
+                img_id = img.get("id", "")
+                selected.append(ImageReference(
+                    image_id=img_id,
+                    path=img.get("path", ""),
+                    description=img.get("description", "") or f"Page {img.get('page', '?')}",
+                    caption=img.get("alt_text", ""),
+                    attribution=f"Source: {Path(img.get('source', '')).name}, page {img.get('page', '?')}",
+                ))
+                selected_ids.add(img_id)
+
         return selected[:max_images]
 
     def _extract_subsection_keywords(
@@ -228,7 +273,8 @@ class ImageSelector:
         if not page_importance:
             return []
 
-        image_page_map = self._load_image_page_map()
+        # Build image-page map directly from available pdf_images (no disk I/O, session-safe)
+        image_page_map = self._build_page_map_from_pdf_images(pdf_images)
         if not image_page_map:
             return []
 
@@ -434,6 +480,32 @@ class ImageSelector:
             logger.info(f"     💡 {pdf_skipped} PDF images skipped (no descriptions)")
             logger.info(f"        Tip: Use 'lecture-forge improve --enhance-pdf-images' to add descriptions")
 
+        # Phase 3: quality-based fallback — include best available PDF images if still empty
+        if len(selected) < max_images and pdf_images:
+            scored = []
+            for img in pdf_images:
+                img_id = img.get("id", "")
+                if img_id in selected_ids:
+                    continue
+                quality = self._evaluate_image_quality_simple(img)
+                if quality >= Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
+                    scored.append((quality, img))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            for quality, img in scored[:max_images - len(selected)]:
+                img_id = img.get("id", "")
+                selected_ids.add(img_id)
+                selected.append(
+                    ImageReference(
+                        image_id=img_id,
+                        path=img.get("path", ""),
+                        description=img.get("description", "") or f"Page {img.get('page', '?')}",
+                        caption=img.get("alt_text", ""),
+                        attribution=f"Source: {Path(img.get('source', '')).name}, page {img.get('page', '?')}",
+                    )
+                )
+            if len(selected) > (location_matched + matched_count + pdf_matched):
+                logger.debug(f"     📎 Phase 3 fallback: added {len(selected) - (location_matched + matched_count + pdf_matched)} quality images")
+
         if len(selected) == 0 and available_images:
             logger.warning(f"     ⚠️  No matching images found for topics: {section.topics[:3]}")
 
@@ -468,10 +540,10 @@ class ImageSelector:
             logger.debug(f"        No PDF page info in RAG context")
             return selected
 
-        # 2. Load image-page map
-        image_page_map = self._load_image_page_map()
+        # 2. Build image-page map directly from available pdf_images (session-safe, no disk I/O)
+        image_page_map = self._build_page_map_from_pdf_images(pdf_images)
         if not image_page_map:
-            logger.debug(f"        No image-page map found")
+            logger.debug(f"        No image-page map could be built from available images")
             return selected
 
         # 3. Collect candidate images with scoring
@@ -552,6 +624,51 @@ class ImageSelector:
         logger.info(f"     ✅ Location-based: {len(selected)} images matched")
 
         return selected
+
+    def _build_page_map_from_pdf_images(self, pdf_images: List[dict]) -> dict:
+        """Build an in-memory image-page map from the available pdf_images list.
+
+        This replaces the disk-based _load_image_page_map() approach, eliminating
+        session-ID mismatches when multiple lecture sessions share the same DATA_DIR.
+
+        Args:
+            pdf_images: List of available PDF image dicts (must have 'source' and 'page')
+
+        Returns:
+            Dict structured as {source_path: {page_str: [img_info, ...]}}
+        """
+        image_page_map: dict = {}
+        for img in pdf_images:
+            source = img.get("source", "")
+            page = img.get("page")
+            if not source or page is None:
+                continue
+            if source not in image_page_map:
+                image_page_map[source] = {}
+            page_str = str(page)
+            if page_str not in image_page_map[source]:
+                image_page_map[source][page_str] = []
+            image_page_map[source][page_str].append({
+                "id": img.get("id", ""),
+                "path": img.get("path", ""),
+                "hash": img.get("hash", ""),
+                "description": img.get("description", ""),
+                "alt_text": img.get("alt_text", ""),
+                "width": img.get("width"),
+                "height": img.get("height"),
+                "y0": img.get("page_y0"),
+            })
+        # Sort images within each page by y0 ascending (top-to-bottom visual order)
+        for source in image_page_map:
+            for page_str in image_page_map[source]:
+                image_page_map[source][page_str].sort(
+                    key=lambda x: x["y0"] if x["y0"] is not None else float("inf")
+                )
+        logger.debug(
+            f"        Built in-memory image-page map: {len(image_page_map)} sources, "
+            f"{sum(len(pages) for pages in image_page_map.values())} pages"
+        )
+        return image_page_map
 
     def _load_image_page_map(self) -> dict:
         """Load image-page mapping from JSON file.

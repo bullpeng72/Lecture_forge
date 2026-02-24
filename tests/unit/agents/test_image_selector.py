@@ -579,16 +579,18 @@ class TestMatchImagesByLocation:
                     )
         assert result == []
 
-    def test_image_not_in_pdf_images_skipped(self, selector):
-        page_importance = {"doc.pdf": [(1, 0.9)]}
-        image_page_map = {"doc.pdf": {"1": [{"id": "unknown_img"}]}}
-        pdf_images = [self._make_pdf_image("img_1", page=1)]  # id doesn't match
-        with patch.object(selector, "_calculate_page_importance", return_value=page_importance):
-            with patch.object(selector, "_load_image_page_map", return_value=image_page_map):
+    def test_image_in_pdf_images_selected_via_in_memory_map(self, selector):
+        # Since _match_images_by_location now builds the page map from pdf_images
+        # directly (session-safe), any image present in pdf_images for a page that
+        # ranks highly in RAG context should be selected (no cross-session mismatch).
+        pdf_images = [self._make_pdf_image("img_1", page=1)]
+        with patch.object(selector, "_calculate_page_importance",
+                          return_value={"doc.pdf": [(1, 0.9)]}):
+            with patch.object(selector, "_evaluate_image_quality_simple", return_value=0.8):
                 result = selector._match_images_by_location(
                     [{"source": "doc.pdf", "page_number": 1}], pdf_images, 3
                 )
-        assert result == []
+        assert len(result) >= 1
 
     def test_screenshot_content_type_weighting(self, selector):
         """Screenshot and technical types use different weight (0.25/0.65/0.10)."""

@@ -725,5 +725,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-23
-**Version**: 0.4.1
+**Last Updated**: 2026-02-24
+**Version**: 0.4.2

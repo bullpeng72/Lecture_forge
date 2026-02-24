@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.4.1** | `translate` 명령어 품질 개선 🌐 + `--with-diagrams` 옵션 🎛️ + 코드 품질 향상 🔧
+> 🚀 **v0.4.2** | `translate` 명령어 품질 개선 🌐 + `--with-diagrams` 옵션 🎛️ + 코드 품질 향상 🔧
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -240,12 +240,12 @@ lecture-forge create
 | 명령어 | 설명 | 주요 옵션 |
 |--------|------|----------|
 | **init** | 초기 설정 | `--path` |
-| **create** | 강의 생성 | `--image-search`, `--quality-level` |
+| **create** | 강의 생성 | `--interactive`, `--image-search`, `--quality-level`, `--existing-kb` |
 | **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit-images** | 이미지 편집 | `--output` |
 | **improve** | 강의 향상 / 재평가 | `--to-slides`, `--re-evaluate` |
-| **cleanup** | 지식베이스 관리 | `--all` |
+| **cleanup** | 지식베이스 관리 | `--all` (`-a`) |
 | **home** | 폴더 열기 (v0.3.1+) | `outputs`, `data`, `kb`, `env` |
 
 ### 빠른 실행 예제
@@ -333,10 +333,11 @@ lecture-forge create
 
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
-| `--config FILE` | YAML 설정 파일 사용 | `--config lecture.yaml` |
+| `-c, --config FILE` | YAML 설정 파일 사용 | `--config lecture.yaml` |
+| `-i, --interactive` | 생성 중 대화형 Q&A 모드 활성화 | `--interactive` |
 | `--image-search` | 웹 이미지 검색 활성화 Pexels (기본 활성화) | `--no-image-search` |
 | `--quality-level LEVEL` | 품질 기준 설정 | `--quality-level strict` |
-| `--output FILE` | 출력 파일명 지정 (확장자 제외) | `--output my_lecture` |
+| `-o, --output FILE` | 출력 파일명 지정 (확장자 제외) | `--output my_lecture` |
 | `--async-mode` | Async I/O 사용 (70% 빠름, 실험적) | `--async-mode` |
 | `--include-pdf-images` | PDF 이미지 추출 및 location-based 자동 배치 (기본 활성화) | `--no-include-pdf-images` |
 | `--auto-describe-images` | PDF 이미지 GPT-4o-mini 설명 자동 생성 (기본 활성화) | `--no-auto-describe-images` |
@@ -535,7 +536,7 @@ lecture-forge cleanup
 
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
-| `--all` | 모든 지식베이스 삭제 (⚠️ 주의!) | `--all` |
+| `-a, --all` | 모든 지식베이스 삭제 (⚠️ 주의!) | `--all` |
 
 **예제:**
 ```bash
@@ -941,90 +942,23 @@ lecture-forge create
 - 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
 - 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
 
-### v0.3.8 (2026-02-20) - 🧠 RMC 자기검토
+### v0.3.x (2026-02-12 ~ 2026-02-20) - 기반 기능 구축
 
-- 🧠 **RMC (Reflective Meta-Cognition)** 3개 에이전트에 적용 (2단계 자기검토: Layer 1 검토 + Layer 2 검토의 검토)
-  - `CurriculumDesigner._review_with_rmc()`: 섹션 순서 난이도, 학습목표 커버리지, 선수 내용 순서 자동 수정
-  - `ContentWriter._review_content_with_rmc()`: 개념 비약·흐름 단절·중복 의미론적 검토 후 수정
-  - `QAAgent._review_answer_with_rmc()`: 주장별 ✓/~/✗ 분류 → 할루시네이션 항목 제거 또는 경고
-- 🐛 결론/도입 섹션 LLM 거부 응답 수정: 안전 프롬프트 + 거부 패턴 감지 자동 재시도
-- 🐛 `--with-notes` Mermaid `-->` → `--&gt;` 인코딩 버그 수정 (`SlideNotesGenerator`)
-- ✅ Python 3.13 전체 의존성 호환 검증
+- 🧠 **RMC 자기검토** (v0.3.8): CurriculumDesigner·ContentWriter·QAAgent 2단계 자기반성, 할루시네이션 항목 제거, Python 3.13 검증
+- 🖼️ **UI & 슬라이드** (v0.3.7): Lightbox 클릭 확대, 한국어 서브스트링 검색, Mermaid 전체 너비, API 수정
+- 🔧 **코드 품질** (v0.3.6): `make_api_retry()` 팩토리, `BaseImageSearchTool`, RAG 파라미터 환경변수화, Chat 로그
+- 🎯 **RAG 품질** (v0.3.5): 400단어 구조화 답변, 15+15 듀얼쿼리(top-12), ChromaDB 신뢰도 수정, Rich 렌더링
+- ⚡ **Async I/O** (v0.3.4): `--async-mode`, httpx 병렬 수집 70% 향상
+- ⌨️ **입력 시스템** (v0.3.3): prompt-toolkit, 한국어 완벽 지원, 히스토리·자동완성
+- 🌐 **다국어** (v0.3.2): langdetect, Cross-lingual 듀얼쿼리, 지능형 재랭킹
+- 📂 **디렉토리** (v0.3.1): `~/Documents/LectureForge/`, `home` 커맨드, 자동 마이그레이션
+- 🎨 **프레젠테이션** (v0.3.0): Mermaid 다이어그램, 예외처리 시스템(9개), 슬라이드 최적화
 
-### v0.3.7 (2026-02-18) - 🖼️ UI & 슬라이드 개선
+### v0.2.x (2026-02-09 ~ 2026-02-12) - 품질·안정성
 
-- 🖼️ **Lightbox**: 강의 HTML에서 이미지·Mermaid 다이어그램 클릭 시 전체화면 모달 확대
-- 🔍 **검색 개선**: Lunr.js → 서브스트링 검색 (한국어·영어 혼합 완벽 지원)
-- 📊 **Mermaid 전체 너비**: 슬라이드에서 ~300px → ~1180px (`width: 100%`)
-- 🐛 Mermaid 10 API 수정: `contentLoaded()` → `mermaid.run()`, `startOnLoad: false`
-
-### v0.3.6 (2026-02-18) - 🔧 코드 품질 & 안정성
-
-- 🐛 `BaseAgent.temperature=0.0` falsy 버그 수정
-- 🐛 `QAAgent` 하드코딩 경로 → `Config.USER_CONFIG_DIR`
-- 🔧 `utils/retry.py`: `make_api_retry()` 공통 팩토리 (중복 4곳 제거)
-- 🏗️ `BaseImageSearchTool`: Unsplash/Pexels 공통 로직 추출 (~100줄 감소)
-- ⚙️ RAG 파라미터 환경변수 지원: `RAG_QA_N_RESULTS`, `RAG_QA_TOP_K`, `RAG_CONTENT_N_RESULTS`
-- ✅ Config 검증: `IMAGE_WEIGHT_*`, `CONTENT_*_RATIO` 합계 1.0 검증
-- 💬 Chat 응답 `conversation_log.txt` 저장 (질문 + AI 답변 모두)
-- 🧪 async 도구 테스트 23개 추가
-
-### v0.3.5 (2026-02-18) - 🎯 RAG 품질 대폭 향상
-
-- 🎯 **400단어 구조화 답변**: 5개 Markdown 섹션 강제 (개요/상세/핵심/예시/추가고려)
-- 🔍 **검색 강화**: n_results 10→15, top_k 8→12 (+50%), source-page당 최대 3개 chunks
-- 🌡️ temperature 0.7→0.3 (정확성 향상), Rich Markdown Panel 렌더링
-- 🐛 ChromaDB L2 신뢰도 버그 수정: `1 - distance` → `max(0, 1 - distance/2)` (항상 0% 해결)
-- 🔧 `pkg_resources.path` → `importlib.resources.files()` (Python 3.11+ deprecation 제거)
-
-### v0.3.4 (2026-02-16) - ⚡ Async I/O 지원
-
-- ⚡ **AsyncContentCollectorAgent**: PDF·URL·검색 병렬 처리 (70% 성능 향상)
-- 🌐 **Async Tools**: httpx 기반 web scraper, Serper search, Rate limiting
-- 🚀 `--async-mode` CLI 플래그 (실험적), 기존 sync 100% 호환
-
-### v0.3.3 (2026-02-15) - ⌨️ 입력 시스템 개선
-
-- ⌨️ **prompt-toolkit 도입**: 한국어·멀티바이트 완벽 지원, 백스페이스/방향키 정상 작동
-- 📜 입력 히스토리 (`chat_history.txt`), ↑/↓ 탐색, Ctrl+R 검색
-- 💡 자동 제안 (이전 질문 기반), 편집 단축키 (Ctrl+A/E, Alt+←/→)
-- 🔧 NumPy 1.26.0+ (Python 3.12 공식 지원)
-
-### v0.3.2 (2026-02-14) - 🌐 다국어 지원
-
-- 🌐 **자동 언어 감지**: chunk 단위 언어 감지 (langdetect)
-- 🔍 **Cross-lingual Dual Query**: 한국어 질문 → 영어 문서도 검색 (자동 번역)
-- 🎯 지능형 재랭킹: 같은 언어 우선 + cross-lingual 보너스
-- 🛠️ 기존 Vector DB 마이그레이션 도구 (`migrate_add_language_metadata.py`)
-
-### v0.3.1 (2026-02-13) - 📂 사용자 친화적 디렉토리
-
-- 📂 `~/.lecture-forge/` (히든) → `~/Documents/LectureForge/` (일반 폴더)
-- 🏠 `home` 커맨드 추가: `outputs`, `data`, `kb`, `env` 빠른 접근
-- 🔄 자동 마이그레이션: 기존 데이터 자동 이동 (하위 호환)
-
-### v0.3.0 (2026-02-12) - 🎯 프레젠테이션 최적화
-
-- 🎯 슬라이드당 항목 수 4→3, 긴 리스트 자동 분할 (최대 5개씩)
-- 🎨 제목 크기/색상 계층화, 타이포그래피 최적화, 코드 블록 입체감
-- 📊 텍스트 다이어그램 → Mermaid 변환 (아키텍처, 예외 계층, 품질 평가)
-- 🎯 예외 처리 시스템 (9개 카테고리) + 템플릿 기반 프롬프트 관리
-
-### v0.2.6 (2026-02-12) - 🐛 이미지 버그 수정
-
-- 🐛 `pil_image.thumbnail()` 원본 수정 버그 수정 → `pil_image.copy()` 후 분석
-  - 증상: 모든 PDF 이미지가 200px 너비로 저장됨 → 원본 크기 완전 보존
-
-### v0.2.1–0.2.5 (2026-02-10~12) - 버그 수정 및 품질 개선
-
-- 🐛 Visual score, 품질 평가, 슬라이드 생성 버그 수정
-- 🎨 이미지 Full HD·고품질 WebP, IMAGE_MIN_WIDTH=500 강화
-
-### v0.2.0 (2026-02-09) - 🚀 Enhanced Quality Release
-
-- ⚡ RAG 쿼리 캐싱 (60% 성능 향상), 자동 API 재시도 (지수 백오프)
+- ⚡ RAG 쿼리 캐싱(60%), 자동 API 재시도(지수 백오프), Config 리팩토링(15+ 환경변수)
+- 🐛 이미지 크기 버그 수정(원본 보존), Visual score·슬라이드 버그 수정, Full HD WebP 지원
 - 🧪 77+ 단위 테스트, 타입 힌트 40% → 75%
-- 🔧 Config 리팩토링: 모든 하드코딩 제거, 15+ 환경변수 기반 설정
 
 ### v0.1.0 (2026-02-08) - 🎉 Initial Release
 

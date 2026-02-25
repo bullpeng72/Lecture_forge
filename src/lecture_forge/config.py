@@ -215,6 +215,24 @@ def resolve_config_path(env_var: str, default_subdir: str, base_dir: Path) -> Pa
     return path.resolve()
 
 
+def _env_int(key: str, default: int) -> int:
+    try:
+        return int(os.getenv(key, str(default)))
+    except ValueError:
+        import warnings
+        warnings.warn(f"[Config] Invalid value for '{key}', using default {default}")
+        return default
+
+
+def _env_float(key: str, default: float) -> float:
+    try:
+        return float(os.getenv(key, str(default)))
+    except ValueError:
+        import warnings
+        warnings.warn(f"[Config] Invalid value for '{key}', using default {default}")
+        return default
+
+
 class Config:
     """Global configuration class."""
 
@@ -232,140 +250,140 @@ class Config:
     DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
     VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.7"))
+    TEMPERATURE: float = _env_float("TEMPERATURE", 0.7)
 
     # ===== Search API =====
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")
-    SEARCH_NUM_RESULTS: int = int(os.getenv("SEARCH_NUM_RESULTS", "10"))
-    SEARCH_TIMEOUT: int = int(os.getenv("SEARCH_TIMEOUT", "30"))
+    SEARCH_NUM_RESULTS: int = _env_int("SEARCH_NUM_RESULTS", 10)
+    SEARCH_TIMEOUT: int = _env_int("SEARCH_TIMEOUT", 30)
 
     # ===== Image Search APIs =====
     UNSPLASH_ACCESS_KEY: Optional[str] = os.getenv("UNSPLASH_ACCESS_KEY")
     PEXELS_API_KEY: Optional[str] = os.getenv("PEXELS_API_KEY")
-    MAX_IMAGES_PER_SEARCH: int = int(os.getenv("MAX_IMAGES_PER_SEARCH", "10"))
-    IMAGE_SEARCH_PER_PAGE: int = int(os.getenv("IMAGE_SEARCH_PER_PAGE", "10"))
-    IMAGE_SEARCH_TIMEOUT: int = int(os.getenv("IMAGE_SEARCH_TIMEOUT", "30"))
+    MAX_IMAGES_PER_SEARCH: int = _env_int("MAX_IMAGES_PER_SEARCH", 10)
+    IMAGE_SEARCH_PER_PAGE: int = _env_int("IMAGE_SEARCH_PER_PAGE", 10)
+    IMAGE_SEARCH_TIMEOUT: int = _env_int("IMAGE_SEARCH_TIMEOUT", 30)
     IMAGE_FORMAT: str = os.getenv("IMAGE_FORMAT", "webp")
-    IMAGE_MAX_WIDTH: int = int(os.getenv("IMAGE_MAX_WIDTH", "1920"))  # Full HD support
+    IMAGE_MAX_WIDTH: int = _env_int("IMAGE_MAX_WIDTH", 1920)  # Full HD support
 
     # ===== Image Extraction & Quality =====
     # Minimum dimensions for extracted images (filters out icons/logos)
     # v0.2.5+: Increased default from 200x200 to 500x300 for better quality
-    IMAGE_MIN_WIDTH: int = int(os.getenv("IMAGE_MIN_WIDTH", "500"))
-    IMAGE_MIN_HEIGHT: int = int(os.getenv("IMAGE_MIN_HEIGHT", "300"))
+    IMAGE_MIN_WIDTH: int = _env_int("IMAGE_MIN_WIDTH", 500)
+    IMAGE_MIN_HEIGHT: int = _env_int("IMAGE_MIN_HEIGHT", 300)
 
     # Quality thresholds (0.0 ~ 1.0)
     # Extraction phase: Filter for meaningful images (diagrams, charts, text-rich images)
     # Enhanced algorithm: size(15%) + aspect(15%) + compression(20%) + content(30%) + meaningful(20%)
-    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_EXTRACTION_QUALITY_THRESHOLD", "0.35"))
+    IMAGE_EXTRACTION_QUALITY_THRESHOLD: float = _env_float("IMAGE_EXTRACTION_QUALITY_THRESHOLD", 0.35)
     # Selection phase: Strict filtering (select best images for lecture inclusion)
-    IMAGE_SELECTION_QUALITY_THRESHOLD: float = float(os.getenv("IMAGE_SELECTION_QUALITY_THRESHOLD", "0.40"))
+    IMAGE_SELECTION_QUALITY_THRESHOLD: float = _env_float("IMAGE_SELECTION_QUALITY_THRESHOLD", 0.40)
 
     # ===== Image Quality Analysis - Color Diversity =====
     # Standard deviation thresholds for color diversity scoring
     # Higher std = more color variation = better content
-    IMAGE_STD_HIGH: int = int(os.getenv("IMAGE_STD_HIGH", "50"))  # High color diversity
-    IMAGE_STD_MEDIUM: int = int(os.getenv("IMAGE_STD_MEDIUM", "30"))  # Medium diversity
-    IMAGE_STD_LOW: int = int(os.getenv("IMAGE_STD_LOW", "15"))  # Low diversity
-    IMAGE_STD_MINIMAL: int = int(os.getenv("IMAGE_STD_MINIMAL", "5"))  # Almost solid color
+    IMAGE_STD_HIGH: int = _env_int("IMAGE_STD_HIGH", 50)  # High color diversity
+    IMAGE_STD_MEDIUM: int = _env_int("IMAGE_STD_MEDIUM", 30)  # Medium diversity
+    IMAGE_STD_LOW: int = _env_int("IMAGE_STD_LOW", 15)  # Low diversity
+    IMAGE_STD_MINIMAL: int = _env_int("IMAGE_STD_MINIMAL", 5)  # Almost solid color
 
     # ===== Image Quality Analysis - Edge Density =====
     # Edge density thresholds for content structure detection
     # Higher edge density = more structure/detail = better for diagrams
-    IMAGE_EDGE_DENSITY_HIGH: float = float(os.getenv("IMAGE_EDGE_DENSITY_HIGH", "0.15"))  # High detail
-    IMAGE_EDGE_DENSITY_MEDIUM: float = float(os.getenv("IMAGE_EDGE_DENSITY_MEDIUM", "0.08"))  # Medium detail
-    IMAGE_EDGE_DENSITY_LOW: float = float(os.getenv("IMAGE_EDGE_DENSITY_LOW", "0.04"))  # Low detail
-    IMAGE_EDGE_DENSITY_MINIMAL: float = float(os.getenv("IMAGE_EDGE_DENSITY_MINIMAL", "0.02"))  # Minimal edges
+    IMAGE_EDGE_DENSITY_HIGH: float = _env_float("IMAGE_EDGE_DENSITY_HIGH", 0.15)  # High detail
+    IMAGE_EDGE_DENSITY_MEDIUM: float = _env_float("IMAGE_EDGE_DENSITY_MEDIUM", 0.08)  # Medium detail
+    IMAGE_EDGE_DENSITY_LOW: float = _env_float("IMAGE_EDGE_DENSITY_LOW", 0.04)  # Low detail
+    IMAGE_EDGE_DENSITY_MINIMAL: float = _env_float("IMAGE_EDGE_DENSITY_MINIMAL", 0.02)  # Minimal edges
 
     # ===== Image Quality Analysis - Compression Ratio =====
     # Bytes per pixel thresholds for compression quality
     # Higher bpp = less compression = better quality
-    IMAGE_COMPRESSION_SOLID: float = float(os.getenv("IMAGE_COMPRESSION_SOLID", "0.05"))  # Solid color/icon
-    IMAGE_COMPRESSION_LOW: float = float(os.getenv("IMAGE_COMPRESSION_LOW", "0.2"))  # Highly compressed
-    IMAGE_COMPRESSION_MEDIUM: float = float(os.getenv("IMAGE_COMPRESSION_MEDIUM", "1.0"))  # Medium quality
-    IMAGE_COMPRESSION_HIGH: float = float(os.getenv("IMAGE_COMPRESSION_HIGH", "1.5"))  # High quality
+    IMAGE_COMPRESSION_SOLID: float = _env_float("IMAGE_COMPRESSION_SOLID", 0.05)  # Solid color/icon
+    IMAGE_COMPRESSION_LOW: float = _env_float("IMAGE_COMPRESSION_LOW", 0.2)  # Highly compressed
+    IMAGE_COMPRESSION_MEDIUM: float = _env_float("IMAGE_COMPRESSION_MEDIUM", 1.0)  # Medium quality
+    IMAGE_COMPRESSION_HIGH: float = _env_float("IMAGE_COMPRESSION_HIGH", 1.5)  # High quality
 
     # ===== Image Selection - Weighting Factors =====
     # Each content-type group has its own quality/importance pair.
     # All three groups share IMAGE_WEIGHT_POSITION, and each pair + position must sum to ~1.0.
 
     # diagram / chart: quality matters more (structured content)
-    IMAGE_WEIGHT_QUALITY: float = float(os.getenv("IMAGE_WEIGHT_QUALITY", "0.35"))
-    IMAGE_WEIGHT_IMPORTANCE: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE", "0.55"))
+    IMAGE_WEIGHT_QUALITY: float = _env_float("IMAGE_WEIGHT_QUALITY", 0.35)
+    IMAGE_WEIGHT_IMPORTANCE: float = _env_float("IMAGE_WEIGHT_IMPORTANCE", 0.55)
 
     # screenshot / technical: page location matters slightly more than pure quality
-    IMAGE_WEIGHT_QUALITY_SCREENSHOT: float = float(os.getenv("IMAGE_WEIGHT_QUALITY_SCREENSHOT", "0.25"))
-    IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT", "0.65"))
+    IMAGE_WEIGHT_QUALITY_SCREENSHOT: float = _env_float("IMAGE_WEIGHT_QUALITY_SCREENSHOT", 0.25)
+    IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT: float = _env_float("IMAGE_WEIGHT_IMPORTANCE_SCREENSHOT", 0.65)
 
     # photo / unknown: page location is the primary signal
-    IMAGE_WEIGHT_QUALITY_PHOTO: float = float(os.getenv("IMAGE_WEIGHT_QUALITY_PHOTO", "0.20"))
-    IMAGE_WEIGHT_IMPORTANCE_PHOTO: float = float(os.getenv("IMAGE_WEIGHT_IMPORTANCE_PHOTO", "0.70"))
+    IMAGE_WEIGHT_QUALITY_PHOTO: float = _env_float("IMAGE_WEIGHT_QUALITY_PHOTO", 0.20)
+    IMAGE_WEIGHT_IMPORTANCE_PHOTO: float = _env_float("IMAGE_WEIGHT_IMPORTANCE_PHOTO", 0.70)
 
     # Shared position weight across all content types
-    IMAGE_WEIGHT_POSITION: float = float(os.getenv("IMAGE_WEIGHT_POSITION", "0.10"))  # Location proximity weight
+    IMAGE_WEIGHT_POSITION: float = _env_float("IMAGE_WEIGHT_POSITION", 0.10)  # Location proximity weight
 
     # ===== Image Content Detection =====
     # Threshold for meaningful content detection (diagrams, charts, text)
-    IMAGE_MEANINGFUL_CONTENT_THRESHOLD: float = float(os.getenv("IMAGE_MEANINGFUL_CONTENT_THRESHOLD", "0.8"))
+    IMAGE_MEANINGFUL_CONTENT_THRESHOLD: float = _env_float("IMAGE_MEANINGFUL_CONTENT_THRESHOLD", 0.8)
     # Bonus score for detected high-value content
-    IMAGE_DIAGRAM_BONUS: float = float(os.getenv("IMAGE_DIAGRAM_BONUS", "0.10"))
+    IMAGE_DIAGRAM_BONUS: float = _env_float("IMAGE_DIAGRAM_BONUS", 0.10)
 
     # ===== Image Aspect Ratio Bounds =====
     # Valid aspect ratio range (width/height)
-    IMAGE_ASPECT_RATIO_MIN: float = float(os.getenv("IMAGE_ASPECT_RATIO_MIN", "0.3"))  # Very tall
-    IMAGE_ASPECT_RATIO_MAX: float = float(os.getenv("IMAGE_ASPECT_RATIO_MAX", "3.0"))  # Very wide
+    IMAGE_ASPECT_RATIO_MIN: float = _env_float("IMAGE_ASPECT_RATIO_MIN", 0.3)  # Very tall
+    IMAGE_ASPECT_RATIO_MAX: float = _env_float("IMAGE_ASPECT_RATIO_MAX", 3.0)  # Very wide
 
     # ===== Vector DB =====
     VECTOR_DB_PATH: Path = resolve_config_path("VECTOR_DB_PATH", "vector_db", DATA_DIR)
-    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "1000"))
-    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "200"))
+    CHUNK_SIZE: int = _env_int("CHUNK_SIZE", 1000)
+    CHUNK_OVERLAP: int = _env_int("CHUNK_OVERLAP", 200)
 
     # ===== RAG Cache =====
     RAG_CACHE_PATH: Path = resolve_config_path("RAG_CACHE_PATH", "rag_cache", DATA_DIR)
-    RAG_CACHE_TTL: int = int(os.getenv("RAG_CACHE_TTL", "86400"))  # 24 hours in seconds
-    RAG_CACHE_MAX_SIZE: int = int(os.getenv("RAG_CACHE_MAX_SIZE", "1000"))  # Max number of cached queries
+    RAG_CACHE_TTL: int = _env_int("RAG_CACHE_TTL", 86400)  # 24 hours in seconds
+    RAG_CACHE_MAX_SIZE: int = _env_int("RAG_CACHE_MAX_SIZE", 1000)  # Max number of cached queries
 
     # ===== RAG Query Settings =====
     # Default number of documents to retrieve per query
-    RAG_DEFAULT_RESULTS: int = int(os.getenv("RAG_DEFAULT_RESULTS", "10"))
+    RAG_DEFAULT_RESULTS: int = _env_int("RAG_DEFAULT_RESULTS", 10)
     # Top-k results for context building
-    RAG_TOP_K_RESULTS: int = int(os.getenv("RAG_TOP_K_RESULTS", "5"))
+    RAG_TOP_K_RESULTS: int = _env_int("RAG_TOP_K_RESULTS", 5)
     # Q&A mode: dual-query retrieval count (original + translated each)
-    RAG_QA_N_RESULTS: int = int(os.getenv("RAG_QA_N_RESULTS", "15"))
+    RAG_QA_N_RESULTS: int = _env_int("RAG_QA_N_RESULTS", 15)
     # Q&A mode: top-k after merge and re-ranking
-    RAG_QA_TOP_K: int = int(os.getenv("RAG_QA_TOP_K", "12"))
+    RAG_QA_TOP_K: int = _env_int("RAG_QA_TOP_K", 12)
     # Content generation: RAG retrieval count per section query
-    RAG_CONTENT_N_RESULTS: int = int(os.getenv("RAG_CONTENT_N_RESULTS", "15"))   # 10 → 15
+    RAG_CONTENT_N_RESULTS: int = _env_int("RAG_CONTENT_N_RESULTS", 15)   # 10 → 15
     # Dynamic n_results bounds: scaled by section duration/difficulty (K)
-    RAG_N_RESULTS_MIN: int = int(os.getenv("RAG_N_RESULTS_MIN", "5"))
-    RAG_N_RESULTS_MAX: int = int(os.getenv("RAG_N_RESULTS_MAX", "60"))            # 40 → 60
+    RAG_N_RESULTS_MIN: int = _env_int("RAG_N_RESULTS_MIN", 5)
+    RAG_N_RESULTS_MAX: int = _env_int("RAG_N_RESULTS_MAX", 60)            # 40 → 60
     # Sparse fallback threshold: trigger broadened queries if fewer chunks found (I)
-    RAG_SPARSE_THRESHOLD: int = int(os.getenv("RAG_SPARSE_THRESHOLD", "5"))
+    RAG_SPARSE_THRESHOLD: int = _env_int("RAG_SPARSE_THRESHOLD", 5)
     # Maximum context token budget passed to the LLM per section (M)
     # ~3 chars/token approximation; 40 000 tokens ≈ 120 000 chars of mixed KO/EN text
-    RAG_MAX_CONTEXT_TOKENS: int = int(os.getenv("RAG_MAX_CONTEXT_TOKENS", "40000"))  # 24000 → 40000
+    RAG_MAX_CONTEXT_TOKENS: int = _env_int("RAG_MAX_CONTEXT_TOKENS", 40000)  # 24000 → 40000
     # Coverage sweep: minimum ratio of KB chunks that must be referenced across all sections
-    RAG_COVERAGE_MIN_RATIO: float = float(os.getenv("RAG_COVERAGE_MIN_RATIO", "0.70"))
+    RAG_COVERAGE_MIN_RATIO: float = _env_float("RAG_COVERAGE_MIN_RATIO", 0.70)
 
     # ===== RAG Similarity & Diversity =====
     # Minimum similarity score to include a result (L2 distance based)
-    RAG_SIMILARITY_THRESHOLD: float = float(os.getenv("RAG_SIMILARITY_THRESHOLD", "0.3"))
+    RAG_SIMILARITY_THRESHOLD: float = _env_float("RAG_SIMILARITY_THRESHOLD", 0.3)
     # Number of top results to keep when all results fall below threshold
-    RAG_MIN_FALLBACK_RESULTS: int = int(os.getenv("RAG_MIN_FALLBACK_RESULTS", "3"))
+    RAG_MIN_FALLBACK_RESULTS: int = _env_int("RAG_MIN_FALLBACK_RESULTS", 3)
     # Maximum chunks allowed from the same source-page in diversity selection
-    RAG_MAX_CHUNKS_PER_SOURCE_PAGE: int = int(os.getenv("RAG_MAX_CHUNKS_PER_SOURCE_PAGE", "3"))
+    RAG_MAX_CHUNKS_PER_SOURCE_PAGE: int = _env_int("RAG_MAX_CHUNKS_PER_SOURCE_PAGE", 3)
 
     # ===== Quality Assurance =====
-    QUALITY_THRESHOLD: int = int(os.getenv("QUALITY_THRESHOLD", "80"))
-    QUALITY_THRESHOLD_SECTION: int = int(os.getenv("QUALITY_THRESHOLD_SECTION", "70"))  # Relaxed for section-level
-    MAX_ITERATIONS: int = int(os.getenv("MAX_ITERATIONS", "3"))
+    QUALITY_THRESHOLD: int = _env_int("QUALITY_THRESHOLD", 80)
+    QUALITY_THRESHOLD_SECTION: int = _env_int("QUALITY_THRESHOLD_SECTION", 70)  # Relaxed for section-level
+    MAX_ITERATIONS: int = _env_int("MAX_ITERATIONS", 3)
 
     # Diagram quality threshold (0-100)
-    DIAGRAM_QUALITY_THRESHOLD: int = int(os.getenv("DIAGRAM_QUALITY_THRESHOLD", "70"))
+    DIAGRAM_QUALITY_THRESHOLD: int = _env_int("DIAGRAM_QUALITY_THRESHOLD", 70)
 
     # Diagram generation settings (v0.4.0)
-    DIAGRAM_MAX_PER_SECTION: int = int(os.getenv("DIAGRAM_MAX_PER_SECTION", "3"))
-    DIAGRAM_MINUTES_PER: int = int(os.getenv("DIAGRAM_MINUTES_PER", "20"))  # 20분당 1개
+    DIAGRAM_MAX_PER_SECTION: int = _env_int("DIAGRAM_MAX_PER_SECTION", 3)
+    DIAGRAM_MINUTES_PER: int = _env_int("DIAGRAM_MINUTES_PER", 20)  # 20분당 1개
     DIAGRAM_ENABLE_SEQUENCE: bool = os.getenv("DIAGRAM_ENABLE_SEQUENCE", "true").lower() == "true"
     DIAGRAM_ENABLE_MINDMAP: bool = os.getenv("DIAGRAM_ENABLE_MINDMAP", "true").lower() == "true"
 
@@ -375,67 +393,67 @@ class Config:
     #   - Pauses for comprehension
     #   - Code demonstrations
     #   - Interactive elements
-    LECTURE_WORDS_PER_MINUTE: int = int(os.getenv("LECTURE_WORDS_PER_MINUTE", "120"))
+    LECTURE_WORDS_PER_MINUTE: int = _env_int("LECTURE_WORDS_PER_MINUTE", 120)
 
     # Difficulty multipliers for word count
-    DIFFICULTY_MULTIPLIER_BEGINNER: float = float(os.getenv("DIFFICULTY_MULTIPLIER_BEGINNER", "1.3"))
-    DIFFICULTY_MULTIPLIER_INTERMEDIATE: float = float(os.getenv("DIFFICULTY_MULTIPLIER_INTERMEDIATE", "1.0"))
-    DIFFICULTY_MULTIPLIER_ADVANCED: float = float(os.getenv("DIFFICULTY_MULTIPLIER_ADVANCED", "1.1"))
+    DIFFICULTY_MULTIPLIER_BEGINNER: float = _env_float("DIFFICULTY_MULTIPLIER_BEGINNER", 1.3)
+    DIFFICULTY_MULTIPLIER_INTERMEDIATE: float = _env_float("DIFFICULTY_MULTIPLIER_INTERMEDIATE", 1.0)
+    DIFFICULTY_MULTIPLIER_ADVANCED: float = _env_float("DIFFICULTY_MULTIPLIER_ADVANCED", 1.1)
 
     # Practice problems per time (minutes per problem)
-    PRACTICE_PER_TIME_BEGINNER: int = int(os.getenv("PRACTICE_PER_TIME_BEGINNER", "25"))
-    PRACTICE_PER_TIME_INTERMEDIATE: int = int(os.getenv("PRACTICE_PER_TIME_INTERMEDIATE", "20"))
-    PRACTICE_PER_TIME_ADVANCED: int = int(os.getenv("PRACTICE_PER_TIME_ADVANCED", "30"))
+    PRACTICE_PER_TIME_BEGINNER: int = _env_int("PRACTICE_PER_TIME_BEGINNER", 25)
+    PRACTICE_PER_TIME_INTERMEDIATE: int = _env_int("PRACTICE_PER_TIME_INTERMEDIATE", 20)
+    PRACTICE_PER_TIME_ADVANCED: int = _env_int("PRACTICE_PER_TIME_ADVANCED", 30)
 
     # Subsections and visuals
-    SUBSECTION_MINUTES: int = int(os.getenv("SUBSECTION_MINUTES", "12"))  # Minutes per subsection
-    VISUAL_PER_MINUTES: int = int(os.getenv("VISUAL_PER_MINUTES", "10"))  # Minutes per visual
+    SUBSECTION_MINUTES: int = _env_int("SUBSECTION_MINUTES", 12)  # Minutes per subsection
+    VISUAL_PER_MINUTES: int = _env_int("VISUAL_PER_MINUTES", 10)  # Minutes per visual
     # Maximum images to select per subsection (subsection-level image matching)
-    IMAGE_MAX_PER_SUBSECTION: int = int(os.getenv("IMAGE_MAX_PER_SUBSECTION", "1"))
+    IMAGE_MAX_PER_SUBSECTION: int = _env_int("IMAGE_MAX_PER_SUBSECTION", 1)
 
     # Word count tolerance
-    MIN_WORDS_RATIO: float = float(os.getenv("MIN_WORDS_RATIO", "0.75"))  # Allow 25% under
-    MAX_WORDS_RATIO: float = float(os.getenv("MAX_WORDS_RATIO", "1.3"))  # Allow 30% over
+    MIN_WORDS_RATIO: float = _env_float("MIN_WORDS_RATIO", 0.75)  # Allow 25% under
+    MAX_WORDS_RATIO: float = _env_float("MAX_WORDS_RATIO", 1.3)  # Allow 30% over
 
     # Content quality metric constants
     # Reading speed used for completeness check (expected content volume)
-    CONTENT_READING_WPM: int = int(os.getenv("CONTENT_READING_WPM", "250"))
+    CONTENT_READING_WPM: int = _env_int("CONTENT_READING_WPM", 250)
     # Fraction of lecture time expected to be covered by text (completeness)
-    CONTENT_TIME_COVERAGE: float = float(os.getenv("CONTENT_TIME_COVERAGE", "0.7"))
+    CONTENT_TIME_COVERAGE: float = _env_float("CONTENT_TIME_COVERAGE", 0.7)
     # Words per minute bounds for time-alignment score
-    CONTENT_WPM_MIN: int = int(os.getenv("CONTENT_WPM_MIN", "150"))
-    CONTENT_WPM_MAX: int = int(os.getenv("CONTENT_WPM_MAX", "250"))
+    CONTENT_WPM_MIN: int = _env_int("CONTENT_WPM_MIN", 150)
+    CONTENT_WPM_MAX: int = _env_int("CONTENT_WPM_MAX", 250)
     # Minimum number of sections for structural checks
-    CONTENT_MIN_SECTIONS: int = int(os.getenv("CONTENT_MIN_SECTIONS", "3"))
+    CONTENT_MIN_SECTIONS: int = _env_int("CONTENT_MIN_SECTIONS", 3)
 
     # ===== Content Generation - Section Structure =====
     # Content distribution ratios for section parts (should sum to 1.0)
-    CONTENT_INTRO_RATIO: float = float(os.getenv("CONTENT_INTRO_RATIO", "0.10"))  # 10% intro
-    CONTENT_MAIN_RATIO: float = float(os.getenv("CONTENT_MAIN_RATIO", "0.70"))  # 70% main content
-    CONTENT_SUMMARY_RATIO: float = float(os.getenv("CONTENT_SUMMARY_RATIO", "0.20"))  # 20% summary
+    CONTENT_INTRO_RATIO: float = _env_float("CONTENT_INTRO_RATIO", 0.10)  # 10% intro
+    CONTENT_MAIN_RATIO: float = _env_float("CONTENT_MAIN_RATIO", 0.70)  # 70% main content
+    CONTENT_SUMMARY_RATIO: float = _env_float("CONTENT_SUMMARY_RATIO", 0.20)  # 20% summary
 
     # Content quality improvement thresholds
-    CONTENT_MIN_QUALITY_IMPROVEMENT: int = int(os.getenv("CONTENT_MIN_QUALITY_IMPROVEMENT", "3"))  # Minimum score improvement
-    CONTENT_MAX_EXPANSION_ITERATIONS: int = int(os.getenv("CONTENT_MAX_EXPANSION_ITERATIONS", "2"))  # Max expansion attempts
+    CONTENT_MIN_QUALITY_IMPROVEMENT: int = _env_int("CONTENT_MIN_QUALITY_IMPROVEMENT", 3)  # Minimum score improvement
+    CONTENT_MAX_EXPANSION_ITERATIONS: int = _env_int("CONTENT_MAX_EXPANSION_ITERATIONS", 2)  # Max expansion attempts
 
     # ===== Slide Generation =====
-    MAX_ITEMS_PER_SLIDE: int = int(os.getenv("MAX_ITEMS_PER_SLIDE", "6"))  # Maximum content blocks per slide
+    MAX_ITEMS_PER_SLIDE: int = _env_int("MAX_ITEMS_PER_SLIDE", 6)  # Maximum content blocks per slide
 
     # ===== Web Scraping =====
-    WEB_SCRAPER_TIMEOUT: int = int(os.getenv("WEB_SCRAPER_TIMEOUT", "30"))
+    WEB_SCRAPER_TIMEOUT: int = _env_int("WEB_SCRAPER_TIMEOUT", 30)
 
     # ===== Deep Web Crawler =====
-    DEEP_CRAWLER_MAX_DEPTH: int = int(os.getenv("DEEP_CRAWLER_MAX_DEPTH", "2"))
-    DEEP_CRAWLER_MAX_PAGES: int = int(os.getenv("DEEP_CRAWLER_MAX_PAGES", "10"))
-    DEEP_CRAWLER_DELAY: float = float(os.getenv("DEEP_CRAWLER_DELAY", "1.0"))
-    DEEP_CRAWLER_TIMEOUT: int = int(os.getenv("DEEP_CRAWLER_TIMEOUT", "30"))
+    DEEP_CRAWLER_MAX_DEPTH: int = _env_int("DEEP_CRAWLER_MAX_DEPTH", 2)
+    DEEP_CRAWLER_MAX_PAGES: int = _env_int("DEEP_CRAWLER_MAX_PAGES", 10)
+    DEEP_CRAWLER_DELAY: float = _env_float("DEEP_CRAWLER_DELAY", 1.0)
+    DEEP_CRAWLER_TIMEOUT: int = _env_int("DEEP_CRAWLER_TIMEOUT", 30)
     DEEP_CRAWLER_BASE_URL: str = os.getenv("DEEP_CRAWLER_BASE_URL", "https://news.hada.io")
 
     # ===== Playwright Crawler =====
-    PLAYWRIGHT_MAX_DEPTH: int = int(os.getenv("PLAYWRIGHT_MAX_DEPTH", "2"))
-    PLAYWRIGHT_MAX_PAGES: int = int(os.getenv("PLAYWRIGHT_MAX_PAGES", "10"))
-    PLAYWRIGHT_DELAY: float = float(os.getenv("PLAYWRIGHT_DELAY", "2.0"))
-    PLAYWRIGHT_TIMEOUT: int = int(os.getenv("PLAYWRIGHT_TIMEOUT", "30000"))
+    PLAYWRIGHT_MAX_DEPTH: int = _env_int("PLAYWRIGHT_MAX_DEPTH", 2)
+    PLAYWRIGHT_MAX_PAGES: int = _env_int("PLAYWRIGHT_MAX_PAGES", 10)
+    PLAYWRIGHT_DELAY: float = _env_float("PLAYWRIGHT_DELAY", 2.0)
+    PLAYWRIGHT_TIMEOUT: int = _env_int("PLAYWRIGHT_TIMEOUT", 30000)
     PLAYWRIGHT_WAIT_STATE: str = os.getenv("PLAYWRIGHT_WAIT_STATE", "networkidle")  # networkidle, domcontentloaded, load
 
     # ===== Logging =====

@@ -91,14 +91,15 @@ class TestFindPdfFiles:
 
     def test_sorted_by_modification_time(self, tmp_path, monkeypatch):
         """Most recently modified file appears first."""
-        import time
+        import os
         from lecture_forge.cli.utils.helpers import find_pdf_files
         monkeypatch.chdir(tmp_path)
         old = tmp_path / "old.pdf"
         old.write_bytes(b"%PDF-1.4 old")
-        time.sleep(0.01)
         new = tmp_path / "new.pdf"
         new.write_bytes(b"%PDF-1.4 new")
+        os.utime(str(old), (1000, 1000))
+        os.utime(str(new), (2000, 2000))
         result = find_pdf_files()
         assert result[0]["name"] == "new.pdf"
 

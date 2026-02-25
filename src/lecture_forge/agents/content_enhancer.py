@@ -8,13 +8,15 @@ from typing import Optional
 
 import markdown
 from bs4 import BeautifulSoup
+from rich.console import Console
 from rich.table import Table
 
 from lecture_forge.agents.content_writer import ContentWriterAgent
 from lecture_forge.quality.evaluator import QualityEvaluator
-from lecture_forge.cli.commands.create import parse_html_to_lecture
-from lecture_forge.cli.utils import console
+from lecture_forge.utils.html_parser import parse_html_to_lecture
 from lecture_forge.config import Config
+
+console = Console()
 from lecture_forge.exceptions import ConfigurationError
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section

@@ -751,5 +751,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-02-24
-**Version**: 0.4.2
+**Last Updated**: 2026-02-25
+**Version**: 0.4.3

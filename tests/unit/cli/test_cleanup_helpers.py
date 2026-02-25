@@ -21,13 +21,14 @@ class TestGetKnowledgeBases:
         assert result == []
 
     def test_returns_sorted_dirs(self, tmp_path):
+        import os
         from lecture_forge.cli.commands.cleanup_helpers import get_knowledge_bases
-        import time
         d1 = tmp_path / "KB_001"
         d1.mkdir()
-        time.sleep(0.01)
         d2 = tmp_path / "KB_002"
         d2.mkdir()
+        os.utime(str(d1), (1000, 1000))
+        os.utime(str(d2), (2000, 2000))
         result = get_knowledge_bases(tmp_path)
         # Newest first
         assert result[0].name == "KB_002"

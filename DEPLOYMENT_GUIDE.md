@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.4.2 ✅ **배포 준비 완료**
-> **최종 수정**: 2026-02-24
+> **최신 버전**: 0.4.3 ✅ **배포 준비 완료**
+> **최종 수정**: 2026-02-25
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 

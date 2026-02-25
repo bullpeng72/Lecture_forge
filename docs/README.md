@@ -51,12 +51,13 @@ Technical API documentation:
 
 ## 📊 Project Status
 
-**Version**: 0.4.2
+**Version**: 0.4.3
 **Status**: Production Ready+ (RMC Self-Review)
-**Test Coverage**: ~48% with 1,356+ test functions
+**Test Coverage**: ~48% with 1,370+ test functions
 **Python**: 3.11, 3.12, 3.13
 
 **Recent Updates:**
+- ✅ **Techdebt fixes (v0.4.3)** - Architecture boundary fix (`agents/` → `utils/html_parser.py`), config safe parsing, 36 new unit tests, flaky test fixes
 - ✅ **Version bump (v0.4.2)** - Version alignment across all docs and package files
 - ✅ **translate quality (v0.4.1)** - PDF artifact removal, TOC detection, empty-section filter, AI/ML glossary, `--with-diagrams` flag; meta-commentary stripping in `content_expander.py`; `constants.py` magic-number removal; refined exception types; type hints added
 - ✅ **Search Coverage Fix (v0.4.0)** - Full-section search indexing (removed [:500] truncation); `--re-evaluate` HTML stats auto-update; `--to-slides` always rewrites (≤35자); `--with-notes` O(n²) hang fix
@@ -76,5 +77,5 @@ Technical API documentation:
 
 ---
 
-**Last Updated**: 2026-02-24 (v0.4.2)
+**Last Updated**: 2026-02-25 (v0.4.3)
 **Maintained by**: Sungwoo Kim

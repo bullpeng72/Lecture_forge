@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.4.2 | **최종 수정**: 2026-02-24
+> **버전**: 0.4.3 | **최종 수정**: 2026-02-25
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -120,7 +120,7 @@ lecture-forge/  (Git 저장소)
     ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
     ├── ✅ quality/                 ✅ 품질 평가 시스템
     ├── 📊 models/                  ✅ 데이터 모델
-    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry 포함)
+    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry, html_parser 포함)
     ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
     ├── 💻 cli/                     ✅ CLI 모듈 (7개 명령어)
     ├── 🎬 slides/                  ✅ Reveal.js 슬라이드 변환
@@ -369,7 +369,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
+A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
 
 ---
 
@@ -394,7 +394,7 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 | 에이전트 | 10개 |
 | 도구 | 9개 |
 | CLI 명령어 | 8개 |
-| 테스트 | 1,356+, ~48% 커버리지 |
+| 테스트 | 1,370+, ~48% 커버리지 |
 | Type Hints | 71% (207/292 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -405,6 +405,15 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.4.3 (2026-02-25) - 🏗️ 아키텍처 정리 & 테스트 강화
+
+- 🏗️ **아키텍처 경계 수정**: `agents/content_enhancer.py` CLI import 위반 제거
+  - `parse_html_to_lecture` → `utils/html_parser.py` 분리
+  - `from lecture_forge.cli.utils import console` → `from rich.console import Console` 로컬화
+- 🔧 **config 안전 파싱**: `_env_int()` / `_env_float()` 헬퍼 — 잘못된 환경변수 크래시 방지
+- 🧪 **단위 테스트 36개 추가** (1,333 → 1,370+): `ContentEnhancer`, `BaseAgent` 전용 테스트 파일
+- 🐛 **플레이키 테스트 수정**: `time.sleep(0.01)` → `os.utime()` 결정론적 처리
 
 ### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
 

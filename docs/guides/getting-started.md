@@ -228,7 +228,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.4.2 - Lecture Material Generator
+📚 LectureForge Pro v0.4.3 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -639,8 +639,8 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-02-24
-**Version**: 0.4.2
+**Last Updated**: 2026-02-25
+**Version**: 0.4.3
 
 **Ready to create amazing lectures? Start with:**
 ```bash

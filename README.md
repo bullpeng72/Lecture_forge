@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.4.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.4.2** | `translate` 명령어 품질 개선 🌐 + `--with-diagrams` 옵션 🎛️ + 코드 품질 향상 🔧
+> 🚀 **v0.4.3** | 아키텍처 경계 수정 🏗️ + config 안전 파싱 🔧 + 36개 신규 테스트 🧪
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 8개 CLI 명령 | 1,356+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 8개 CLI 명령 | 1,370+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,356+ 테스트 함수 (81개 파일, ~48% 커버리지)
+- 🧪 **테스트 커버리지**: 1,370+ 테스트 함수 (81개 파일, ~48% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -68,19 +68,13 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.4.1)
+## 🚀 최근 개선사항 (v0.4.3)
 
-**`translate` 명령어 품질 대폭 개선 + `--with-diagrams` 옵션**:
-- **`translate` 명령어** (영문 PDF → 한국어 강의자료):
-  - PDF 아티팩트 제거: 단독 페이지 번호·도메인 워터마크·짧은 단편 줄 자동 제거
-  - TOC 감지·필터: 차례 페이지 자동 감지 및 제외 (점선+숫자 패턴 >40%)
-  - 빈 섹션 제거: 30 단어 미만 섹션 자동 제외
-  - AI/ML 용어 사전 (`_TERM_GLOSSARY`): 25개 표준 용어 일관 번역
-  - 할루시네이션 가드: 번역 청크에 `⛔ 절대 금지` 규칙 추가
-  - 이미지 중복 제거: 크로스 섹션 globally_used_ids 집합으로 중복 이미지 방지
-- **`--with-diagrams` 플래그**: Mermaid 다이어그램 생성 opt-in (기본 OFF, PDF 이미지 우선)
-- **콘텐츠 메타 주석 제거**: "이제 X단어를 달성하였습니다" 등 AI 메타 주석 자동 삭제
-- **코드 품질**: `constants.py` 상수 모듈, 예외 처리 세분화, 타입 힌트 보완
+**아키텍처 정리 + 테스트 강화 + config 안전 파싱**:
+- **아키텍처 경계 수정**: `agents/content_enhancer.py`의 CLI import 제거 — `parse_html_to_lecture` → `utils/html_parser.py`로 분리
+- **config 안전 파싱**: `_env_int()` / `_env_float()` 헬퍼 — 잘못된 환경변수값 크래시 대신 경고 후 기본값 사용
+- **신규 단위 테스트 36개**: `ContentEnhancer` (23개), `BaseAgent` (13개) 전용 테스트 파일 추가
+- **플레이키 테스트 수정**: `time.sleep()` → `os.utime()` 으로 결정론적 파일 정렬 테스트
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -913,6 +907,18 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.4.3 (2026-02-25) - 🏗️ 아키텍처 정리 & 테스트 강화
+
+- 🏗️ **아키텍처 경계 수정**: `agents/content_enhancer.py`의 CLI import 위반 제거
+  - `parse_html_to_lecture` 함수 → `utils/html_parser.py`로 분리 (중립 유틸리티 위치)
+  - `from lecture_forge.cli.utils import console` → `from rich.console import Console` 로컬화
+- 🔧 **config 안전 파싱**: `_env_int()` / `_env_float()` 모듈 레벨 헬퍼 추가
+  - 잘못된 환경변수 (e.g. `CHUNK_SIZE=abc`) → `ValueError` 크래시 대신 `warnings.warn` 후 기본값
+- 🧪 **단위 테스트 36개 추가**: 테스트 1,333+ → 1,370+
+  - `tests/unit/agents/test_content_enhancer.py` (23개): `ContentEnhancer`, `parse_html_to_lecture`
+  - `tests/unit/agents/test_base_agent.py` (13개): `BaseAgent.__init__`, `invoke_llm`
+- 🐛 **플레이키 테스트 수정**: `time.sleep(0.01)` → `os.utime()` — 파일 정렬 테스트 결정론적 처리
 
 ### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
 

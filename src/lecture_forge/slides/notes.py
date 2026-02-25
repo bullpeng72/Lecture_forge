@@ -26,6 +26,7 @@ def _invoke_notes_llm(messages: list):
         model=Config.DEFAULT_MODEL,
         temperature=0.5,
         api_key=Config.OPENAI_API_KEY,
+        max_tokens=1000,
     )
     return llm.invoke(messages)
 

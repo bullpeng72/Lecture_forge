@@ -8,7 +8,7 @@ from typing import Dict, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
 from rich.markdown import Markdown
@@ -38,14 +38,13 @@ class QAAgent(BaseAgent):
         logger.info(f"Initializing Q&A Agent with KB: {knowledge_base_path}")
 
         # Setup prompt session with history and auto-suggest
-        # History file is stored in user-friendly location (v0.3.1+)
         lf_dir = Config.USER_CONFIG_DIR
         lf_dir.mkdir(parents=True, exist_ok=True)
-        history_path = lf_dir / "chat_history.txt"
         self.conversation_log_path = lf_dir / "conversation_log.txt"
+        self._session_header_written = False
 
         self.prompt_session = PromptSession(
-            history=FileHistory(str(history_path)),
+            history=InMemoryHistory(),
             auto_suggest=AutoSuggestFromHistory(),  # Suggest previous questions
             enable_history_search=True,  # Ctrl+R to search history
             multiline=False,  # Single-line input
@@ -641,20 +640,10 @@ However, the context does not directly address: [missing aspects]
             else:
                 return "I'm sorry, but I cannot find relevant information in the provided context."
 
-    def _log_session_start(self) -> None:
-        """Write session start header to conversation log."""
-        try:
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(self.conversation_log_path, "a", encoding="utf-8") as f:
-                f.write(f"\n{'='*60}\n")
-                f.write(f"Session Start: {timestamp}\n")
-                f.write(f"Knowledge Base: {self.knowledge_base_path.name}\n")
-                f.write(f"{'='*60}\n")
-        except Exception as e:
-            logger.warning(f"Failed to write session start to conversation log: {e}")
-
     def _log_session_end(self, question_count: int) -> None:
-        """Write session end marker to conversation log."""
+        """Write session end marker to conversation log (only if any exchange was logged)."""
+        if not self._session_header_written:
+            return
         try:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(self.conversation_log_path, "a", encoding="utf-8") as f:
@@ -663,9 +652,16 @@ However, the context does not directly address: [missing aspects]
             logger.warning(f"Failed to write session end to conversation log: {e}")
 
     def _log_exchange(self, question: str, result: Dict) -> None:
-        """Append a Q&A exchange to the conversation log."""
+        """Append a Q&A exchange to the conversation log (creates file on first real question)."""
         try:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if not self._session_header_written:
+                with open(self.conversation_log_path, "a", encoding="utf-8") as f:
+                    f.write(f"\n{'='*60}\n")
+                    f.write(f"Session Start: {timestamp}\n")
+                    f.write(f"Knowledge Base: {self.knowledge_base_path.name}\n")
+                    f.write(f"{'='*60}\n")
+                self._session_header_written = True
             confidence = result.get("confidence", 0.0)
             confidence_pct = confidence * 100
             if confidence >= 0.8:
@@ -715,7 +711,6 @@ However, the context does not directly address: [missing aspects]
         console.print(welcome)
 
         question_count = 0
-        self._log_session_start()
 
         while True:
             try:

@@ -126,6 +126,7 @@ def translate_text(
             model=model,
             temperature=0.0,  # Deterministic translation
             openai_api_key=Config.OPENAI_API_KEY,
+            max_tokens=2000,
         )
 
         # Create translation prompt

@@ -620,7 +620,8 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
                 logger.debug(f"  ⚠️  Title filler response detected for '{title}' — keeping original")
                 return title
             return translated if translated else title
-        except Exception:
+        except Exception as e:
+            logger.debug(f"  ⚠️  Title translation failed for '{title}': {e}")
             return title  # Fallback: keep original
 
     def _translate_chapter_text(

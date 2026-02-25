@@ -27,6 +27,7 @@ def _invoke_llm(messages: list) -> AIMessage:
         model=Config.DEFAULT_MODEL,
         temperature=0.3,
         api_key=Config.OPENAI_API_KEY,
+        max_tokens=800,
     )
     return llm.invoke(messages)
 

@@ -48,8 +48,8 @@ def edit_images(html_path: str, output: str) -> None:
 
     \b
     Interactive Commands:
-      d <number>    - Delete image or diagram (e.g., d 3)
-      u <number>    - Undo deletion (e.g., u 3)
+      d <number...> - Delete image or diagram (e.g., d 3  or  d 1 2 3)
+      u <number...> - Undo deletion (e.g., u 3  or  u 1 2 3)
       r <number>    - Replace image (images only; search alternatives)
       s             - Save changes
       /exit, /quit  - Exit without saving (or use: q)
@@ -97,8 +97,8 @@ def edit_images(html_path: str, output: str) -> None:
 
             # Display compact command hint
             console.print("\n[bold cyan]명령어:[/bold cyan]")
-            console.print("  [bold]d <번호>[/bold]     - 삭제 (이미지·다이어그램 공통, 예: d 3)")
-            console.print("  [bold]u <번호>[/bold]     - 삭제 취소 (예: u 3)")
+            console.print("  [bold]d <번호...>[/bold]  - 삭제 (이미지·다이어그램 공통, 예: d 3  또는  d 1 2 3)")
+            console.print("  [bold]u <번호...>[/bold]  - 삭제 취소 (예: u 3  또는  u 1 2 3)")
             console.print("  [bold]r <번호>[/bold]     - 이미지 교체 (이미지만 지원)")
             console.print("  [bold]s[/bold]            - 변경사항 저장")
             console.print("  [bold]/exit, /quit[/bold] - 취소 및 종료 (단축키: q)")
@@ -132,47 +132,49 @@ def edit_images(html_path: str, output: str) -> None:
 
             elif cmd in ("d", "delete"):
                 if not args:
-                    console.print("[red]❌ 번호를 입력하세요 (예: d 3)[/red]")
+                    console.print("[red]❌ 번호를 입력하세요 (예: d 3  또는  d 1 2 3)[/red]")
                     continue
-                try:
-                    num = int(args[0])
-                    el = index_map.get(num)
-                    if el is None:
-                        console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
-                    elif el["kind"] == "image":
-                        if editor.mark_delete(el["img_index"]):
-                            console.print(f"[green]✅ 이미지 {num} 삭제 표시됨[/green]")
+                for arg in args:
+                    try:
+                        num = int(arg)
+                        el = index_map.get(num)
+                        if el is None:
+                            console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
+                        elif el["kind"] == "image":
+                            if editor.mark_delete(el["img_index"]):
+                                console.print(f"[green]✅ 이미지 {num} 삭제 표시됨[/green]")
+                            else:
+                                console.print(f"[red]❌ 이미지 {num} 삭제 표시 실패[/red]")
                         else:
-                            console.print(f"[red]❌ 이미지 삭제 표시 실패[/red]")
-                    else:
-                        if editor.mark_delete_diagram(el["dgm_index"]):
-                            console.print(f"[green]✅ 다이어그램 {num} 삭제 표시됨[/green]")
-                        else:
-                            console.print(f"[red]❌ 다이어그램 삭제 표시 실패[/red]")
-                except ValueError:
-                    console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+                            if editor.mark_delete_diagram(el["dgm_index"]):
+                                console.print(f"[green]✅ 다이어그램 {num} 삭제 표시됨[/green]")
+                            else:
+                                console.print(f"[red]❌ 다이어그램 {num} 삭제 표시 실패[/red]")
+                    except ValueError:
+                        console.print(f"[red]❌ 유효한 숫자를 입력하세요: {arg}[/red]")
 
             elif cmd in ("u", "undo", "undelete"):
                 if not args:
-                    console.print("[red]❌ 번호를 입력하세요 (예: u 3)[/red]")
+                    console.print("[red]❌ 번호를 입력하세요 (예: u 3  또는  u 1 2 3)[/red]")
                     continue
-                try:
-                    num = int(args[0])
-                    el = index_map.get(num)
-                    if el is None:
-                        console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
-                    elif el["kind"] == "image":
-                        if editor.unmark_delete(el["img_index"]):
-                            console.print(f"[green]✅ 이미지 {num} 삭제 취소됨[/green]")
+                for arg in args:
+                    try:
+                        num = int(arg)
+                        el = index_map.get(num)
+                        if el is None:
+                            console.print(f"[red]❌ 잘못된 번호: {num}[/red]")
+                        elif el["kind"] == "image":
+                            if editor.unmark_delete(el["img_index"]):
+                                console.print(f"[green]✅ 이미지 {num} 삭제 취소됨[/green]")
+                            else:
+                                console.print(f"[yellow]⚠️ {num}번 이미지는 삭제 표시되지 않았습니다[/yellow]")
                         else:
-                            console.print(f"[yellow]⚠️ {num}번 이미지는 삭제 표시되지 않았습니다[/yellow]")
-                    else:
-                        if editor.unmark_delete_diagram(el["dgm_index"]):
-                            console.print(f"[green]✅ 다이어그램 {num} 삭제 취소됨[/green]")
-                        else:
-                            console.print(f"[yellow]⚠️ {num}번 다이어그램은 삭제 표시되지 않았습니다[/yellow]")
-                except ValueError:
-                    console.print("[red]❌ 유효한 숫자를 입력하세요[/red]")
+                            if editor.unmark_delete_diagram(el["dgm_index"]):
+                                console.print(f"[green]✅ 다이어그램 {num} 삭제 취소됨[/green]")
+                            else:
+                                console.print(f"[yellow]⚠️ {num}번 다이어그램은 삭제 표시되지 않았습니다[/yellow]")
+                    except ValueError:
+                        console.print(f"[red]❌ 유효한 숫자를 입력하세요: {arg}[/red]")
 
             elif cmd in ("r", "replace"):
                 if not args:
@@ -349,11 +351,13 @@ def _display_help(console):
   • [magenta][DGM][/magenta]  - Mermaid 다이어그램 (삭제만 지원)
 
 [bold]기본 명령어:[/bold]
-  • [bold]d <번호>[/bold]  - 삭제 표시 (이미지·다이어그램 공통)
+  • [bold]d <번호...>[/bold]  - 삭제 표시 (이미지·다이어그램 공통)
     예: d 3 → 3번 항목 삭제 표시
+    예: d 1 2 3 → 1, 2, 3번 항목 일괄 삭제 표시
 
-  • [bold]u <번호>[/bold]  - 삭제 취소
+  • [bold]u <번호...>[/bold]  - 삭제 취소
     예: u 3 → 3번 항목 삭제 취소
+    예: u 1 2 3 → 1, 2, 3번 항목 일괄 삭제 취소
 
   • [bold]r <번호>[/bold]  - 이미지 교체 (이미지만 지원)
     예: r 5 → 5번 이미지를 대안으로 교체

@@ -444,6 +444,8 @@ class PDFTranslatorAgent(BaseAgent):
 
     # Minimum word count for a section to be included
     _MIN_SECTION_WORDS = 30
+    # Minimum alphanumeric characters required for a valid TOC title
+    _MIN_TITLE_ALNUM = 2
 
     def _is_toc_content(self, text: str) -> bool:
         """Detect if text is a Table of Contents page (dot-leaders + page numbers)."""
@@ -454,11 +456,43 @@ class PDFTranslatorAgent(BaseAgent):
         matches = sum(1 for l in lines if dot_number.search(l))
         return matches / len(lines) > 0.4
 
+    def _extract_fallback_title(self, raw_text: str) -> Optional[str]:
+        """
+        Infer a chapter title from raw text when the PDF TOC title is empty.
+
+        Scans the first lines for a short, meaningful phrase (3–80 chars).
+        Returns None if no suitable candidate is found.
+        """
+        lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
+        for line in lines[:20]:
+            # Skip standalone page numbers
+            if re.match(r"^\d{1,4}$", line):
+                continue
+            # Skip domain watermarks / URLs
+            if re.match(r"^[\w.-]+\.(com|org|net|io|ai)\s*$", line, re.IGNORECASE):
+                continue
+            # Must be in title-like length range and have enough content
+            if len(line) < 3 or len(line) > 80:
+                continue
+            if sum(1 for c in line if c.isalnum()) < 3:
+                continue
+            return line
+        # Fallback: truncate first long line at word boundary (same guards as above)
+        for line in lines[:10]:
+            if re.match(r"^\d{1,4}$", line):
+                continue
+            if re.match(r"^[\w.-]+\.(com|org|net|io|ai)\s*$", line, re.IGNORECASE):
+                continue
+            if len(line) >= 3 and sum(1 for c in line if c.isalnum()) >= 3:
+                return line[:80].rsplit(" ", 1)[0]
+        return None
+
     def _filter_chapters(self, chapters: List[dict]) -> List[dict]:
         """
         Remove low-quality chapters:
           - TOC pages (table of contents embedded as body text)
           - Empty / near-empty sections (< _MIN_SECTION_WORDS words)
+          - Chapters with empty/meaningless TOC titles (recover from raw_text or discard)
         """
         before = len(chapters)
         filtered = []
@@ -472,6 +506,18 @@ class PDFTranslatorAgent(BaseAgent):
                     f"  🗑️  Filtered empty section ({len(raw.split())} words): '{ch['title']}'"
                 )
                 continue
+            # Recover chapters whose PDF TOC title is empty or purely decorative
+            title_alnum = sum(1 for c in ch["title"] if c.isalnum())
+            if title_alnum < self._MIN_TITLE_ALNUM:
+                fallback = self._extract_fallback_title(raw)
+                if fallback:
+                    logger.info(
+                        f"  🔧 Recovered empty TOC title from content → '{fallback[:60]}'"
+                    )
+                    ch = {**ch, "title": fallback}
+                else:
+                    logger.debug(f"  🗑️  Filtered untitled section: no fallback found")
+                    continue
             filtered.append(ch)
         removed = before - len(filtered)
         if removed:

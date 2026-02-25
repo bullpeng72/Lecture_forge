@@ -442,4 +442,36 @@ A: `pytest tests/ -v` (1,356+ 테스트, ~48% 커버리지)
 - 🔧 **코드 품질** (v0.3.6): `make_api_retry()` 팩토리, `BaseImageSearchTool`, RAG 파라미터 환경변수화, Chat 로그
 - 🎯 **RAG 품질** (v0.3.5): 400단어 구조화 답변, 15+15 듀얼쿼리(top-12), ChromaDB 신뢰도 수정, Rich 렌더링
 
+---
+
+## /techdebt 전용 아키텍처 규칙
+
+글로벌 `/techdebt` skill이 이 섹션을 읽어 LectureForge 전용 검사를 추가로 수행합니다.
+
+### 아키텍처 경계
+- `cli/` 는 비즈니스 로직을 직접 포함하면 안 됨 — 모든 로직은 `agents/` 또는 `utils/`에 위치
+- `agents/` 는 `cli/` 를 import하면 안 됨 (단방향 의존)
+- `knowledge/` (ChromaDB)는 `agents/` 에서만 접근, `cli/` 직접 접근 금지
+
+### RAG 파이프라인 검사
+- ChromaDB 컬렉션 초기화 후 정리(`cleanup`)가 보장되지 않으면 🟡 Medium
+- 임베딩 결과가 캐시되지 않고 동일 쿼리를 반복 호출하면 🟡 Medium
+- RAG 쿼리 결과를 검증 없이 그대로 LLM 프롬프트에 삽입하면 🟡 Medium
+
+### LLM 비용 최적화
+- `agents/` 에서 `max_tokens` 없이 GPT 호출 시 🔴 High
+- 루프 안에서 개별 GPT 호출 (배치 처리 대상) 시 🟡 Medium
+- 프롬프트에 전체 문서를 삽입하면서 요약/청크 사용 가능한 경우 🟡 Medium
+- RMC(자기검토) 루프가 무한 반복될 수 있는 종료 조건 없음 시 🔴 High
+
+### 에이전트 시스템
+- 에이전트 간 직접 결합 (agent A가 agent B를 직접 인스턴스화) 시 🟡 Medium
+- `Pipeline Orchestrator` 밖에서 에이전트 실행 순서를 제어하면 🟡 Medium
+
+### 자동 수정 금지 대상 (Manual Only)
+- RAG 청킹 전략 (chunk_size, overlap) 변경
+- Quality Evaluator 6차원 평가 임계값 수정
+- CLI 커맨드 시그니처 변경
+- ChromaDB 컬렉션 스키마 변경
+
 **End of CLAUDE.md**

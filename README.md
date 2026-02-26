@@ -402,7 +402,7 @@ lecture-forge edit outputs/lecture.html
 **옵션:**
 
 | 옵션 | 설명 | 사용 예 |
-|------|------|---------||
+|------|------|---------|
 | `--port INTEGER` | 서버 포트 지정 (기본: 5757) | `--port 8080` |
 | `--no-browser` | 브라우저 자동 오픈 없이 서버만 실행 | `--no-browser` |
 
@@ -458,6 +458,42 @@ lecture-forge edit-images outputs/my_lecture.html
 
 # 출력 파일 지정
 lecture-forge edit-images outputs/my_lecture.html -o outputs/final.html
+```
+
+**인터랙티브 세션 예:**
+
+```
+📸 강의 이미지 편집 모드
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HTML: my_lecture.html  |  총 이미지: 25개
+
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━┓
+┃ 번호  ┃ 설명                               ┃ 섹션              ┃ 페이지   ┃ 상태      ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━┩
+│  1   │ Neural network architecture       │ 1. Introduction  │  5     │ 유지      │
+│  2   │ Backpropagation diagram           │ 2. Core Concepts │  12    │ 유지      │
+│  3   │ Training process flowchart        │ 2. Core Concepts │  15    │ 유지      │
+│  …   │ …                                 │ …                │  …     │ …        │
+└──────┴───────────────────────────────────┴──────────────────┴────────┴──────────┘
+
+명령 입력 (h=도움말): d 2
+🗑️  이미지 2 삭제 예정
+
+명령 입력 (h=도움말): r 3
+🔍 이미지 3 대안 검색 중...
+✅ 5개 대안 이미지 발견
+  1. training_diagram.jpg
+  2. ml_flowchart.png
+  3. process_chart.jpg
+  4. workflow_vis.png
+  5. pipeline.jpg
+선택 (1-5): 1
+✅ 이미지 3 교체 예정 → training_diagram.jpg
+
+명령 입력 (h=도움말): s
+💾 변경사항 저장됨: outputs/my_lecture_edited.html
+   삭제: 1개 | 교체: 1개
 ```
 
 ---
@@ -679,18 +715,28 @@ HTML: my_lecture.html
 ┃ 번호  ┃ 설명                               ┃ 섹션              ┃ 페이지   ┃ 상태      ┃
 ┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━┩
 │  1   │ Neural network architecture       │ 1. Introduction  │  5     │ 유지      │
-│  2   │ Backpropagation diagram           │ 2. Core Concepts │  12    │ 🗑️ 삭제   │
-│  3   │ Training process flowchart        │ 2. Core Concepts │  15    │ 🔄 교체   │
+│  2   │ Backpropagation diagram           │ 2. Core Concepts │  12    │ 유지      │
+│  3   │ Training process flowchart        │ 2. Core Concepts │  15    │ 유지      │
+│  …   │ …                                 │ …                │  …     │ …        │
 └──────┴───────────────────────────────────┴──────────────────┴────────┴──────────┘
 
-명령 입력: r 3
+명령 입력 (h=도움말): d 2
+🗑️  이미지 2 삭제 예정
+
+명령 입력 (h=도움말): r 3
 🔍 이미지 3 대안 검색 중...
 ✅ 5개 대안 이미지 발견
-선택: 1
-✅ 이미지 3 교체 예정
+  1. training_diagram.jpg
+  2. ml_flowchart.png
+  3. process_chart.jpg
+  4. workflow_vis.png
+  5. pipeline.jpg
+선택 (1-5): 1
+✅ 이미지 3 교체 예정 → training_diagram.jpg
 
-명령 입력: s
+명령 입력 (h=도움말): s
 💾 변경사항 저장됨: outputs/my_lecture_edited.html
+   삭제: 1개 | 교체: 1개
 ```
 
 ---

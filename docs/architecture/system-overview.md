@@ -127,7 +127,7 @@ flowchart TD
 
 **Components:**
 - `cli/__init__.py` - Main entry point
-- `cli/commands/` - 7 command modules
+- `cli/commands/` - 9 command modules
 - `cli/utils/` - Shared utilities
 
 **Responsibilities:**
@@ -318,6 +318,8 @@ Logged to conversation_log.txt (v0.3.6+)
 | `prompt-toolkit` | Enhanced input system (v0.3.3+) |
 | `httpx` | Async HTTP client (v0.3.4+) |
 | `aiofiles` | Async file I/O (v0.3.4+) |
+| `flask` | Web editor server (v0.5.0+) |
+| `markdownify` | HTML → Markdown conversion (v0.5.0+) |
 
 ### Development Tools
 
@@ -487,6 +489,22 @@ Logged to conversation_log.txt (v0.3.6+)
 
 **Why**: External quality loops (QualityEvaluator) only run after full HTML assembly. RMC adds per-agent semantic quality checks inside the generation step itself — catching curriculum logic errors, content meaning issues, and answer hallucinations before they propagate downstream.
 
+### v0.5.0: Web-Based Editor
+
+#### 8. Editor Module (v0.5.0)
+
+**New directory**: `src/lecture_forge/editor/`
+
+| File | Description |
+|------|-------------|
+| `html_editor.py` | `LectureHTMLEditor` — section CRUD, markdownify HTML↔MD conversion |
+| `server.py` | Flask REST API + `run_editor()` launcher |
+| `templates/editor/index.html` | SPA (Tailwind CSS, EasyMDE, Marked.js) |
+
+**9 REST endpoints** for lecture metadata, section management, image operations, and file I/O (port 5757, configurable).
+
+---
+
 ### v0.3.7: UI & Slides Enhancement
 
 #### 7. Lightbox (Click-to-Zoom)
@@ -531,5 +549,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-02-25
-**Version**: 0.4.3
+**Last Updated**: 2026-02-26
+**Version**: 0.5.0

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.4.3 | **최종 수정**: 2026-02-25
+> **버전**: 0.5.0 | **최종 수정**: 2026-02-26
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -28,6 +28,7 @@
 16. **템플릿 기반 프롬프트**: 재사용 가능한 프롬프트 템플릿
 17. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
 18. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
+19. **웹 기반 강의 편집기**: 3-패널 SPA 에디터 — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색 (`edit` 명령어, v0.5.0)
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -122,7 +123,7 @@ lecture-forge/  (Git 저장소)
     ├── 📊 models/                  ✅ 데이터 모델
     ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry, html_parser 포함)
     ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
-    ├── 💻 cli/                     ✅ CLI 모듈 (7개 명령어)
+    ├── 💻 cli/                     ✅ CLI 모듈 (9개 명령어)
     ├── 🎬 slides/                  ✅ Reveal.js 슬라이드 변환
     ├── ⚙️ config.py                ✅ 설정 관리 (자동 마이그레이션)
     └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (9개 카테고리)
@@ -275,6 +276,11 @@ lecture-forge translate paper.pdf --audience-level beginner          # 초급 �
 lecture-forge translate paper.pdf --quality-level strict --with-slides  # 고품질 + 슬라이드
 lecture-forge translate paper.pdf --with-diagrams                    # Mermaid 다이어그램 생성 (opt-in)
 
+# ===== EDIT: 웹 기반 강의 편집기 =====
+lecture-forge edit <html_path>                    # 웹 편집기 실행 (포트 5757)
+lecture-forge edit <html_path> --port 8080        # 커스텀 포트
+lecture-forge edit <html_path> --no-browser       # 브라우저 자동 오픈 없이 실행
+
 # ===== EDIT-IMAGES: 이미지 편집 =====
 lecture-forge edit-images <html_path>             # 대화형 이미지 편집
 lecture-forge edit-images <html_path> -o output   # 출력 파일 지정
@@ -393,7 +399,7 @@ A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
 |------|------|
 | 에이전트 | 10개 |
 | 도구 | 9개 |
-| CLI 명령어 | 8개 |
+| CLI 명령어 | 9개 |
 | 테스트 | 1,370+, ~48% 커버리지 |
 | Type Hints | 71% (207/292 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
@@ -406,43 +412,17 @@ A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
 
 > 전체 변경 이력은 README.md 참조
 
-### v0.4.3 (2026-02-25) - 🏗️ 아키텍처 정리 & 테스트 강화
+### v0.5.0 (2026-02-26) - 🌐 웹 기반 강의 편집기
 
-- 🏗️ **아키텍처 경계 수정**: `agents/content_enhancer.py` CLI import 위반 제거
-  - `parse_html_to_lecture` → `utils/html_parser.py` 분리
-  - `from lecture_forge.cli.utils import console` → `from rich.console import Console` 로컬화
-- 🔧 **config 안전 파싱**: `_env_int()` / `_env_float()` 헬퍼 — 잘못된 환경변수 크래시 방지
-- 🧪 **단위 테스트 36개 추가** (1,333 → 1,370+): `ContentEnhancer`, `BaseAgent` 전용 테스트 파일
-- 🐛 **플레이키 테스트 수정**: `time.sleep(0.01)` → `os.utime()` 결정론적 처리
+- 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색, 브라우저 자동 오픈
+- 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1`
+- 📊 **CLI 명령어**: 8개 → 9개
 
-### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
+### v0.4.x (2026-02-22 ~ 2026-02-25) - 🔍 보강·번역·아키텍처 정리
 
-- 🌐 **`translate` 명령어 품질 개선** (`pdf_translator.py`)
-  - `_TERM_GLOSSARY` 클래스 상수: AI/ML 표준 용어 25개 (본문 번역에만 적용)
-  - PDF 아티팩트 제거: `_clean_raw_text()` — 단독 페이지 번호, 도메인 워터마크, 짧은 단편 줄 제거
-  - TOC 감지 및 필터: `_is_toc_content()` — 점선+숫자 패턴 비율 >40% 시 차례 페이지 제외
-  - 빈 섹션 제거: `_filter_chapters()` — 30 단어 미만 섹션 자동 제외
-  - 번역 품질: `_translate_chunk()`에 `⛔ 절대 금지` 할루시네이션 가드 추가
-  - 제목 번역 수정: `_translate_title()` 접두어 제거 ("제목:", "타이틀:" 등)
-  - 한국어 학습 목표: `build_curriculum()`에서 영어 챕터 제목 기반 객관 → 고정 한국어 객관으로 교체
-  - 크로스 섹션 이미지 중복 제거: `assign_images_to_sections()`에 `globally_used_ids` 집합 추가
-- 🎛️ **`--with-diagrams` 플래그** (`translate` 명령어): Mermaid 다이어그램 생성 opt-in (기본 OFF)
-- 📝 **콘텐츠 메타 주석 제거** (`content_expander.py`): `_strip_meta_commentary()` — 단어 수 보고 문장 자동 삭제
-- 📄 **프롬프트 개선**: `content_generation.txt`, `content_expansion.txt` — 메타 주석 생성 금지 규칙 추가
-- 🔢 **상수 모듈** (`constants.py`): 12개 명명된 상수 클래스 — 품질 평가, 이미지 점수, RAG, 코드 복잡도 등
-- 🔍 **예외 처리 개선**: `html_assembler`, `curriculum_designer`, `content_writer`, `image_extractor` — 광범위한 `except Exception` → 구체적 예외 타입
-- 🔷 **타입 힌트 보완**: `token_tracker`, `retriever`, `qa_agent` 함수 반환 타입 추가
-- 🧪 **테스트 수정**: macOS `/tmp` → `/private/tmp` symlink 수정, 예외 mock 타입 정렬
-
-### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
-
-- 🔍 **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
-- 📊 **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`)
-  - `_compute_updated_stats()`: 보강 완료 soup에서 단어수·이미지수·다이어그램수 재계산
-  - `_update_stats_in_html()`: 사이드바·헤더 배지·푸터 통계 수치 교체
-  - 🕐 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
-- 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
-- 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
+- 🔍 **검색 커버리지** (v0.4.0): 섹션 전체 인덱싱, `--re-evaluate` HTML 통계 자동 업데이트, `--to-slides` 기본 LLM 재작성 (≤35자, 말줄임표 없음)
+- 🌐 **translate 명령어** (v0.4.1): PDF 아티팩트 제거, TOC 감지, AI/ML 용어사전 25개, `--with-diagrams` opt-in, 빈 섹션 필터
+- 🏗️ **아키텍처 정리** (v0.4.3): `agents/` → `cli/` import 위반 제거, config 안전 파싱, 단위 테스트 36개 추가
 
 ### v0.3.x (2026-02-12 ~ 2026-02-20) - 기반 기능 구축
 

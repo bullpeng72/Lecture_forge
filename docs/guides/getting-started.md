@@ -228,7 +228,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.4.3 - Lecture Material Generator
+📚 LectureForge Pro v0.5.0 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -454,15 +454,34 @@ You: /exit
 Goodbye! 👋
 ```
 
-### 3. Edit Images (Optional)
+### 3. Web-Based Editor (New in v0.5.0, Optional)
 
-Edit images in your generated lecture:
+Edit lecture content directly in your browser:
+
+```bash
+lecture-forge edit outputs/your_lecture.html
+```
+
+This opens a 3-panel GUI editor on port 5757:
+- **Left**: Section list with add/delete/reorder controls
+- **Center**: Markdown editor (EasyMDE) with live preview
+- **Right**: Image gallery with RAG-based alternative search
+
+**Options:**
+```bash
+lecture-forge edit outputs/lecture.html --port 8080     # Custom port
+lecture-forge edit outputs/lecture.html --no-browser    # Server only
+```
+
+### 4. Edit Images (Optional)
+
+Edit images in your generated lecture using the CLI:
 
 ```bash
 lecture-forge edit-images outputs/your_lecture.html
 ```
 
-### 4. Convert to Slides (Optional)
+### 5. Convert to Slides (Optional)
 
 Convert your lecture to presentation slides:
 
@@ -480,7 +499,7 @@ This creates a Reveal.js presentation with:
 - Speaker notes (S) — press S to open speaker view (requires `--with-notes`)
 - Full screen (F)
 
-### 5. Translate English PDF (Optional)
+### 6. Translate English PDF (Optional)
 
 Convert an English PDF directly into Korean lecture material (v0.4.1+):
 
@@ -501,7 +520,7 @@ lecture-forge translate paper.pdf --audience-level beginner --with-slides
 lecture-forge translate paper.pdf --with-diagrams
 ```
 
-### 6. Manage Storage
+### 7. Manage Storage
 
 Delete old knowledge bases to free space:
 
@@ -639,8 +658,8 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-02-25
-**Version**: 0.4.3
+**Last Updated**: 2026-02-26
+**Version**: 0.5.0
 
 **Ready to create amazing lectures? Start with:**
 ```bash

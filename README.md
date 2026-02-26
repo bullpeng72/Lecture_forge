@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.4.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.4.3** | 아키텍처 경계 수정 🏗️ + config 안전 파싱 🔧 + 36개 신규 테스트 🧪
+> 🚀 **v0.5.0** | 웹 기반 강의 편집기 🌐 + `edit` 명령어 + Flask SPA 에디터 (포트 5757)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 8개 CLI 명령 | 1,370+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 10개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,370+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -68,13 +68,13 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.4.3)
+## 🚀 최근 개선사항 (v0.5.0)
 
-**아키텍처 정리 + 테스트 강화 + config 안전 파싱**:
-- **아키텍처 경계 수정**: `agents/content_enhancer.py`의 CLI import 제거 — `parse_html_to_lecture` → `utils/html_parser.py`로 분리
-- **config 안전 파싱**: `_env_int()` / `_env_float()` 헬퍼 — 잘못된 환경변수값 크래시 대신 경고 후 기본값 사용
-- **신규 단위 테스트 36개**: `ContentEnhancer` (23개), `BaseAgent` (13개) 전용 테스트 파일 추가
-- **플레이키 테스트 수정**: `time.sleep()` → `os.utime()` 으로 결정론적 파일 정렬 테스트
+**웹 기반 강의 편집기 추가**:
+- **`edit` 명령어**: 3-패널 SPA 에디터 (포트 5757) — 브라우저에서 강의 섹션 직접 편집
+- **섹션 CRUD**: 섹션 추가·삭제·이동 + Markdown 편집기 (EasyMDE, 실시간 미리보기)
+- **이미지 관리**: 갤러리 뷰·대안 검색·교체·업로드 (Vector DB RAG 연동)
+- **Flask + markdownify**: `flask>=3.0.0`, `markdownify>=0.12.1` 의존성 추가
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -237,7 +237,8 @@ lecture-forge create
 | **create** | 강의 생성 | `--interactive`, `--image-search`, `--quality-level`, `--existing-kb` |
 | **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
-| **edit-images** | 이미지 편집 | `--output` |
+| **edit** | 웹 기반 강의 편집기 (v0.5.0+) | `--port`, `--no-browser` |
+| **edit-images** | 이미지 편집 (CLI) | `--output` |
 | **improve** | 강의 향상 / 재평가 | `--to-slides`, `--re-evaluate` |
 | **cleanup** | 지식베이스 관리 | `--all` (`-a`) |
 | **home** | 폴더 열기 (v0.3.1+) | `outputs`, `data`, `kb`, `env` |
@@ -387,6 +388,42 @@ lecture-forge chat
 # 특정 지식베이스 사용
 lecture-forge chat -kb ./data/vector_db/lecture_20260209_123456
 ```
+
+---
+
+#### ✏️ `edit` - 웹 기반 강의 편집기 (v0.5.0+)
+
+**기본 사용:**
+```bash
+lecture-forge edit outputs/lecture.html
+```
+로컬 Flask 서버(기본 포트 5757)를 실행하고 브라우저를 자동으로 엽니다.
+
+**옵션:**
+
+| 옵션 | 설명 | 사용 예 |
+|------|------|---------||
+| `--port INTEGER` | 서버 포트 지정 (기본: 5757) | `--port 8080` |
+| `--no-browser` | 브라우저 자동 오픈 없이 서버만 실행 | `--no-browser` |
+
+**3-패널 에디터 구성:**
+- **왼쪽 패널**: 섹션 목록 — 섹션 추가·삭제·순서 변경
+- **중앙 패널**: Markdown 편집기 (EasyMDE) — HTML ↔ Markdown 자동 변환
+- **오른쪽 패널**: 이미지 갤러리 — 대안 검색 (Vector DB), 교체, 업로드
+
+**예제:**
+```bash
+# 기본 실행 (포트 5757, 브라우저 자동 오픈)
+lecture-forge edit outputs/my_lecture.html
+
+# 커스텀 포트
+lecture-forge edit outputs/my_lecture.html --port 8080
+
+# 서버만 시작 (원격 접속 등)
+lecture-forge edit outputs/my_lecture.html --no-browser
+```
+
+> ⚠️ Reveal.js 슬라이드 파일(`*_slides.html`)은 지원하지 않습니다.
 
 ---
 
@@ -908,45 +945,17 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.4.3 (2026-02-25) - 🏗️ 아키텍처 정리 & 테스트 강화
+### v0.5.0 (2026-02-26) - 🌐 웹 기반 강의 편집기
 
-- 🏗️ **아키텍처 경계 수정**: `agents/content_enhancer.py`의 CLI import 위반 제거
-  - `parse_html_to_lecture` 함수 → `utils/html_parser.py`로 분리 (중립 유틸리티 위치)
-  - `from lecture_forge.cli.utils import console` → `from rich.console import Console` 로컬화
-- 🔧 **config 안전 파싱**: `_env_int()` / `_env_float()` 모듈 레벨 헬퍼 추가
-  - 잘못된 환경변수 (e.g. `CHUNK_SIZE=abc`) → `ValueError` 크래시 대신 `warnings.warn` 후 기본값
-- 🧪 **단위 테스트 36개 추가**: 테스트 1,333+ → 1,370+
-  - `tests/unit/agents/test_content_enhancer.py` (23개): `ContentEnhancer`, `parse_html_to_lecture`
-  - `tests/unit/agents/test_base_agent.py` (13개): `BaseAgent.__init__`, `invoke_llm`
-- 🐛 **플레이키 테스트 수정**: `time.sleep(0.01)` → `os.utime()` — 파일 정렬 테스트 결정론적 처리
+- 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
+- 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1`
+- 📊 **CLI 명령어**: 8개 → 9개
 
-### v0.4.1 (2026-02-23) - 🌐 translate 명령어 & 코드 품질
+### v0.4.x (2026-02-22 ~ 2026-02-25) - 🔍 보강·번역·아키텍처 정리
 
-- 🌐 **`translate` 명령어 품질 대폭 개선** (`pdf_translator.py`)
-  - `_TERM_GLOSSARY` 클래스 상수: AI/ML 표준 용어 25개 일관 번역 (본문에만 적용)
-  - `_clean_raw_text()`: PDF 아티팩트 자동 제거 (페이지 번호, 도메인 워터마크, 짧은 단편)
-  - `_is_toc_content()` + `_filter_chapters()`: 차례 페이지 및 30단어 미만 섹션 자동 제외
-  - `_translate_title()` 수정: 접두어 제거 ("제목:", "타이틀:" 등), 단순 예제 추가
-  - `_translate_chunk()` 개선: 할루시네이션 가드 (`⛔ 절대 금지`) 추가
-  - `build_curriculum()`: 영어 챕터 제목 기반 학습 목표 → 고정 한국어 학습 목표로 교체
-  - `assign_images_to_sections()`: `globally_used_ids` 집합으로 크로스 섹션 이미지 중복 방지
-- 🎛️ **`--with-diagrams` 플래그**: `translate` 명령어에 Mermaid 다이어그램 생성 opt-in (기본 OFF)
-- 📝 **콘텐츠 메타 주석 제거** (`content_expander.py`): `_strip_meta_commentary()` — "이제 X단어를 달성하였습니다" 등 AI 상태 보고 자동 삭제
-- 📄 **프롬프트 개선**: `content_generation.txt`, `content_expansion.txt` — 메타 주석 생성 금지 규칙 명시
-- 🔢 **`constants.py` 상수 모듈**: 12개 명명된 상수 클래스 — 품질 평가 임계값, 이미지 품질 점수, RAG 파라미터, 코드 복잡도 등 magic number 제거
-- 🔍 **예외 처리 세분화**: `html_assembler`, `curriculum_designer`, `content_writer`, `image_extractor` — 광범위한 `except Exception` → 구체적 예외 타입
-- 🔷 **타입 힌트 보완**: `token_tracker`, `retriever`, `qa_agent` 함수 반환 타입 (`-> None`, `Dict[str, Any]`)
-- 🧪 **테스트 수정**: macOS `/tmp` → `/private/tmp` symlink 처리, 예외 mock 타입 일치
-
-### v0.4.0 (2026-02-22) - 🔍 검색·슬라이드·보강 개선
-
-- 🔍 **검색 커버리지 수정**: `html_assembler.py`에서 `[:500]` 절단 제거 → 섹션 전체 내용 인덱싱 (기존 ~15% → 100%)
-- 📊 **`--re-evaluate` HTML 통계 자동 업데이트** (`content_enhancer.py`)
-  - 사이드바·헤더 배지: 단어수·이미지수·다이어그램수 보강 후 재계산값으로 교체
-  - 🕐 타임스탬프: 원본 생성 시각 → 보강 시각으로 교체
-  - 푸터: "Generated by LectureForge · {보강 시각}" 업데이트
-- 🎬 **`--to-slides` 기본 LLM 재작성**: `--slide-rewrite` 옵션 제거 → `--to-slides` 시 항상 섹션별 LLM 재작성 실행 (≤35자, 말줄임표 없음)
-- 🐛 **`--with-notes` hang 수정**: Mermaid placeholder 방식으로 O(n²) 정규식 hang 문제 해결
+- 🔍 **검색 커버리지** (v0.4.0): 섹션 전체 인덱싱, `--re-evaluate` HTML 통계 자동 업데이트, `--to-slides` 기본 LLM 재작성 (≤35자)
+- 🌐 **translate 명령어** (v0.4.1): PDF 아티팩트 제거, TOC 감지, AI/ML 용어사전 25개, `--with-diagrams` opt-in
+- 🏗️ **아키텍처 정리** (v0.4.3): `agents/` → `cli/` import 위반 제거, config 안전 파싱, 테스트 36개 추가
 
 ### v0.3.x (2026-02-12 ~ 2026-02-20) - 기반 기능 구축
 

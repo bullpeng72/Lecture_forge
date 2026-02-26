@@ -26,7 +26,7 @@ cli.py (3,603 lines)
 **After (v0.3+)**:
 ```
 cli/
-├── __init__.py (133 lines) - Main entry point
+├── __init__.py (146 lines) - Main entry point
 ├── utils/ - Shared utilities
 │   ├── formatters.py - Output formatting
 │   ├── helpers.py - Helper functions
@@ -41,7 +41,8 @@ cli/
     ├── cleanup.py - KB management
     ├── cleanup_helpers.py - Cleanup helpers
     ├── improve.py - Enhancement & slide conversion
-    ├── edit_images.py - Image editing
+    ├── edit.py - Web-based lecture editor (v0.5.0+)
+    ├── edit_images.py - Image editing (CLI)
     └── home.py - Folder navigation
 ```
 
@@ -493,6 +494,65 @@ improve([
 
 ---
 
+### edit
+
+**Location**: `lecture_forge/cli/commands/edit.py`
+**Added**: v0.5.0
+
+Launch a web-based 3-panel lecture editor. Opens a local Flask server (default port 5757) and auto-launches a browser with a split-screen GUI.
+
+#### Command
+
+```bash
+lecture-forge edit HTML_PATH [OPTIONS]
+```
+
+**Arguments:**
+- `HTML_PATH`: Path to lecture HTML file (Reveal.js `*_slides.html` not supported)
+
+**Options:**
+- `--port INTEGER`: Server port (default: 5757)
+- `--no-browser`: Start server without auto-opening browser
+
+#### Features
+
+| Feature | Description |
+|---------|-------------|
+| Section CRUD | Add, delete, reorder sections |
+| Markdown Editor | EasyMDE with preview (HTML → Markdown via markdownify) |
+| Image Gallery | Browse, search alternatives (RAG), replace, upload |
+| Save | Writes changes back to HTML file |
+
+#### API Endpoints (port 5757)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/lecture` | Full lecture metadata |
+| GET/POST/DELETE | `/api/sections/<id>` | Section CRUD |
+| GET | `/api/elements` | All HTML elements |
+| PATCH | `/api/elements/<idx>` | Update element |
+| GET | `/api/images/<idx>/alternatives` | RAG alternative images |
+| POST | `/api/images/<idx>/replace` | Replace image |
+| GET | `/api/gallery` | All images list |
+| GET | `/api/images/serve` | Serve image file |
+| POST | `/api/images/upload` | Upload new image |
+| POST | `/api/save` | Save to HTML file |
+| POST | `/api/shutdown` | Stop server |
+
+#### Python API
+
+```python
+from lecture_forge.editor.server import run_editor
+
+run_editor(
+    html_path="outputs/lecture.html",
+    port=5757,
+    open_browser=True,
+)
+```
+
+---
+
 ### edit-images
 
 **Location**: `lecture_forge/cli/commands/edit_images.py`
@@ -725,5 +785,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-25
-**Version**: 0.4.3
+**Last Updated**: 2026-02-26
+**Version**: 0.5.0

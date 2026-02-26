@@ -216,11 +216,11 @@ def _display_elements_table(console, elements: list):
     """Display unified table of images and diagrams."""
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("번호", style="dim", width=5)
-    table.add_column("종류", width=7)
-    table.add_column("제목 / 설명", width=34)
     table.add_column("섹션", width=24)
+    table.add_column("종류", width=10)
+    table.add_column("제목 / 설명", width=34)
     table.add_column("정보", width=10)
-    table.add_column("상태", width=10)
+    table.add_column("상태", width=7)
 
     for el in elements:
         if el["kind"] == "image":
@@ -238,9 +238,9 @@ def _display_elements_table(console, elements: list):
 
         table.add_row(
             str(el["display_index"]),
+            el["section"],
             kind_label,
             el["title"] or "[dim]설명 없음[/dim]",
-            el["section"],
             el["extra"],
             status_text,
         )

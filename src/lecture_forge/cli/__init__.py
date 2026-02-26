@@ -39,6 +39,7 @@ from lecture_forge.cli.commands import (
     chat,
     cleanup,
     create,
+    edit,
     edit_images,
     home,
     improve,
@@ -53,7 +54,7 @@ from lecture_forge.cli.utils import print_basic_help
 @click.pass_context
 def cli(ctx, version: bool) -> None:
     """
-    📚 LectureForge Pro v0.4.3 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro v0.5.0 - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
     Multi-agent pipeline system with RAG-based knowledge management and multilingual support.
@@ -67,6 +68,7 @@ def cli(ctx, version: bool) -> None:
     🧠 RMC Self-Review: Curriculum logic, content quality, QA hallucination (v0.3.8+)
     🔄 Re-Evaluate: KB-based quality re-evaluation + content supplement (v0.4.0+)
     🌐 PDF Translate: English PDF → Korean lecture, TOC detection, term glossary (v0.4.1+)
+    ✏️  Web Editor: 3-panel GUI editor — section CRUD, Markdown, image gallery (v0.5.0+)
 
     \b
     🎉 FIRST TIME HERE?
@@ -83,7 +85,8 @@ def cli(ctx, version: bool) -> None:
        │ create      │ Generate lecture from sources        │ --image-search     │
        │ translate   │ Translate English PDF to Korean HTML │ --no-translate     │
        │ chat        │ Interactive Q&A with knowledge base  │ -kb PATH           │
-       │ edit-images │ Edit/replace lecture images          │ -o FILE            │
+       │ edit        │ Web-based lecture editor (GUI)       │ --port --no-browser│
+       │ edit-images │ Edit/replace lecture images (CLI)    │ -o FILE            │
        │ improve     │ Enhance: slides, re-evaluate, KB     │ --to-slides        │
        │ cleanup     │ Delete knowledge bases (free space)  │ --all              │
        │ home        │ Open folders in file manager         │ outputs/env        │
@@ -118,6 +121,7 @@ def cli(ctx, version: bool) -> None:
 cli.add_command(init)
 cli.add_command(create)
 cli.add_command(chat)
+cli.add_command(edit)
 cli.add_command(edit_images, name="edit-images")  # Use hyphenated name
 cli.add_command(improve)
 cli.add_command(translate)

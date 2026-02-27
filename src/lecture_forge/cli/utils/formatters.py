@@ -89,10 +89,10 @@ def print_basic_help() -> None:
     console.print()
     console.print(
         Panel.fit(
-            "[bold cyan]📚 LectureForge Pro[/bold cyan] v" + __version__ + " [green](Beta)[/green]\n\n"
+            "[bold cyan]📚 LectureForge Pro[/bold cyan]\n\n"
             "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
             "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-            "[dim]10 Agents | 9 Tools | 8 Commands | 1,356+ Tests | ~$0.035 per 60min lecture[/dim]",
+            "[dim]12 Agents | 9 Tools | 9 Commands | 1,437+ Tests | ~$0.035 per 60min lecture[/dim]",
             border_style="cyan",
         )
     )
@@ -121,7 +121,8 @@ def print_basic_help() -> None:
     table.add_row("create", "Generate lecture materials", "--image-search")
     table.add_row("translate", "Translate English PDF to Korean HTML", "--no-translate")
     table.add_row("chat", "Interactive Q&A (RAG-based)", "-kb PATH")
-    table.add_row("edit-images", "Edit lecture images", "-o FILE")
+    table.add_row("edit", "Web-based lecture editor (GUI)", "--port --no-browser")
+    table.add_row("edit-images", "Edit lecture images (CLI)", "-o FILE")
     table.add_row("improve", "Enhance or convert lecture", "--to-slides")
     table.add_row("cleanup", "Manage knowledge bases", "--all")
     table.add_row("[bold green]home[/bold green]", "[bold]Open folders[/bold] in file manager", "outputs/data/env")

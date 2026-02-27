@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.0** | 웹 기반 강의 편집기 🌐 + `edit` 명령어 + Flask SPA 에디터 (포트 5757)
+> 🚀 **v0.5.1** | 웹 기반 강의 편집기 🌐 + `edit` 명령어 + Flask SPA 에디터 (포트 5757)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 10개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,370+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,437+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,370+ 테스트 함수 (81개 파일, ~48% 커버리지)
+- 🧪 **테스트 커버리지**: 1,437+ 테스트 함수 (70개 파일, ~48% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -62,7 +62,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ### 안정성 & 성능
 - 🔄 **자동 재시도**: API 실패 시 지수 백오프 (최대 3회)
 - 💰 **비용 추적**: 실시간 토큰 사용량 및 비용 추정
-- 🔧 **타입 힌트**: 71% 타입 안정성
+- 🔧 **타입 힌트**: ~70% 타입 안정성 (340/489 함수)
 - 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
 - 📝 **프롬프트 관리**: 템플릿 기반 프롬프트 시스템
 
@@ -629,7 +629,7 @@ WEB_SCRAPER_TIMEOUT=60             # 기본: 30초
 
 ## 🏗️ 시스템 아키텍처
 
-### Multi-Agent 파이프라인 (10개 전문 에이전트)
+### Multi-Agent 파이프라인 (12개 전문 에이전트)
 
 ```mermaid
 flowchart TD
@@ -656,7 +656,7 @@ flowchart TD
     style Output fill:#ffebee
 ```
 
-### 10개 전문 에이전트
+### 12개 전문 에이전트
 
 | # | 에이전트 | 역할 | 파일 |
 |---|---------|------|------|
@@ -665,11 +665,13 @@ flowchart TD
 | 3 | **Content Analyzer** 🔍 | 내용 분석 및 토픽 클러스터 | content_analyzer.py |
 | 4 | **Curriculum Designer** 📋 | 강의 구조 설계 | curriculum_designer.py |
 | 5 | **Content Writer** ✍️ | RAG 기반 컨텐츠 생성 | content_writer.py |
-| 6 | **Diagram Generator** 📊 | Mermaid 다이어그램 생성 | diagram_generator.py |
-| 7 | **Quality Evaluator** ✅ | 6차원 품질 평가 | quality_evaluator.py |
-| 8 | **Revision Agent** 🔄 | 자동/반자동 수정 | revision_agent.py |
-| 9 | **Q&A Agent** 🤖 | 지식창고 기반 대화 (RAG 캐싱) | qa_agent.py |
-| 10 | **HTML Assembler** 🎨 | 최종 HTML 생성 | html_assembler.py |
+| 6 | **Content Enhancer** 🔧 | KB 기반 콘텐츠 보강·재평가 | content_enhancer.py |
+| 7 | **Diagram Generator** 📊 | Mermaid 다이어그램 생성 | diagram_generator.py |
+| 8 | **Quality Evaluator** ✅ | 6차원 품질 평가 | quality_evaluator.py |
+| 9 | **Revision Agent** 🔄 | 자동/반자동 수정 | revision_agent.py |
+| 10 | **Q&A Agent** 🤖 | 지식창고 기반 대화 (RAG 캐싱) | qa_agent.py |
+| 11 | **HTML Assembler** 🎨 | 최종 HTML 생성 | html_assembler.py |
+| 12 | **PDF Translator** 🌐 | 영문 PDF → 한국어 강의자료 | pdf_translator.py |
 
 ### 9개 도구 (Tools)
 

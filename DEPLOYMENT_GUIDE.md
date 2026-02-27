@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.5.0 ✅ **배포 준비 완료**
-> **최종 수정**: 2026-02-26
+> **최신 버전**: 0.5.1 ✅ **배포 준비 완료**
+> **최종 수정**: 2026-02-28
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
@@ -916,9 +916,17 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.5.0 (2026-02-26) 🔜 **배포 준비 완료**
+### v0.5.1 (2026-02-28) 🔜 **배포 준비 완료**
 
 - **상태**: 배포 대기
+- **주요 변경사항**:
+  - 🐛 **`edit` TemplateNotFound 수정**: `templates/editor/index.html` 누락 → 파일 생성으로 수정
+  - 🐛 **`improve --to-slides` IndexError 수정**: `slides/parser.py` 빈 bullet_points 가드 추가
+  - 📝 **도움말 개선**: `lecture-forge` / `--help` 에서 버전 표기 제거, `edit` 명령어 누락 수정
+
+### v0.5.0 (2026-02-26) ✅
+
+- **상태**: 배포 완료
 - **주요 변경사항**:
   - ✅ **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757)
   - ✅ **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1`
@@ -1093,7 +1101,7 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ### 다음 릴리스 계획
 
-- v0.5.0: 새로운 기능 추가 예정
+- v0.6.0: 새로운 기능 추가 예정
 - v1.0.0: 안정 버전 릴리스
 
 ---
@@ -1176,4 +1184,4 @@ gh release create v0.x.x
 **작성일**: 2026-02-09
 **최종 업데이트**: 2026-02-26
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: 🔜 v0.5.0 배포 준비 완료
+**상태**: 🔜 v0.5.1 배포 준비 완료

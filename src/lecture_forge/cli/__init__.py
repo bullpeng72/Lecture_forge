@@ -54,7 +54,7 @@ from lecture_forge.cli.utils import print_basic_help
 @click.pass_context
 def cli(ctx, version: bool) -> None:
     """
-    📚 LectureForge Pro v0.5.0 - AI-Powered Lecture Material Generator
+    📚 LectureForge Pro - AI-Powered Lecture Material Generator
 
     Transform PDFs, URLs, and web content into comprehensive lecture materials.
     Multi-agent pipeline system with RAG-based knowledge management and multilingual support.

@@ -27,7 +27,7 @@ System architecture and design:
 
 ### 🔧 API Reference
 Technical API documentation:
-- **[Agents API](api/agents.md)** - All 11 agents (BaseAgent, 10 task agents, AsyncContentCollector)
+- **[Agents API](api/agents.md)** - All 14 agents (BaseAgent, 12 task agents, AsyncContentCollector)
 - **[CLI API](api/cli.md)** - CLI module structure, commands, utilities
 
 ### 📊 Analysis
@@ -51,9 +51,9 @@ Technical API documentation:
 
 ## 📊 Project Status
 
-**Version**: 0.5.0
+**Version**: 0.5.1
 **Status**: Production Ready+ (RMC Self-Review)
-**Test Coverage**: ~48% with 1,370+ test functions
+**Test Coverage**: ~48% with 1,437+ test functions
 **Python**: 3.11, 3.12, 3.13
 
 **Recent Updates:**

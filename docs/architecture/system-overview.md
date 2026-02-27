@@ -139,18 +139,20 @@ flowchart TD
 ### 2. Agent Layer
 **Purpose**: Business logic and task execution
 
-**10+ Agents:**
+**12 Task Agents (+ 1 async variant):**
 1. **ContentCollectorAgent** - Collect text from PDFs/URLs/search
 2. **AsyncContentCollectorAgent** - Async version (70% faster, v0.3.4+)
 3. **ImageCollectorAgent** - Collect images from multiple sources
 4. **ContentAnalyzerAgent** - Extract topics and entities
 5. **CurriculumDesignerAgent** - Design lecture structure
 6. **ContentWriterAgent** - Write content using RAG (refactored)
-7. **DiagramGeneratorAgent** - Generate Mermaid diagrams
-8. **HTMLAssemblerAgent** - Assemble final HTML
-9. **QualityEvaluator** - Evaluate quality (6 dimensions)
-10. **RevisionAgent** - Improve content
-11. **QAAgent** - Interactive Q&A with RAG
+7. **ContentEnhancer** - KB-based content enhancement & re-evaluation (`--re-evaluate`)
+8. **DiagramGeneratorAgent** - Generate Mermaid diagrams
+9. **HTMLAssemblerAgent** - Assemble final HTML
+10. **QualityEvaluator** - Evaluate quality (6 dimensions)
+11. **RevisionAgent** - Improve content
+12. **QAAgent** - Interactive Q&A with RAG
+13. **PDFTranslatorAgent** - Translate English PDF to Korean lecture (v0.4.1+)
 
 **Responsibilities:**
 - Execute specific tasks
@@ -550,4 +552,4 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 ---
 
 **Last Updated**: 2026-02-28
-**Version**: 0.5.0
+**Version**: 0.5.1

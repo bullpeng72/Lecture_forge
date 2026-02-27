@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.0 | **최종 수정**: 2026-02-28
+> **버전**: 0.5.1 | **최종 수정**: 2026-02-28
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -85,7 +85,7 @@ flowchart TD
 
 ## 🤖 에이전트 시스템
 
-### 10개 에이전트 구성
+### 12개 에이전트 구성
 
 | 에이전트 | 역할 | 주요 기능 |
 |---------|------|----------|
@@ -94,11 +94,13 @@ flowchart TD
 | **Content Analyzer** 🔍 | 컨텐츠 분석 | 엔티티 추출, 토픽 클러스터, 난이도 분석 |
 | **Curriculum Designer** 📋 | 강의 설계 | 학습 목표, 섹션 분할, 시간 배분, RMC 검토 |
 | **Content Writer** ✍️ | 컨텐츠 생성 | RAG 기반 섹션별 작성, 이미지 배치, RMC 검토 |
+| **Content Enhancer** 🔧 | 콘텐츠 보강 | KB 기반 재평가·미반영 청크 보충 (`--re-evaluate`) |
 | **Diagram Generator** 📊 | 다이어그램 | Mermaid 코드 자동 생성 |
 | **HTML Assembler** 🎨 | HTML 생성 | 템플릿 렌더링, 스타일링, 검색 인덱스 |
 | **Quality Evaluator** ✅ | 품질 평가 | 6차원 평가, LLM-as-Judge |
 | **Revision Agent** 🔄 | 개선 | 자동/반자동 수정, 반복 개선 |
 | **Q&A Agent** 🤖 | 대화형 Q&A | RAG 기반 질문 응답, 소스 인용, RMC 검토 |
+| **PDF Translator** 🌐 | PDF 번역 | 영문 PDF → 한국어 강의자료, TOC 감지, 용어사전 |
 
 ---
 
@@ -116,15 +118,16 @@ lecture-forge/  (Git 저장소)
 ├── 📄 requirements.txt             ✅ 의존성
 │
 └── 📂 src/lecture_forge/
-    ├── 🤖 agents/                  ✅ 10개 에이전트
-    ├── 🛠️ tools/                   ✅ 9개 도구 (image_editor 포함)
+    ├── 🤖 agents/                  ✅ 12개 에이전트 (+ async 변형 1개)
+    ├── 🛠️ tools/                   ✅ 9개 도구 (+ async 변형 2개)
     ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
     ├── ✅ quality/                 ✅ 품질 평가 시스템
     ├── 📊 models/                  ✅ 데이터 모델
     ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry, html_parser 포함)
-    ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿
+    ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿 + 에디터 SPA
     ├── 💻 cli/                     ✅ CLI 모듈 (9개 명령어)
     ├── 🎬 slides/                  ✅ Reveal.js 슬라이드 변환
+    ├── 🌐 editor/                  ✅ 웹 에디터 서버 (Flask, html_editor, server)
     ├── ⚙️ config.py                ✅ 설정 관리 (자동 마이그레이션)
     └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (9개 카테고리)
 ```
@@ -375,7 +378,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
+A: `pytest tests/ -v` (1,437+ 테스트, ~48% 커버리지)
 
 ---
 
@@ -397,11 +400,11 @@ A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
 
 | 항목 | 수치 |
 |------|------|
-| 에이전트 | 10개 |
-| 도구 | 9개 |
+| 에이전트 | 12개 (+ async 변형 1개) |
+| 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,370+, ~48% 커버리지 |
-| Type Hints | 71% (207/292 함수) |
+| 테스트 | 1,437+, ~48% 커버리지 |
+| Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
 | 데이터 저장 | ~/Documents/LectureForge/ |

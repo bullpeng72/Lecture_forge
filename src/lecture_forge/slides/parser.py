@@ -189,12 +189,15 @@ class HTMLLectureParser:
         if pending_paragraphs:
             texts = [t for _, t in pending_paragraphs]
             bullet_lists = batch_convert_to_bullet_points(texts)
-            for (placeholder_idx, _), bullet_points in zip(pending_paragraphs, bullet_lists):
+            for (placeholder_idx, original_text), bullet_points in zip(pending_paragraphs, bullet_lists):
                 self.converted_paragraphs += 1
                 if len(bullet_points) > 1:
                     content_blocks[placeholder_idx] = {"type": "list", "items": bullet_points, "ordered": False}
-                else:
+                elif bullet_points:
                     content_blocks[placeholder_idx] = {"type": "paragraph", "content": bullet_points[0]}
+                else:
+                    # LLM returned empty result — keep original text as paragraph
+                    content_blocks[placeholder_idx] = {"type": "paragraph", "content": original_text}
 
         # Remove any remaining None placeholders (should not occur in normal flow)
         content_blocks = [b for b in content_blocks if b is not None]

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.0 | **최종 수정**: 2026-02-26
+> **버전**: 0.5.0 | **최종 수정**: 2026-02-28
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -417,6 +417,11 @@ A: `pytest tests/ -v` (1,370+ 테스트, ~48% 커버리지)
 - 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색, 브라우저 자동 오픈
 - 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1`
 - 📊 **CLI 명령어**: 8개 → 9개
+
+### v0.5.0 버그수정 (2026-02-28)
+
+- 🐛 **`edit` TemplateNotFound 수정**: `templates/editor/index.html` 누락으로 `edit` 명령어 실행 시 Flask 템플릿 오류 발생 → 파일 생성으로 수정
+- 🐛 **`improve --to-slides` IndexError 수정**: `slides/parser.py`에서 LLM 응답이 빈 리스트를 반환할 때 `bullet_points[0]` 접근 시 IndexError 발생 → 빈 리스트 가드 추가 + 원본 텍스트 폴백
 
 ### v0.4.x (2026-02-22 ~ 2026-02-25) - 🔍 보강·번역·아키텍처 정리
 

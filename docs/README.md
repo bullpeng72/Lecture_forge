@@ -51,12 +51,14 @@ Technical API documentation:
 
 ## 📊 Project Status
 
-**Version**: 0.4.3
+**Version**: 0.5.0
 **Status**: Production Ready+ (RMC Self-Review)
 **Test Coverage**: ~48% with 1,370+ test functions
 **Python**: 3.11, 3.12, 3.13
 
 **Recent Updates:**
+- 🐛 **Bugfixes (v0.5.0, 2026-02-28)** - `edit` TemplateNotFound fix (`templates/editor/index.html` missing); `improve --to-slides` IndexError fix in `slides/parser.py` (empty bullet_points guard)
+- ✅ **Web-based editor (v0.5.0)** - `edit` command: 3-panel SPA editor (port 5757) — section CRUD, Markdown editing (EasyMDE), image gallery & alternative search; `flask>=3.0.0`, `markdownify>=0.12.1` dependencies added
 - ✅ **Techdebt fixes (v0.4.3)** - Architecture boundary fix (`agents/` → `utils/html_parser.py`), config safe parsing, 36 new unit tests, flaky test fixes
 - ✅ **Version bump (v0.4.2)** - Version alignment across all docs and package files
 - ✅ **translate quality (v0.4.1)** - PDF artifact removal, TOC detection, empty-section filter, AI/ML glossary, `--with-diagrams` flag; meta-commentary stripping in `content_expander.py`; `constants.py` magic-number removal; refined exception types; type hints added
@@ -77,5 +79,5 @@ Technical API documentation:
 
 ---
 
-**Last Updated**: 2026-02-25 (v0.4.3)
+**Last Updated**: 2026-02-28 (v0.5.0)
 **Maintained by**: Sungwoo Kim

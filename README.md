@@ -68,13 +68,12 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.0)
+## 🚀 최근 개선사항 (v0.5.2)
 
-**웹 기반 강의 편집기 추가**:
-- **`edit` 명령어**: 3-패널 SPA 에디터 (포트 5757) — 브라우저에서 강의 섹션 직접 편집
-- **섹션 CRUD**: 섹션 추가·삭제·이동 + Markdown 편집기 (EasyMDE, 실시간 미리보기)
-- **이미지 관리**: 갤러리 뷰·대안 검색·교체·업로드 (Vector DB RAG 연동)
-- **Flask + markdownify**: `flask>=3.0.0`, `markdownify>=0.12.1` 의존성 추가
+- 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
+- 🔧 **`BaseAgent` `max_tokens` 전역화**: `MAX_LLM_TOKENS` 환경변수로 LLM 비용 제어
+- 🔒 **RMC 루프 상한**: `MAX_RMC_ROUNDS` (기본 1) — 자기검토 무한 반복 방지
+- ⚡ **다이어그램 병렬 생성**: `ThreadPoolExecutor`로 다이어그램 생성 속도 개선
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -879,24 +878,15 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.5.2 (2026-03-03) - 🔧 안정성 & 비용 개선
+### v0.5.x (2026-02-26 ~ 2026-03-03) - 🌐 웹 편집기 · 안정성 & 비용 개선
 
-- 🔧 **`BaseAgent` `max_tokens` 전역화**: 모든 에이전트에 `max_tokens` 지원 — `MAX_LLM_TOKENS` (기본 4096) 환경변수 제어
-- 🔒 **RMC 루프 상한 추가**: `MAX_RMC_ROUNDS` (기본 1) config로 무한 반복 방지, `no_changes=True` 시 조기 종료
-- ⚡ **다이어그램 병렬 생성**: `ThreadPoolExecutor`로 섹션당 다중 다이어그램 병렬 처리
-- 🆔 **HTML 섹션 ID 중복 방지**: 생성 시점 중복 제거 (`_2`, `_3` suffix)
-- 🌐 **에디터 UX 개선**: `editor.js` 대규모 개선, 스타일 강화
-
-### v0.5.0 버그수정 (2026-02-28)
-
-- 🐛 **`edit` TemplateNotFound 수정**: `templates/editor/index.html` 파일 누락으로 Flask 템플릿 오류 발생 → 파일 생성으로 수정
-- 🐛 **`improve --to-slides` IndexError 수정**: `slides/parser.py`에서 LLM이 빈 bullet 리스트를 반환할 때 IndexError 발생 → 빈 리스트 가드 추가 + 원본 텍스트 폴백
-
-### v0.5.0 (2026-02-26) - 🌐 웹 기반 강의 편집기
-
-- 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
-- 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1`
-- 📊 **CLI 명령어**: 8개 → 9개
+- 🌐 **웹 기반 강의 편집기** (`edit` 명령어, v0.5.0): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
+- 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1` · CLI 명령어 8개 → 9개
+- 🐛 **버그수정** (v0.5.1): `edit` TemplateNotFound, `improve --to-slides` IndexError
+- 🔧 **`BaseAgent` `max_tokens` 전역화** (v0.5.2): `MAX_LLM_TOKENS` (기본 4096) 환경변수 제어
+- 🔒 **RMC 루프 상한** (v0.5.2): `MAX_RMC_ROUNDS` (기본 1) — 무한 반복 방지
+- ⚡ **다이어그램 병렬 생성** (v0.5.2): `ThreadPoolExecutor`로 섹션당 다중 다이어그램 병렬 처리
+- 🆔 **HTML 섹션 ID 중복 방지** (v0.5.2): 생성 시점 중복 제거 (`_2`, `_3` suffix)
 
 ### v0.4.x (2026-02-22 ~ 2026-02-25) - 🔍 보강·번역·아키텍처 정리
 

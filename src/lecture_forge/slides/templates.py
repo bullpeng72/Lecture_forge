@@ -3,6 +3,7 @@ Reveal.js HTML template generator for lecture slides.
 """
 
 import re
+from datetime import datetime
 from typing import Dict, List
 
 from lecture_forge.config import Config
@@ -134,12 +135,14 @@ class RevealJsTemplate:
 
     def _create_title_slide(self, title: str, subtitle: str) -> str:
         """Create title slide."""
+        now = datetime.now()
+        date_str = f"{now.year}년 {now.month}월 {now.day}일"
         subtitle_html = f'<p class="subtitle">{subtitle}</p>' if subtitle else ''
         return f"""
     <section data-transition="zoom">
         <h1>{title}</h1>
         {subtitle_html}
-        <p><small>LectureForge로 생성됨</small></p>
+        <p><small>{date_str}</small></p>
     </section>
     """
 
@@ -157,7 +160,6 @@ class RevealJsTemplate:
     <section data-transition="zoom">
         <h2>감사합니다!</h2>
         <p>질문이 있으신가요?</p>
-        <p><small>LectureForge로 생성됨</small></p>
     </section>
     """
 
@@ -544,6 +546,10 @@ class RevealJsTemplate:
         /* Center-aligned slides: title (zoom) and section headers (convex) */
         .reveal .slides section[data-transition="zoom"],
         .reveal .slides section[data-transition="convex"] {
+            text-align: center;
+        }
+        /* Title/end slide의 <p>는 .reveal p { text-align: left }를 재정의하여 가운데 정렬 */
+        .reveal .slides section[data-transition="zoom"] p {
             text-align: center;
         }
         /* 계속 슬라이드 표시 (P4: 눈에 띄는 스타일) */

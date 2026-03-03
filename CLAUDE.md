@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.1 | **최종 수정**: 2026-02-28
+> **버전**: 0.5.2 | **최종 수정**: 2026-03-03
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -403,7 +403,7 @@ A: `pytest tests/ -v` (1,437+ 테스트, ~48% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,437+, ~48% 커버리지 |
+| 테스트 | 1,436+, ~48% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -414,6 +414,14 @@ A: `pytest tests/ -v` (1,437+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.2 (2026-03-03) - 🔧 안정성 & 비용 개선
+
+- 🔧 **`BaseAgent` `max_tokens` 파라미터**: 모든 에이전트에 `max_tokens` 지원 추가 — `Config.MAX_LLM_TOKENS` (기본 4096) 환경변수로 제어
+- 🔒 **RMC 루프 무한 반복 방지**: `Config.MAX_RMC_ROUNDS` (기본 1)로 상한 고정, `no_changes=True` 시 조기 종료
+- ⚡ **다이어그램 병렬 생성**: `DiagramGeneratorAgent`에 `ThreadPoolExecutor` 도입 — 섹션당 다중 다이어그램 병렬 생성
+- 🆔 **HTML 섹션 ID 중복 방지**: `HTMLAssemblerAgent._build_section_id_registry()` — 생성 시점에 중복 ID 제거 (suffix `_2`, `_3`)
+- 🌐 **에디터 UI 개선**: `editor.js` 대규모 개선, CSS 추가, 서버 안정성 강화
 
 ### v0.5.0 (2026-02-26) - 🌐 웹 기반 강의 편집기
 

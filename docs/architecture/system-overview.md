@@ -18,7 +18,7 @@ High-level architecture of the LectureForge system.
 LectureForge follows these architectural principles:
 
 ### 1. Multi-Agent Pattern
-- **10 specialized agents** each handle a specific task
+- **12 specialized agents** each handle a specific task (+ 1 async variant)
 - **Sequential pipeline** with clear data flow (async support in v0.3.4+)
 - **Separation of concerns** - each agent has one responsibility
 - **Async I/O support** - 70% faster content collection with parallel operations
@@ -485,6 +485,16 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.2: Stability & Cost Control
+
+- **`BaseAgent.max_tokens`**: All agents accept `max_tokens` (default `Config.MAX_LLM_TOKENS` = 4096, env `MAX_LLM_TOKENS`). Prevents unbounded per-call cost.
+- **RMC loop cap**: `Config.MAX_RMC_ROUNDS` (env `MAX_RMC_ROUNDS`, default 1) — hard upper limit on self-review iterations. Early exit on `no_changes=True`.
+- **Parallel diagram generation**: `DiagramGeneratorAgent` uses `ThreadPoolExecutor` when `num_diagrams > 1`, reducing multi-diagram wait time.
+- **Section ID deduplication at generation time**: `HTMLAssemblerAgent._build_section_id_registry()` — prevents duplicate HTML `id` attributes before assembly (suffix `_2`, `_3`, …).
+- **Editor UX improvements**: `editor.js` major rewrite, CSS additions, server stability fixes.
+
+---
+
 ### v0.3.8: RMC Self-Review
 
 **What changed**: Added `_review_with_rmc()` / `_review_content_with_rmc()` / `_review_answer_with_rmc()` to `CurriculumDesignerAgent`, `ContentWriterAgent`, and `QAAgent` respectively.
@@ -551,5 +561,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-02-28
-**Version**: 0.5.1
+**Last Updated**: 2026-03-03
+**Version**: 0.5.2

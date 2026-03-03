@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lecture-forge"
-version = "0.5.1"
+version = "0.5.2"
 description = "AI-powered lecture material generator with multilingual support using LangChain"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -45,8 +45,26 @@ lecture-forge = "lecture_forge.cli:cli"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
 [tool.setuptools.package-data]
-lecture_forge = ["templates/*", "templates/prompts/*"]
+lecture_forge = [
+    # Root-level data files
+    ".env.example",
+    # Templates (lecture HTML, CSS, JS)
+    "templates/*.html",
+    "templates/*.css",
+    "templates/*.js",
+    # Environment template used by `init` command at runtime
+    "templates/.env.example",
+    # Prompt templates
+    "templates/prompts/*.txt",
+    # Web editor SPA
+    "templates/editor/*.html",
+    "templates/editor/*.css",
+    "templates/editor/*.js",
+]
 
 [tool.black]
 line-length = 127

@@ -265,6 +265,7 @@ class ImageEditor:
                         "title": dgm["title"][:50],
                         "section": dgm["section"],
                         "extra": dgm["diagram_type"],
+                        "mermaid_code": dgm["mermaid_code"],
                         "status": status,
                     })
 

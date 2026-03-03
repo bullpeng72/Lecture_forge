@@ -4,9 +4,11 @@ Content Collector Agent - Collects text content from various sources.
 
 import hashlib
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.exceptions import PDFParsingError, SearchAPIError, WebScrapingError
 from lecture_forge.knowledge.chunker import TextChunker
 from lecture_forge.knowledge.vector_store import VectorStore
@@ -112,28 +114,37 @@ class ContentCollectorAgent(BaseAgent):
         for keyword in keywords:
             try:
                 logger.info(f"Searching for: {keyword}")
-                result = self.search_tool.run(keyword, num_results=5)
+                result = self.search_tool.run(keyword, num_results=Config.SEARCH_NUM_RESULTS)
 
                 if result["success"]:
-                    # Create a summary document from search results
-                    search_text = f"Search results for '{keyword}':\n\n"
-                    for i, item in enumerate(result["results"], 1):
-                        search_text += f"{i}. {item['title']}\n"
-                        search_text += f"{item['snippet']}\n"
-                        search_text += f"URL: {item['url']}\n\n"
+                    # Store each result as an individual snippet document
+                    for i, item in enumerate(result["results"]):
+                        snippet_text = f"{item['title']}\n{item['snippet']}"
+                        if item.get("url"):
+                            snippet_text += f"\nURL: {item['url']}"
 
-                    all_documents.append(
-                        {
-                            "text": search_text,
-                            "source": f"search:{keyword}",
-                            "source_type": "search",
-                            "metadata": {
-                                "query": keyword,
-                                "total_results": result["total_results"],
-                            },
-                        }
-                    )
-                    logger.info(f"✅ Collected {result['total_results']} search results")
+                        all_documents.append(
+                            {
+                                "text": snippet_text,
+                                "source": item.get("url") or f"search:{keyword}:{i}",
+                                "source_type": "search_snippet",
+                                "metadata": {
+                                    "query": keyword,
+                                    "title": item.get("title", ""),
+                                    "position": item.get("position", i),
+                                    "result_type": item.get("type", "organic"),
+                                },
+                            }
+                        )
+                    logger.info(f"✅ Stored {len(result['results'])} search snippets for '{keyword}'")
+
+                    # Optionally fetch full pages in parallel (SEARCH_FETCH_FULL_PAGES=true)
+                    if Config.SEARCH_FETCH_FULL_PAGES:
+                        fetched = self._fetch_search_urls_parallel(
+                            result["results"], keyword=keyword, top_n=Config.SEARCH_FETCH_TOP_N
+                        )
+                        all_documents.extend(fetched)
+                        logger.info(f"  📄 Fetched {len(fetched)} full pages for '{keyword}'")
                 else:
                     logger.error(f"❌ Search failed: {result['error']}")
 
@@ -316,6 +327,54 @@ class ContentCollectorAgent(BaseAgent):
 
         logger.debug(f"  Created {len(chunks)} chunks from {len(pages)} pages")
         return chunks, metadatas
+
+    def _fetch_search_urls_parallel(self, results: List[Dict], keyword: str, top_n: int) -> List[Dict]:
+        """
+        Fetch full page content for top-N search result URLs in parallel.
+
+        Args:
+            results: List of search result dicts (with 'url', 'title', etc.)
+            keyword: Original search keyword (for metadata)
+            top_n: Maximum number of URLs to fetch
+
+        Returns:
+            List of document dicts with full page content (source_type="search_full")
+        """
+        urls_to_fetch = [(i, item) for i, item in enumerate(results[:top_n]) if item.get("url")]
+        if not urls_to_fetch:
+            return []
+
+        def _fetch_one(idx_item):
+            idx, item = idx_item
+            url = item["url"]
+            try:
+                scrape_result = self.web_scraper.run(url)
+                if scrape_result["success"] and scrape_result.get("text", "").strip():
+                    return {
+                        "text": scrape_result["text"],
+                        "source": url,
+                        "source_type": "search_full",
+                        "metadata": {
+                            "query": keyword,
+                            "title": item.get("title", ""),
+                            "position": item.get("position", idx),
+                            "result_type": item.get("type", "organic"),
+                            **scrape_result.get("metadata", {}),
+                        },
+                    }
+            except Exception as e:
+                logger.warning(f"  ⚠️ Could not fetch {url}: {e}")
+            return None
+
+        fetched_docs = []
+        with ThreadPoolExecutor(max_workers=min(top_n, 5)) as executor:
+            futures = {executor.submit(_fetch_one, idx_item): idx_item for idx_item in urls_to_fetch}
+            for future in as_completed(futures):
+                doc = future.result()
+                if doc is not None:
+                    fetched_docs.append(doc)
+
+        return fetched_docs
 
     def query(self, question: str, n_results: int = 5) -> Dict:
         """

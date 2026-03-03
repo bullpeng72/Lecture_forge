@@ -742,6 +742,14 @@ EMBEDDING_MODEL=text-embedding-3-small
 QUALITY_THRESHOLD=80
 MAX_ITERATIONS=3
 
+# LLM cost control (v0.5.2+)
+MAX_LLM_TOKENS=4096     # Max tokens per LLM response (default: 4096)
+MAX_RMC_ROUNDS=1        # Max RMC self-review iterations per agent (default: 1)
+
+# Search full-page fetch (v0.5.2+)
+SEARCH_FETCH_FULL_PAGES=false  # Fetch full page content from top search result URLs (default: false)
+SEARCH_FETCH_TOP_N=3           # Number of URLs to fetch in parallel when SEARCH_FETCH_FULL_PAGES=true
+
 # Paths
 OUTPUT_DIR=./outputs
 DATA_DIR=./data
@@ -785,5 +793,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-02-28
-**Version**: 0.5.1
+**Last Updated**: 2026-03-03
+**Version**: 0.5.2

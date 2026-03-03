@@ -1,6 +1,6 @@
 # Agents API Reference
 
-Complete reference for all agents in the LectureForge multi-agent system (10 task agents + 1 async variant).
+Complete reference for all agents in the LectureForge multi-agent system (12 task agents + 1 async variant).
 
 ## Table of Contents
 
@@ -83,7 +83,7 @@ class MyCustomAgent(BaseAgent):
 - `embedding_model`: Embedding model name (default: "text-embedding-3-small")
 
 **Methods:**
-- `__init__(self) -> None`: Initialize base agent with LLM client
+- `__init__(self, model=None, temperature=None, max_tokens=None) -> None`: Initialize base agent with LLM client. `max_tokens` defaults to `Config.MAX_LLM_TOKENS` (env: `MAX_LLM_TOKENS`, default 4096) — added in v0.5.2.
 
 ### AsyncBaseAgent
 
@@ -751,5 +751,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-02-25
-**Version**: 0.4.3
+**Last Updated**: 2026-03-03
+**Version**: 0.5.2

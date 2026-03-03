@@ -30,6 +30,9 @@ class LectureHTMLEditor:
             with open(self.html_path, "r", encoding="utf-8") as f:
                 self.soup = BeautifulSoup(f.read(), "html.parser")
 
+        # Fix duplicate section IDs that can occur in pre-v0.5.2 HTML files
+        self._deduplicate_section_ids()
+
         # Staging: {section_id: {"title": ..., "markdown": ...}} or "deleted"
         self._staged: Dict[str, object] = {}
         # Image additions: {section_id: [{"path": ..., "caption": ...}]}
@@ -220,6 +223,47 @@ class LectureHTMLEditor:
     # Private helpers
     # ------------------------------------------------------------------
 
+    def _deduplicate_section_ids(self) -> None:
+        """Fix duplicate <section id="..."> attributes in-place.
+
+        Pre-v0.5.2 HTML files may contain two sections whose titles produce
+        the same sanitized id (e.g. Korean-only titles sharing the same ASCII
+        prefix).  Later duplicates are renamed with a _2, _3, … suffix so
+        every section has a unique id, and the matching TOC <a href> is
+        updated accordingly.
+        """
+        seen: Dict[str, int] = {}  # id -> occurrence count (0-indexed)
+        all_ids: set = {s.get("id", "") for s in self.soup.find_all("section", id=True)}
+
+        for sec in self.soup.find_all("section", id=True):
+            sec_id = sec.get("id", "")
+            occurrence = seen.get(sec_id, 0)
+            seen[sec_id] = occurrence + 1
+
+            if occurrence == 0:
+                continue  # first occurrence — keep as-is
+
+            # Find a collision-free new id
+            counter = occurrence + 1
+            new_id = f"{sec_id}_{counter}"
+            while new_id in all_ids:
+                counter += 1
+                new_id = f"{sec_id}_{counter}"
+            all_ids.add(new_id)
+
+            # Rename the section element
+            sec["id"] = new_id
+
+            # Update the corresponding TOC link (the occurrence-th one)
+            dup_links = self.soup.find_all("a", href=f"#{sec_id}", class_="toc-link")
+            if occurrence < len(dup_links):
+                dup_links[occurrence]["href"] = f"#{new_id}"
+
+            logger.debug(
+                f"Deduplicated section id: '{sec_id}' → '{new_id}' "
+                f"(occurrence {occurrence + 1})"
+            )
+
     def _html_section_to_markdown(self, sec: Tag) -> str:
         """Convert section inner HTML to Markdown, excluding figures and diagrams."""
         # Work on a clone to avoid mutating the main soup
@@ -306,12 +350,20 @@ class LectureHTMLEditor:
                 sec.append(tag)
 
     def _remove_toc_entry(self, section_id: str) -> None:
-        """Remove TOC list item linking to this section."""
+        """Remove TOC entry linking to this section.
+
+        The lecture template uses bare <a class="toc-link"> anchors with no <li>
+        wrapper.  Fall back to removing the <a> tag itself when no parent <li>
+        exists so both template styles are handled.
+        """
         link = self.soup.find("a", href=f"#{section_id}")
-        if link:
-            li = link.find_parent("li")
-            if li:
-                li.decompose()
+        if not link:
+            return
+        li = link.find_parent("li")
+        if li:
+            li.decompose()
+        else:
+            link.decompose()
 
     def _update_toc_entry(self, section_id: str, new_title: str) -> None:
         """Update TOC link text for a section."""

@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.1** | 웹 기반 강의 편집기 🌐 + `edit` 명령어 + Flask SPA 에디터 (포트 5757)
+> 🚀 **v0.5.2** | 안정성 & 비용 개선 — `max_tokens` 전역화, RMC 루프 상한, 다이어그램 병렬 생성
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,437+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,436+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -878,6 +878,14 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.2 (2026-03-03) - 🔧 안정성 & 비용 개선
+
+- 🔧 **`BaseAgent` `max_tokens` 전역화**: 모든 에이전트에 `max_tokens` 지원 — `MAX_LLM_TOKENS` (기본 4096) 환경변수 제어
+- 🔒 **RMC 루프 상한 추가**: `MAX_RMC_ROUNDS` (기본 1) config로 무한 반복 방지, `no_changes=True` 시 조기 종료
+- ⚡ **다이어그램 병렬 생성**: `ThreadPoolExecutor`로 섹션당 다중 다이어그램 병렬 처리
+- 🆔 **HTML 섹션 ID 중복 방지**: 생성 시점 중복 제거 (`_2`, `_3` suffix)
+- 🌐 **에디터 UX 개선**: `editor.js` 대규모 개선, 스타일 강화
 
 ### v0.5.0 버그수정 (2026-02-28)
 

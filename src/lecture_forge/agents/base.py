@@ -16,16 +16,23 @@ from lecture_forge.utils.token_tracker import track_tokens
 class BaseAgent:
     """Base class for all agents."""
 
-    def __init__(self, model: Optional[str] = None, temperature: Optional[float] = None) -> None:
+    def __init__(
+        self,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> None:
         """
         Initialize base agent.
 
         Args:
             model: LLM model name (default: Config.DEFAULT_MODEL)
             temperature: Temperature for LLM (default: Config.TEMPERATURE)
+            max_tokens: Maximum tokens per LLM response (default: Config.MAX_LLM_TOKENS)
         """
         self.model = model if model is not None else Config.DEFAULT_MODEL
         self.temperature = temperature if temperature is not None else Config.TEMPERATURE
+        self.max_tokens = max_tokens if max_tokens is not None else Config.MAX_LLM_TOKENS
         self.llm = self._create_llm()
         self.agent_name = self.__class__.__name__
 
@@ -35,6 +42,7 @@ class BaseAgent:
             model=self.model,
             temperature=self.temperature,
             openai_api_key=Config.OPENAI_API_KEY,
+            max_tokens=self.max_tokens,
         )
 
     @make_api_retry()

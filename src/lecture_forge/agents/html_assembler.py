@@ -179,8 +179,36 @@ class HTMLAssemblerAgent(BaseAgent):
         else:
             logger.info(f"✅ All {total_sections} sections have images")
 
+    def _build_section_id_registry(self, sections: List[SectionContent]) -> dict:
+        """
+        Build a mapping from raw section_id → unique sanitized HTML id.
+
+        When two sections produce the same sanitized id (e.g. Korean-only
+        titles that share the same ASCII prefix), the later ones get a
+        numeric suffix (_2, _3, …) to guarantee uniqueness.
+        """
+        registry: dict = {}
+        used: set = set()
+        for section in sections:
+            base = self._sanitize_section_id(section.section_id)
+            if base not in used:
+                registry[section.section_id] = base
+                used.add(base)
+            else:
+                counter = 2
+                candidate = f"{base}_{counter}"
+                while candidate in used:
+                    counter += 1
+                    candidate = f"{base}_{counter}"
+                registry[section.section_id] = candidate
+                used.add(candidate)
+        return registry
+
     def _generate_html(self, lecture: Lecture) -> str:
         """Generate complete HTML document using Jinja2 template."""
+        # Build a de-duplicated id registry before any HTML generation
+        self._id_registry = self._build_section_id_registry(lecture.sections)
+
         # Convert sections to HTML
         sections_html = []
         for i, section in enumerate(lecture.sections):
@@ -195,7 +223,8 @@ class HTMLAssemblerAgent(BaseAgent):
         search_data = {
             "sections": [
                 {
-                    "section_id": self._sanitize_section_id(section.section_id),
+                    "section_id": self._id_registry.get(section.section_id,
+                                                        self._sanitize_section_id(section.section_id)),
                     "title": section.title,
                     "markdown_content": section.markdown_content,
                 }
@@ -251,7 +280,9 @@ class HTMLAssemblerAgent(BaseAgent):
         toc_items = []
 
         for section in sections:
-            safe_id = self._sanitize_section_id(section.section_id)
+            safe_id = getattr(self, '_id_registry', {}).get(
+                section.section_id, self._sanitize_section_id(section.section_id)
+            )
             toc_items.append(f'<a href="#{safe_id}" class="toc-link">{section.title}</a>')
 
         return "\n".join(toc_items)
@@ -436,7 +467,9 @@ class HTMLAssemblerAgent(BaseAgent):
         # Add remaining images (not inline-placed) at the end
         remaining_images_html = [self._render_image_html(img) for img in remaining_images]
 
-        safe_id = self._sanitize_section_id(section.section_id)
+        safe_id = getattr(self, '_id_registry', {}).get(
+            section.section_id, self._sanitize_section_id(section.section_id)
+        )
         return f"""
         <section id="{safe_id}" class="section">
             <h2>{section_num}. {section.title}</h2>

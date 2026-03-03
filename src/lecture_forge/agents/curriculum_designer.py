@@ -6,6 +6,7 @@ import json
 from typing import Dict, List, Optional
 
 from lecture_forge.agents.base import BaseAgent
+from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.analysis import AnalysisResult
 from lecture_forge.models.curriculum import Curriculum, Section
@@ -259,17 +260,23 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
         Layer 1: Review the curriculum for logical ordering, coverage, and coherence.
         Layer 2: Review the review itself to avoid over-correction.
         Applies corrections to the curriculum object before returning.
-        """
-        # Build section summary for the prompt
-        section_lines = []
-        for i, s in enumerate(curriculum.sections):
-            section_lines.append(
-                f"  {i+1}. [{s.id}] {s.title} | {s.estimated_time}min | {s.difficulty_level}"
-            )
-        sections_str = "\n".join(section_lines)
-        objectives_str = "\n".join(f"  - {obj}" for obj in curriculum.learning_objectives)
 
-        prompt = f"""You are a senior curriculum reviewer. Critically evaluate the following lecture curriculum.
+        Bounded by Config.MAX_RMC_ROUNDS (default 1) to prevent runaway LLM calls.
+        Exits early when the LLM reports no_changes=True.
+        """
+        max_rounds = Config.MAX_RMC_ROUNDS
+
+        for rmc_round in range(max_rounds):
+            # Build section summary for the prompt
+            section_lines = []
+            for i, s in enumerate(curriculum.sections):
+                section_lines.append(
+                    f"  {i+1}. [{s.id}] {s.title} | {s.estimated_time}min | {s.difficulty_level}"
+                )
+            sections_str = "\n".join(section_lines)
+            objectives_str = "\n".join(f"  - {obj}" for obj in curriculum.learning_objectives)
+
+            prompt = f"""You are a senior curriculum reviewer. Critically evaluate the following lecture curriculum.
 
 ## Curriculum Details
 - Topic: {curriculum.topic}
@@ -313,52 +320,53 @@ Rules:
 - "issues": list real problems found (empty list [] if none)
 - "no_changes": true only if curriculum is already well-structured"""
 
-        try:
-            response = self.invoke_llm(prompt, phase="curriculum_rmc_review")
-            raw = response.content.strip()
+            try:
+                response = self.invoke_llm(prompt, phase="curriculum_rmc_review")
+                raw = response.content.strip()
 
-            # Strip markdown fences if present
-            if "```json" in raw:
-                raw = raw.split("```json")[1].split("```")[0].strip()
-            elif "```" in raw:
-                raw = raw.split("```")[1].split("```")[0].strip()
+                # Strip markdown fences if present
+                if "```json" in raw:
+                    raw = raw.split("```json")[1].split("```")[0].strip()
+                elif "```" in raw:
+                    raw = raw.split("```")[1].split("```")[0].strip()
 
-            review = json.loads(raw)
+                review = json.loads(raw)
 
-            if review.get("no_changes"):
-                logger.info("RMC curriculum review: no changes needed")
-                return curriculum
+                if review.get("no_changes"):
+                    logger.info(f"RMC curriculum review: stable after {rmc_round + 1} round(s)")
+                    return curriculum
 
-            # Log identified issues
-            for issue in review.get("issues", []):
-                logger.info(f"RMC curriculum issue: {issue}")
+                # Log identified issues
+                for issue in review.get("issues", []):
+                    logger.info(f"RMC curriculum issue (round {rmc_round + 1}): {issue}")
 
-            # Apply revised objectives
-            if review.get("revised_objectives"):
-                curriculum.learning_objectives = review["revised_objectives"]
-                logger.info(f"RMC: updated {len(curriculum.learning_objectives)} learning objectives")
+                # Apply revised objectives
+                if review.get("revised_objectives"):
+                    curriculum.learning_objectives = review["revised_objectives"]
+                    logger.info(f"RMC: updated {len(curriculum.learning_objectives)} learning objectives")
 
-            # Apply section reordering
-            if review.get("section_reorder"):
-                reorder_ids = review["section_reorder"]
-                section_map = {s.id: s for s in curriculum.sections}
-                reordered = []
-                for sid in reorder_ids:
-                    if sid in section_map:
-                        reordered.append(section_map[sid])
-                # Keep any sections not mentioned (append at end)
-                mentioned = set(reorder_ids)
-                for s in curriculum.sections:
-                    if s.id not in mentioned:
-                        reordered.append(s)
-                if len(reordered) == len(curriculum.sections):
-                    curriculum.sections = reordered
-                    logger.info(f"RMC: reordered {len(reordered)} curriculum sections")
+                # Apply section reordering
+                if review.get("section_reorder"):
+                    reorder_ids = review["section_reorder"]
+                    section_map = {s.id: s for s in curriculum.sections}
+                    reordered = []
+                    for sid in reorder_ids:
+                        if sid in section_map:
+                            reordered.append(section_map[sid])
+                    # Keep any sections not mentioned (append at end)
+                    mentioned = set(reorder_ids)
+                    for s in curriculum.sections:
+                        if s.id not in mentioned:
+                            reordered.append(s)
+                    if len(reordered) == len(curriculum.sections):
+                        curriculum.sections = reordered
+                        logger.info(f"RMC: reordered {len(reordered)} curriculum sections")
 
-            logger.info(f"RMC curriculum review applied: {review.get('reasoning', '')[:100]}")
+                logger.info(f"RMC curriculum review (round {rmc_round + 1}/{max_rounds}) applied: {review.get('reasoning', '')[:100]}")
 
-        except (json.JSONDecodeError, ValueError, KeyError, RuntimeError) as e:
-            logger.warning(f"RMC curriculum review failed (returning original): {e}")
+            except (json.JSONDecodeError, ValueError, KeyError, RuntimeError) as e:
+                logger.warning(f"RMC curriculum review failed (returning current state): {e}")
+                break
 
         return curriculum
 

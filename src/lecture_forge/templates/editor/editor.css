@@ -159,6 +159,34 @@
   background: #bfdbfe;
 }
 
+/* ---- Diagram thumbnail wrapper ---- */
+.dgm-thumb-wrapper {
+  width: 100%;
+  height: 90px;
+  overflow: hidden;
+  position: relative;
+  background: #eef2ff;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.dgm-thumb-wrapper:hover { opacity: 0.85; }
+/* Inner div is positioned absolutely so its natural size
+   doesn't push the card height beyond 90px */
+.dgm-thumb-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scale(0.3);
+  transform-origin: top left;
+  pointer-events: none;
+  min-width: 500px;   /* room for the SVG to render at natural size */
+}
+/* Diagram modal SVG: fill available width */
+#dgm-modal-content .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ---- EasyMDE override ---- */
 .EasyMDEContainer {
   height: 100%;

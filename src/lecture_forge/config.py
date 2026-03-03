@@ -256,6 +256,11 @@ class Config:
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")
     SEARCH_NUM_RESULTS: int = _env_int("SEARCH_NUM_RESULTS", 10)
     SEARCH_TIMEOUT: int = _env_int("SEARCH_TIMEOUT", 30)
+    # Full-page fetch from search results (opt-in, default off).
+    # When enabled, top SEARCH_FETCH_TOP_N result URLs are scraped in parallel
+    # using the existing WebScraperTool immediately after snippet collection.
+    SEARCH_FETCH_FULL_PAGES: bool = os.getenv("SEARCH_FETCH_FULL_PAGES", "false").lower() == "true"
+    SEARCH_FETCH_TOP_N: int = _env_int("SEARCH_FETCH_TOP_N", 3)
 
     # ===== Image Search APIs =====
     UNSPLASH_ACCESS_KEY: Optional[str] = os.getenv("UNSPLASH_ACCESS_KEY")
@@ -377,6 +382,14 @@ class Config:
     QUALITY_THRESHOLD: int = _env_int("QUALITY_THRESHOLD", 80)
     QUALITY_THRESHOLD_SECTION: int = _env_int("QUALITY_THRESHOLD_SECTION", 70)  # Relaxed for section-level
     MAX_ITERATIONS: int = _env_int("MAX_ITERATIONS", 3)
+
+    # ===== LLM Generation Limits =====
+    # Maximum tokens per LLM response; prevents unbounded cost per call.
+    # Set via MAX_LLM_TOKENS in .env. Default matches GPT-4o-mini context output cap.
+    MAX_LLM_TOKENS: int = _env_int("MAX_LLM_TOKENS", 4096)
+    # Maximum RMC self-review rounds per agent invocation.
+    # Set via MAX_RMC_ROUNDS in .env. 1 = single-pass (current default behaviour).
+    MAX_RMC_ROUNDS: int = _env_int("MAX_RMC_ROUNDS", 1)
 
     # Diagram quality threshold (0-100)
     DIAGRAM_QUALITY_THRESHOLD: int = _env_int("DIAGRAM_QUALITY_THRESHOLD", 70)

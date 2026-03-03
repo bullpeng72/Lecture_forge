@@ -5,6 +5,7 @@
 //  State                                                               //
 // ------------------------------------------------------------------ //
 let currentSectionId = null;
+let currentSectionIndex = -1;       // index into lectureData.sections
 let mde = null;                     // EasyMDE instance
 let currentTab = 'edit';
 let currentGalleryTab = 'recommended';
@@ -22,6 +23,9 @@ let _galleryPaths = [];             // [{path, label}] for current gallery/recom
 //  Init                                                                //
 // ------------------------------------------------------------------ //
 document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+  }
   await loadLecture();
   await loadElements();
   initMDE();
@@ -52,8 +56,8 @@ function renderSectionList(sections) {
     return;
   }
 
-  list.innerHTML = sections.map(sec => {
-    const isActive = sec.id === currentSectionId;
+  list.innerHTML = sections.map((sec, idx) => {
+    const isActive = idx === currentSectionIndex;
     const isDeleted = sec.status === 'deleted';
     const isModified = sec.status === 'modified';
     let badge = '';
@@ -62,7 +66,7 @@ function renderSectionList(sections) {
 
     return `
       <div class="section-item ${isActive ? 'active' : ''} ${isDeleted ? 'deleted' : ''} ${isModified ? 'modified' : ''}"
-           data-id="${sec.id}" onclick="selectSection('${sec.id}')">
+           data-id="${sec.id}" data-index="${idx}" onclick="selectSection('${sec.id}', ${idx})">
         <div class="flex-1 min-w-0">
           <div class="section-title">${escHtml(sec.title)}</div>
           <div class="section-meta">${sec.word_count}단어 · 이미지 ${sec.image_count} · 다이어그램 ${sec.diagram_count}</div>
@@ -79,12 +83,13 @@ function renderSectionList(sections) {
 // ------------------------------------------------------------------ //
 //  Section selection                                                   //
 // ------------------------------------------------------------------ //
-async function selectSection(sectionId) {
+async function selectSection(sectionId, sectionIndex) {
   currentSectionId = sectionId;
+  if (sectionIndex !== undefined) currentSectionIndex = sectionIndex;
 
   // Highlight in list
   document.querySelectorAll('.section-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === sectionId);
+    el.classList.toggle('active', parseInt(el.dataset.index) === currentSectionIndex);
   });
 
   // Load section content
@@ -265,8 +270,12 @@ function renderVisualsForSection(sectionId) {
     return;
   }
 
-  // Find section title for matching
-  const sec = lectureData && lectureData.sections.find(s => s.id === sectionId);
+  // Find section title for matching — use index to avoid duplicate-id false matches
+  const sec = lectureData && (
+    currentSectionIndex >= 0
+      ? lectureData.sections[currentSectionIndex]
+      : lectureData.sections.find(s => s.id === sectionId)
+  );
   const secTitle = sec ? sec.title : '';
 
   // Filter elements belonging to this section
@@ -284,6 +293,7 @@ function renderVisualsForSection(sectionId) {
     ? '<div class="text-center text-gray-400 text-xs py-4">이 섹션에 비주얼 없음</div>' : '';
 
   panel.innerHTML = emptyNote + existingHtml + pendingHtml;
+  _renderDiagramPreviews();
 }
 
 function renderPendingCard(item, sectionId, index) {
@@ -310,14 +320,23 @@ function renderVisualCard(el) {
 
   let thumbHtml = '';
   if (kind === 'image') {
-    const imgSrc = `/api/images/by-index/${el.img_index}`;
+    // Add cache-buster when a replacement is staged so the browser fetches the new image
+    const cb = el.status === 'replace' ? `?v=${Date.now()}` : '';
+    const imgSrc = `/api/images/by-index/${el.img_index}${cb}`;
     thumbHtml = `<img class="visual-card-thumb-img" src="${imgSrc}" alt="${escAttr(el.title || '')}"
       title="클릭하여 크게 보기"
       onclick="openLightbox(${el.img_index})"
       onerror="this.outerHTML='<div class=\\'visual-card-thumb mermaid-thumb\\'>[이미지 ${dispIdx}]</div>'"
       loading="lazy">`;
   } else {
-    thumbHtml = `<div class="visual-card-thumb mermaid-thumb">[다이어그램] ${escHtml(el.extra || '')}</div>`;
+    const dgmCode = el.mermaid_code || '';
+    thumbHtml = `
+      <div class="dgm-thumb-wrapper" title="클릭하여 크게 보기"
+           onclick="openDiagramModal(${el.dgm_index})">
+        <div class="dgm-thumb-inner">
+          <div class="mermaid">${dgmCode}</div>
+        </div>
+      </div>`;
   }
 
   let actions = '';
@@ -727,8 +746,8 @@ function openLightbox(imgIndex) {
     return el.section && el.section.includes(title);
   });
 
-  _lbSources = secElements.map(el => ({ type: 'index', value: el.img_index, label: el.title || '' }));
-  if (_lbSources.length === 0) _lbSources = [{ type: 'index', value: imgIndex, label: '' }];
+  _lbSources = secElements.map(el => ({ type: 'index', value: el.img_index, label: el.title || '', replaced: el.status === 'replace' }));
+  if (_lbSources.length === 0) _lbSources = [{ type: 'index', value: imgIndex, label: '', replaced: false }];
   _lbCurrent = Math.max(0, _lbSources.findIndex(s => s.type === 'index' && s.value === imgIndex));
 
   _openLightbox();
@@ -751,7 +770,7 @@ function _openLightbox() {
 function _renderLightbox() {
   const src = _lbSources[_lbCurrent];
   const imgSrc = src.type === 'index'
-    ? `/api/images/by-index/${src.value}`
+    ? `/api/images/by-index/${src.value}${src.replaced ? `?v=${Date.now()}` : ''}`
     : `/api/images/serve?path=${encodeURIComponent(src.value)}`;
   const caption = src.label || '';
 
@@ -788,6 +807,70 @@ function _lbKeyHandler(e) {
   if (e.key === 'Escape')      _doCloseLightbox();
   else if (e.key === 'ArrowLeft')  lightboxStep(-1);
   else if (e.key === 'ArrowRight') lightboxStep(1);
+}
+
+// ------------------------------------------------------------------ //
+//  Diagram thumbnail rendering                                         //
+// ------------------------------------------------------------------ //
+async function _renderDiagramPreviews() {
+  if (typeof mermaid === 'undefined') return;
+  const nodes = [...document.querySelectorAll('.dgm-thumb-inner .mermaid')]
+    .filter(n => !n.hasAttribute('data-processed') && n.textContent.trim());
+  if (nodes.length === 0) return;
+  try {
+    await mermaid.run({ nodes });
+    // Remove fixed dimensions so the SVG scales with CSS
+    nodes.forEach(n => {
+      const svg = n.querySelector('svg');
+      if (svg) {
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.maxWidth = 'none';
+      }
+    });
+  } catch (e) {
+    console.warn('Mermaid thumbnail render failed:', e);
+  }
+}
+
+// ------------------------------------------------------------------ //
+//  Diagram lightbox modal                                              //
+// ------------------------------------------------------------------ //
+async function openDiagramModal(dgmIndex) {
+  const el = elementsData.find(e => e.kind === 'diagram' && e.dgm_index === dgmIndex);
+  if (!el) return;
+
+  document.getElementById('dgm-modal-title').textContent = el.title || '다이어그램';
+  const content = document.getElementById('dgm-modal-content');
+  // Fresh div so Mermaid always re-renders
+  content.innerHTML = `<div class="mermaid">${el.mermaid_code || ''}</div>`;
+  document.getElementById('diagram-modal').classList.remove('hidden');
+  document.addEventListener('keydown', _dgmKeyHandler);
+
+  if (typeof mermaid !== 'undefined') {
+    try {
+      await mermaid.run({ nodes: [content.querySelector('.mermaid')] });
+      const svg = content.querySelector('svg');
+      if (svg) { svg.removeAttribute('width'); svg.style.maxWidth = '100%'; svg.style.height = 'auto'; }
+    } catch (e) {
+      content.innerHTML = `<pre class="text-xs bg-gray-50 p-4 rounded overflow-auto whitespace-pre-wrap">${escHtml(el.mermaid_code || '')}</pre>`;
+    }
+  }
+}
+
+function closeDiagramModal(event) {
+  if (event && event.target !== document.getElementById('diagram-modal')) return;
+  _doCloseDiagramModal();
+}
+
+function _doCloseDiagramModal() {
+  document.getElementById('diagram-modal').classList.add('hidden');
+  document.getElementById('dgm-modal-content').innerHTML = '';
+  document.removeEventListener('keydown', _dgmKeyHandler);
+}
+
+function _dgmKeyHandler(e) {
+  if (e.key === 'Escape') _doCloseDiagramModal();
 }
 
 // ------------------------------------------------------------------ //

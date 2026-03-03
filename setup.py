@@ -19,7 +19,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.5.1",
+    version="0.5.2",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator with multilingual support using LangChain",
@@ -48,14 +48,20 @@ setup(
     include_package_data=True,
     package_data={
         "lecture_forge": [
+            # Root-level data files
+            ".env.example",
+            # Templates (lecture HTML, CSS, JS)
             "templates/*.html",
             "templates/*.css",
             "templates/*.js",
+            # Environment template used by `init` command at runtime
+            "templates/.env.example",
+            # Prompt templates
             "templates/prompts/*.txt",
+            # Web editor SPA
             "templates/editor/*.html",
             "templates/editor/*.css",
             "templates/editor/*.js",
-            ".env.example",
         ],
     },
 )

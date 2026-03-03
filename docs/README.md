@@ -49,29 +49,6 @@ Technical API documentation:
 
 ---
 
-## 📊 Project Status
-
-**Version**: 0.5.1
-**Status**: Production Ready+ (RMC Self-Review)
-**Test Coverage**: ~48% with 1,437+ test functions
-**Python**: 3.11, 3.12, 3.13
-
-**Recent Updates:**
-- 🐛 **Bugfixes (v0.5.0, 2026-02-28)** - `edit` TemplateNotFound fix (`templates/editor/index.html` missing); `improve --to-slides` IndexError fix in `slides/parser.py` (empty bullet_points guard)
-- ✅ **Web-based editor (v0.5.0)** - `edit` command: 3-panel SPA editor (port 5757) — section CRUD, Markdown editing (EasyMDE), image gallery & alternative search; `flask>=3.0.0`, `markdownify>=0.12.1` dependencies added
-- ✅ **Techdebt fixes (v0.4.3)** - Architecture boundary fix (`agents/` → `utils/html_parser.py`), config safe parsing, 36 new unit tests, flaky test fixes
-- ✅ **Version bump (v0.4.2)** - Version alignment across all docs and package files
-- ✅ **translate quality (v0.4.1)** - PDF artifact removal, TOC detection, empty-section filter, AI/ML glossary, `--with-diagrams` flag; meta-commentary stripping in `content_expander.py`; `constants.py` magic-number removal; refined exception types; type hints added
-- ✅ **Search Coverage Fix (v0.4.0)** - Full-section search indexing (removed [:500] truncation); `--re-evaluate` HTML stats auto-update; `--to-slides` always rewrites (≤35자); `--with-notes` O(n²) hang fix
-- ✅ **RMC Self-Review (v0.3.8)** - 2-layer self-review in CurriculumDesigner, ContentWriter, QAAgent; LLM refusal detection
-- ✅ **UI & Slides Enhancement (v0.3.7)** - Lightbox zoom, substring search, diagram full-width, Mermaid 10 API fix
-- ✅ **Code Quality & Reliability (v0.3.6)** - retry utility, base classes, config validation, RAG env-vars
-- ✅ **RAG quality boost (v0.3.5)** - 400-word answers, 15+15 retrieval, confidence fix, Rich rendering
-- ✅ **Async I/O support (v0.3.4)** - 70% faster content collection
-- ✅ **Multilingual support (v0.3.2)** - cross-lingual RAG, language detection
-
----
-
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/bullpeng72/Lecture_forge/issues)
@@ -79,5 +56,5 @@ Technical API documentation:
 
 ---
 
-**Last Updated**: 2026-02-28 (v0.5.0)
+**Last Updated**: 2026-03-03 (v0.5.2)
 **Maintained by**: Sungwoo Kim

@@ -3,6 +3,7 @@ Diagram Generator Agent - Generates Mermaid diagrams.
 """
 
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional
 
 from lecture_forge.agents.base import BaseAgent
@@ -55,15 +56,44 @@ class DiagramGeneratorAgent(BaseAgent):
             )
             logger.info(f"Generating {num_diagrams} diagram(s) for section: {section.title} ({section.estimated_time} min)")
 
-            for diagram_idx in range(num_diagrams):
+            if num_diagrams == 1:
                 diagram = self._generate_diagram_for_section(
-                    section, diagram_idx=diagram_idx, section_obj=section_obj
+                    section, diagram_idx=0, section_obj=section_obj
                 )
                 if diagram:
                     section.diagrams.append(diagram)
-                    logger.info(f"  ✅ Generated {diagram.diagram_type} diagram (#{diagram_idx + 1})")
+                    logger.info(f"  ✅ Generated {diagram.diagram_type} diagram (#1)")
                 else:
-                    logger.info(f"  ℹ️  No diagram generated (#{diagram_idx + 1})")
+                    logger.info("  ℹ️  No diagram generated (#1)")
+            else:
+                # Parallelize diagram generation when multiple diagrams are needed per section.
+                # Results are collected into a dict keyed by diagram_idx to preserve insertion order.
+                results: dict = {}
+                with ThreadPoolExecutor(max_workers=num_diagrams) as executor:
+                    futures = {
+                        executor.submit(
+                            self._generate_diagram_for_section,
+                            section,
+                            idx,
+                            section_obj,
+                        ): idx
+                        for idx in range(num_diagrams)
+                    }
+                    for future in as_completed(futures):
+                        idx = futures[future]
+                        try:
+                            results[idx] = future.result()
+                        except Exception as e:
+                            logger.error(f"  ❌ Diagram #{idx + 1} generation failed: {e}")
+                            results[idx] = None
+
+                for idx in range(num_diagrams):
+                    diagram = results.get(idx)
+                    if diagram:
+                        section.diagrams.append(diagram)
+                        logger.info(f"  ✅ Generated {diagram.diagram_type} diagram (#{idx + 1})")
+                    else:
+                        logger.info(f"  ℹ️  No diagram generated (#{idx + 1})")
 
         return section_contents
 

@@ -303,9 +303,21 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
 
     @app.route("/api/images/by-index/<int:img_index>")
     def api_serve_image_by_index(img_index: int):
-        """Serve an image by its 1-based index in image_editor.images."""
+        """Serve an image by its 1-based index in image_editor.images.
+
+        If a replacement is staged for this index, serve the replacement path
+        so the visual panel reflects the pending change before saving.
+        """
         if not (1 <= img_index <= len(image_editor.images)):
             return "Not found", 404
+
+        # Use replacement path when one is staged
+        replacement = image_editor.changes["replace"].get(img_index)
+        if replacement:
+            repl_path = Path(replacement["new_path"]).resolve()
+            if repl_path.exists():
+                mime = mimetypes.guess_type(str(repl_path))[0] or "image/jpeg"
+                return send_file(repl_path, mimetype=mime)
 
         img = image_editor.images[img_index - 1]
         src = img.get("src", "")
@@ -406,10 +418,32 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
     def api_save():
         """Apply all staged changes and write to output_path."""
         try:
-            # Apply section-level edits → get updated soup
+            # Apply section-level edits → modifies html_editor.soup in-place
             updated_soup = html_editor.apply_all_changes()
 
-            # Hand the updated soup to image_editor so it operates on the same DOM
+            # Re-sync image_editor's tag references to the updated soup.
+            # image_editor was initialised from the same file but holds its own
+            # BeautifulSoup instance; its images[*]["tag"] and diagrams[*]["container"]
+            # still point into that stale tree.  decompose() on stale nodes has no
+            # effect on updated_soup, so image deletions would be silently lost.
+            # Re-map by src (images) and code fingerprint (diagrams) to live nodes.
+            from collections import defaultdict
+            src_map: dict = defaultdict(list)
+            for tag in updated_soup.find_all("img"):
+                src_map[tag.get("src", "")].append(tag)
+            for img_info in image_editor.images:
+                live = src_map.get(img_info["src"], [])
+                if live:
+                    img_info["tag"] = live.pop(0)
+
+            for dgm in image_editor.diagrams:
+                prefix = dgm["mermaid_code"][:40]
+                for div in updated_soup.find_all("div", class_="mermaid"):
+                    if prefix in div.get_text(strip=True):
+                        dgm["mermaid_div"] = div
+                        dgm["container"] = div.find_parent("div", class_="my-8") or div
+                        break
+
             image_editor.soup = updated_soup
 
             # Save via ImageEditor (handles image delete/replace + stats update)

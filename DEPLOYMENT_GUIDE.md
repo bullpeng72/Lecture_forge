@@ -1,7 +1,7 @@
 # 📦 LectureForge PyPI 배포 가이드
 
-> **최신 버전**: 0.5.1 ✅ **배포 준비 완료**
-> **최종 수정**: 2026-02-28
+> **최신 버전**: 0.5.3 ✅ **배포 준비 완료**
+> **최종 수정**: 2026-03-05
 > **대상**: PyPI (Python Package Index)
 > **이전 배포**: https://pypi.org/project/lecture-forge/0.3.6/
 
@@ -203,11 +203,12 @@ export TEST_PYPI_TOKEN="pypi-AgEIcHlwaS5vcmc..."
 pip install --upgrade build twine setuptools wheel
 ```
 
-### B. 패키지 정리
+### B. 패키지 정리 ⚠️ 필수
 
 ```bash
-# 이전 빌드 결과 삭제
-rm -rf build/ dist/ *.egg-info src/*.egg-info
+# ❗ 반드시 dist/, build/, egg-info를 삭제 후 빌드할 것.
+# stale 아티팩트가 남아 있으면 새 파일이 누락된 wheel이 PyPI에 올라갈 수 있음.
+rm -rf dist/ build/ src/*.egg-info *.egg-info
 
 # 캐시 삭제
 find . -type d -name __pycache__ -exec rm -rf {} +
@@ -222,27 +223,34 @@ python -m build
 
 # 빌드 결과 확인
 ls -lh dist/
-# lecture-forge-0.3.7.tar.gz
-# lecture_forge-0.3.7-py3-none-any.whl
+# lecture-forge-X.Y.Z.tar.gz
+# lecture_forge-X.Y.Z-py3-none-any.whl
 ```
 
-### D. 빌드 파일 검증
+### D. 빌드 파일 검증 ⚠️ 필수 — wheel 내용 확인
 
 ```bash
-# wheel 파일 내용 확인
-unzip -l dist/lecture_forge-0.3.7-py3-none-any.whl
+# ❗ PyPI 업로드 전 반드시 아래 명령으로 핵심 파일 포함 여부를 확인할 것.
+# (v0.5.2 배포 실패 사례: index.html 누락으로 edit 명령어 500 에러)
 
-# 패키지 메타데이터 확인
-tar -tzf dist/lecture-forge-0.3.7.tar.gz | grep -E "PKG-INFO|setup.py"
+# 1) 에디터 템플릿 3종 모두 포함됐는지 확인
+unzip -l dist/lecture_forge-*.whl | grep "templates/editor"
+# 기대 출력:
+#   lecture_forge/templates/editor/editor.css
+#   lecture_forge/templates/editor/editor.js
+#   lecture_forge/templates/editor/index.html   ← 이게 없으면 배포 금지!
 
-# Twine으로 검증
+# 2) 전체 템플릿 파일 목록 확인
+unzip -l dist/lecture_forge-*.whl | grep "templates/"
+
+# 3) Twine으로 메타데이터 검증
 twine check dist/*
 ```
 
-**예상 출력:**
+**기대 출력:**
 ```
-Checking dist/lecture-forge-0.3.7.tar.gz: PASSED
-Checking dist/lecture_forge-0.3.7-py3-none-any.whl: PASSED
+Checking dist/lecture-forge-X.Y.Z.tar.gz: PASSED
+Checking dist/lecture_forge-X.Y.Z-py3-none-any.whl: PASSED
 ```
 
 ---
@@ -737,7 +745,9 @@ pip list | grep lecture-forge
 
 ### 배포 중
 
-- [ ] 빌드 성공
+- [ ] `rm -rf dist/ build/ src/*.egg-info` 실행 (stale 아티팩트 제거)
+- [ ] 빌드 성공 (`python -m build`)
+- [ ] **wheel 내용 확인**: `unzip -l dist/*.whl | grep "templates/editor"` — index.html·editor.css·editor.js 3종 모두 출력되는지 확인
 - [ ] twine check 통과
 - [ ] TestPyPI 업로드 성공
 - [ ] TestPyPI 설치 테스트
@@ -916,9 +926,21 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ## 📈 배포 현황
 
-### v0.5.1 (2026-02-28) 🔜 **배포 준비 완료**
+### v0.5.3 (2026-03-05) 🔜 **배포 준비 완료**
 
 - **상태**: 배포 대기
+- **주요 변경사항**:
+  - 🐛 **`edit` TemplateNotFound 재수정**: PyPI v0.5.2 wheel에 `templates/editor/index.html` 누락 (stale dist/ 원인) → `server.py`를 Flask 템플릿 탐색에 의존하지 않고 절대경로로 직접 읽도록 변경 (`Path(__file__).parent.parent / "templates/editor/index.html"`)
+  - 🔒 **패키징 검증 절차 강화**: DEPLOYMENT_GUIDE.md에 wheel 내용 필수 확인 단계 추가
+
+### v0.5.2 (2026-03-03) ✅
+
+- **상태**: 배포 완료 (index.html 누락 버그 포함 — v0.5.3으로 수정)
+- **주요 변경사항**: BaseAgent max_tokens, RMC 루프 상한, 다이어그램 병렬 생성, HTML 섹션 ID 중복 방지
+
+### v0.5.1 (2026-02-28) ✅
+
+- **상태**: 배포 완료
 - **주요 변경사항**:
   - 🐛 **`edit` TemplateNotFound 수정**: `templates/editor/index.html` 누락 → 파일 생성으로 수정
   - 🐛 **`improve --to-slides` IndexError 수정**: `slides/parser.py` 빈 bullet_points 가드 추가
@@ -1131,26 +1153,29 @@ curl -s https://pypistats.org/api/packages/lecture-forge/overall
 
 ```bash
 # 1. 버전 업데이트
-# pyproject.toml, setup.py, __version__.py
+# pyproject.toml, setup.py, __version__.py 세 곳 모두
 
 # 2. 테스트 및 코드 품질
 pytest tests/ -v
 black src/ tests/
 flake8 src/ tests/
 
-# 3. 빌드
-rm -rf dist/ build/ *.egg-info
+# 3. 빌드 전 정리 (⚠️ 반드시 실행)
+rm -rf dist/ build/ src/*.egg-info *.egg-info
 python -m build
 
-# 4. 검증
+# 4. wheel 내용 검증 (⚠️ 반드시 실행 — 핵심 파일 누락 여부 확인)
+unzip -l dist/lecture_forge-*.whl | grep "templates/editor"
+# → index.html, editor.css, editor.js 세 줄이 모두 보여야 함. 없으면 배포 금지!
 twine check dist/*
 
-# 5. 업로드 (가장 간단한 방법)
-twine upload dist/lecture_forge-*
+# 5. 업로드
+twine upload dist/lecture_forge-*   # zsh glob 문제 방지: * 대신 파일명 명시 권장
 
-# 6. 확인
+# 6. 설치 확인
 pip install --upgrade lecture-forge
 lecture-forge --version
+lecture-forge edit --help
 
 # 7. Git 태그 및 Release
 git tag -a v0.x.x -m "Release v0.x.x"
@@ -1182,6 +1207,6 @@ gh release create v0.x.x
 ---
 
 **작성일**: 2026-02-09
-**최종 업데이트**: 2026-02-26
+**최종 업데이트**: 2026-03-05
 **저자**: Sungwoo Kim (@bullpeng72)
-**상태**: 🔜 v0.5.1 배포 준비 완료
+**상태**: ✅ v0.5.3 배포 완료

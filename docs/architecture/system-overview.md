@@ -485,6 +485,12 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.3: Packaging Stability
+
+- **`edit` TemplateNotFound prevention**: `editor/server.py` now reads `index.html` via `Path(__file__).parent.parent / "templates/editor/index.html"` — bypasses Flask's template discovery, immune to incomplete PyPI wheel packaging.
+- **Slide title improvement**: Generation date displayed, centered alignment.
+- **PyPI deployment verification**: `DEPLOYMENT_GUIDE.md` now mandates `unzip -l dist/*.whl | grep templates/editor` before every upload.
+
 ### v0.5.2: Stability & Cost Control
 
 - **`BaseAgent.max_tokens`**: All agents accept `max_tokens` (default `Config.MAX_LLM_TOKENS` = 4096, env `MAX_LLM_TOKENS`). Prevents unbounded per-call cost.
@@ -561,5 +567,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-03-03
-**Version**: 0.5.2
+**Last Updated**: 2026-03-05
+**Version**: 0.5.3

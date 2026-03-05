@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.2 | **최종 수정**: 2026-03-03
+> **버전**: 0.5.3 | **최종 수정**: 2026-03-05
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -378,7 +378,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,437+ 테스트, ~48% 커버리지)
+A: `pytest tests/ -v` (1,436+ 테스트, ~48% 커버리지)
 
 ---
 
@@ -414,6 +414,12 @@ A: `pytest tests/ -v` (1,437+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.3 (2026-03-05) - 🔒 패키징 안정화
+
+- 🐛 **`edit` TemplateNotFound 재발 방지**: `server.py`에서 Flask 템플릿 탐색 대신 `Path(__file__).parent.parent / "templates/editor/index.html"` 절대경로 직접 읽기 — 불완전한 wheel 배포 환경에서도 동작
+- 🎨 **슬라이드 타이틀 개선**: 생성일 표시 + 가운데 정렬
+- 🔒 **PyPI 배포 검증 절차 강화**: DEPLOYMENT_GUIDE.md에 `unzip -l dist/*.whl | grep templates/editor` 필수 단계 추가
 
 ### v0.5.2 (2026-03-03) - 🔧 안정성 & 비용 개선
 

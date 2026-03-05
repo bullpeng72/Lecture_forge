@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.2** | 안정성 & 비용 개선 — `max_tokens` 전역화, RMC 루프 상한, 다이어그램 병렬 생성
+> 🚀 **v0.5.3** | 패키징 안정화 — `edit` TemplateNotFound 재발 방지, PyPI wheel 검증 절차 강화
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,437+ 테스트 함수 (70개 파일, ~48% 커버리지)
+- 🧪 **테스트 커버리지**: 1,436+ 테스트 함수 (70개 파일, ~48% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -68,12 +68,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.2)
+## 🚀 최근 개선사항 (v0.5.3)
 
-- 🌐 **웹 기반 강의 편집기** (`edit` 명령어): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
-- 🔧 **`BaseAgent` `max_tokens` 전역화**: `MAX_LLM_TOKENS` 환경변수로 LLM 비용 제어
-- 🔒 **RMC 루프 상한**: `MAX_RMC_ROUNDS` (기본 1) — 자기검토 무한 반복 방지
-- ⚡ **다이어그램 병렬 생성**: `ThreadPoolExecutor`로 다이어그램 생성 속도 개선
+- 🐛 **`edit` TemplateNotFound 재발 방지**: `server.py`에서 `Path(__file__)` 절대경로로 `index.html` 직접 읽기 — pipx/PyPI 불완전 wheel에서도 동작
+- 🎨 **슬라이드 타이틀**: 생성일 표시 + 가운데 정렬
+- 🔒 **PyPI 배포 검증 강화**: `unzip -l dist/*.whl | grep templates/editor` 필수 단계 DEPLOYMENT_GUIDE.md에 추가
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -878,8 +877,11 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.5.x (2026-02-26 ~ 2026-03-03) - 🌐 웹 편집기 · 안정성 & 비용 개선
+### v0.5.x (2026-02-26 ~ 2026-03-05) - 🌐 웹 편집기 · 안정성 & 비용 개선
 
+- 🐛 **`edit` TemplateNotFound 재발 방지** (v0.5.3): `server.py`에서 `Path(__file__)` 절대경로로 `index.html` 직접 읽기
+- 🎨 **슬라이드 타이틀 개선** (v0.5.3): 생성일 표시 + 가운데 정렬
+- 🔒 **PyPI 배포 검증 강화** (v0.5.3): wheel 내용 필수 확인 절차 추가 (`unzip -l dist/*.whl | grep templates/editor`)
 - 🌐 **웹 기반 강의 편집기** (`edit` 명령어, v0.5.0): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
 - 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1` · CLI 명령어 8개 → 9개
 - 🐛 **버그수정** (v0.5.1): `edit` TemplateNotFound, `improve --to-slides` IndexError

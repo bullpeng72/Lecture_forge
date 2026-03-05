@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, request, send_file
 
 from lecture_forge.config import Config
 from lecture_forge.editor.html_editor import LectureHTMLEditor
@@ -22,6 +22,9 @@ from lecture_forge.utils import logger
 
 _UPLOAD_DIR = Config.DATA_DIR / "images" / "_uploaded"
 _ALLOWED_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+# Resolve template path at import time using this file's location,
+# independent of Flask's template discovery (works with any install method).
+_INDEX_TEMPLATE = Path(__file__).parent.parent / "templates" / "editor" / "index.html"
 
 
 def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
@@ -57,7 +60,8 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
     @app.route("/")
     def index():
         filename = Path(html_path).name
-        return render_template("index.html", filename=filename)
+        content = _INDEX_TEMPLATE.read_text(encoding="utf-8")
+        return content.replace("{{ filename }}", filename)
 
     # ------------------------------------------------------------------ #
     #  Lecture meta                                                         #

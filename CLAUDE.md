@@ -123,7 +123,7 @@ lecture-forge/  (Git 저장소)
     ├── 📚 knowledge/               ✅ Vector DB & RAG (캐싱)
     ├── ✅ quality/                 ✅ 품질 평가 시스템
     ├── 📊 models/                  ✅ 데이터 모델
-    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry, html_parser 포함)
+    ├── 🔧 utils/                   ✅ 유틸리티 (prompt_manager, retry, html_parser, json_utils 포함)
     ├── 🎨 templates/               ✅ HTML 템플릿 + 프롬프트 템플릿 + 에디터 SPA
     ├── 💻 cli/                     ✅ CLI 모듈 (9개 명령어)
     ├── 🎬 slides/                  ✅ Reveal.js 슬라이드 변환

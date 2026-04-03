@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 [![Version](https://img.shields.io/badge/version-0.5.4-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
 > 🚀 **v0.5.4** | 테스트 커버리지 강화 — 401개 테스트 추가 (48% → 81%), techdebt 개선
@@ -92,9 +92,8 @@ pipx ensurepath
 # lecture-forge 설치 (격리된 환경에서 자동 설치)
 pipx install lecture-forge
 
-# playwright 설치 (pipx 환경에 추가)
+# playwright 설치 (pipx 환경에 주입 후 브라우저 다운로드)
 pipx inject lecture-forge playwright
-pipx runpip lecture-forge install playwright
 playwright install chromium
 
 # 사용
@@ -328,7 +327,7 @@ lecture-forge create
 |------|------|---------|
 | `-c, --config FILE` | YAML 설정 파일 사용 | `--config lecture.yaml` |
 | `-i, --interactive` | 생성 중 대화형 Q&A 모드 활성화 | `--interactive` |
-| `--image-search` | 웹 이미지 검색 활성화 Pexels (기본 활성화) | `--no-image-search` |
+| `--image-search` / `--no-image-search` | 웹 이미지 검색 활성화 (Pexels 등, 기본: 활성화) | `--no-image-search` |
 | `--quality-level LEVEL` | 품질 기준 설정 | `--quality-level strict` |
 | `-o, --output FILE` | 출력 파일명 지정 (확장자 제외) | `--output my_lecture` |
 | `--async-mode` | Async I/O 사용 (70% 빠름, 실험적) | `--async-mode` |

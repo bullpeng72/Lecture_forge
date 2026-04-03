@@ -48,6 +48,7 @@ data/cache/
 outputs/
 *.html
 !src/lecture_forge/templates/*.html
+!src/lecture_forge/templates/editor/*.html
 *.pdf
 *.log
 

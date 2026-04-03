@@ -118,6 +118,7 @@ async function selectSection(sectionId, sectionIndex) {
 function showEditorPane() {
   document.getElementById('editor-empty').classList.add('hidden');
   document.getElementById('editor-pane').classList.remove('hidden');
+  document.getElementById('save-section-bar').classList.remove('hidden');
   if (currentTab === 'preview') {
     document.getElementById('preview-pane').classList.remove('hidden');
   }
@@ -231,6 +232,7 @@ async function deleteSection(sectionId) {
       document.getElementById('editor-empty').classList.remove('hidden');
       document.getElementById('editor-pane').classList.add('hidden');
       document.getElementById('preview-pane').classList.add('hidden');
+      document.getElementById('save-section-bar').classList.add('hidden');
     }
     await loadLecture();
   } catch (e) {

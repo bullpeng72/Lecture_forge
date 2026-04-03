@@ -11,6 +11,7 @@ from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.analysis import AnalysisResult
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.utils import logger
+from lecture_forge.utils.json_utils import strip_json_fence
 
 
 class CurriculumDesignerAgent(BaseAgent):
@@ -110,11 +111,7 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
             response = self.invoke_llm(prompt, phase="curriculum_design")
             content = response.content.strip()
 
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-
+            content = strip_json_fence(content)
             objectives = json.loads(content)
 
             if isinstance(objectives, list):
@@ -324,13 +321,7 @@ Rules:
                 response = self.invoke_llm(prompt, phase="curriculum_rmc_review")
                 raw = response.content.strip()
 
-                # Strip markdown fences if present
-                if "```json" in raw:
-                    raw = raw.split("```json")[1].split("```")[0].strip()
-                elif "```" in raw:
-                    raw = raw.split("```")[1].split("```")[0].strip()
-
-                review = json.loads(raw)
+                review = json.loads(strip_json_fence(raw))
 
                 if review.get("no_changes"):
                     logger.info(f"RMC curriculum review: stable after {rmc_round + 1} round(s)")
@@ -463,11 +454,7 @@ If the content is already covered, return [].
 Example: ["추가 주제 1", "추가 주제 2"]"""
                             resp = self.invoke_llm(prompt, phase="curriculum_source_coverage")
                             raw = resp.content.strip()
-                            if "```json" in raw:
-                                raw = raw.split("```json")[1].split("```")[0].strip()
-                            elif "```" in raw:
-                                raw = raw.split("```")[1].split("```")[0].strip()
-                            new_topics = json.loads(raw)
+                            new_topics = json.loads(strip_json_fence(raw))
                             if isinstance(new_topics, list):
                                 existing_titles = {s.title.lower() for s in validated}
                                 used_time = sum(s.estimated_time for s in validated)
@@ -552,12 +539,7 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
         try:
             response = self.invoke_llm(prompt, phase="curriculum_kb_enrichment")
             raw = response.content.strip()
-            if "```json" in raw:
-                raw = raw.split("```json")[1].split("```")[0].strip()
-            elif "```" in raw:
-                raw = raw.split("```")[1].split("```")[0].strip()
-
-            new_topics = json.loads(raw)
+            new_topics = json.loads(strip_json_fence(raw))
             if isinstance(new_topics, list):
                 used_time = sum(s.estimated_time for s in validated)
                 intro_time = next(

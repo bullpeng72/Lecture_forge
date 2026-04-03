@@ -13,6 +13,7 @@ from lecture_forge.models.analysis import (
     TopicCluster,
 )
 from lecture_forge.utils import logger
+from lecture_forge.utils.json_utils import strip_json_fence
 
 
 class ContentAnalyzerAgent(BaseAgent):
@@ -183,13 +184,7 @@ Return ONLY a JSON array of topic names (strings), nothing else. Example: ["주�
             response = self.invoke_llm(prompt, phase="content_analysis")
             content = response.content.strip()
 
-            # Extract JSON from response
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-
-            topics = json.loads(content)
+            topics = json.loads(strip_json_fence(content))
 
             if isinstance(topics, list):
                 return topics[:15]  # v0.4.0: 10 → 15
@@ -235,12 +230,7 @@ Return ONLY a JSON array of concept names (strings). Example: ["개념 1", "개�
                 response = self.invoke_llm(prompt, phase="content_analysis")
                 content = response.content.strip()
 
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
-
-                sub_concepts = json.loads(content)
+                sub_concepts = json.loads(strip_json_fence(content))
 
                 for concept in sub_concepts[:5]:
                     if concept not in [e.name for e in entities]:

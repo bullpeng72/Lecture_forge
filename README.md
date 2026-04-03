@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.4-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-beta-green.svg)](https://github.com/bullpeng72/Lecture_forge)
-[![Test Coverage](https://img.shields.io/badge/coverage-~48%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.3** | 패키징 안정화 — `edit` TemplateNotFound 재발 방지, PyPI wheel 검증 절차 강화
+> 🚀 **v0.5.4** | 테스트 커버리지 강화 — 401개 테스트 추가 (48% → 81%), techdebt 개선
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,436+ 테스트 (~48% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,837+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,436+ 테스트 함수 (70개 파일, ~48% 커버리지)
+- 🧪 **테스트 커버리지**: 1,837+ 테스트 함수 (~81% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -68,11 +68,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.3)
+## 🚀 최근 개선사항 (v0.5.4)
 
-- 🐛 **`edit` TemplateNotFound 재발 방지**: `server.py`에서 `Path(__file__)` 절대경로로 `index.html` 직접 읽기 — pipx/PyPI 불완전 wheel에서도 동작
-- 🎨 **슬라이드 타이틀**: 생성일 표시 + 가운데 정렬
-- 🔒 **PyPI 배포 검증 강화**: `unzip -l dist/*.whl | grep templates/editor` 필수 단계 DEPLOYMENT_GUIDE.md에 추가
+- 🧪 **테스트 커버리지 대폭 향상**: 1,436개 → 1,837개 (+401개), ~48% → ~81%
+- 🔧 **JSON 유틸리티 통합**: `utils/json_utils.py` — `strip_json_fence()` / `parse_json_response()` 신설, 4개 에이전트 중복 코드 제거
+- 🌐 **에디터 UX 개선**: '섹션 저장' 버튼 항상 표시, 편집 영역 배경색 추가, 미리보기 마크다운 CSS 렌더링
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -876,6 +876,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화
+
+- 🧪 **테스트 401개 추가**: editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI 전체 커버 → 1,837개 (~81%)
+- 🔧 **`utils/json_utils.py`**: `strip_json_fence()` / `parse_json_response()` — 4개 에이전트 중복 패턴 통합
+- 🌐 **에디터 UX**: '섹션 저장' 버튼 항상 표시, 편집 영역 배경색, 미리보기 마크다운 렌더링 CSS
 
 ### v0.5.x (2026-02-26 ~ 2026-03-05) - 🌐 웹 편집기 · 안정성 & 비용 개선
 

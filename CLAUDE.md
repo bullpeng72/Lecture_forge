@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.3 | **최종 수정**: 2026-03-05
+> **버전**: 0.5.4 | **최종 수정**: 2026-04-03
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -378,7 +378,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,436+ 테스트, ~48% 커버리지)
+A: `pytest tests/ -v` (1,837+ 테스트, ~81% 커버리지)
 
 ---
 
@@ -403,7 +403,7 @@ A: `pytest tests/ -v` (1,436+ 테스트, ~48% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,436+, ~48% 커버리지 |
+| 테스트 | 1,837+, ~81% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -414,6 +414,13 @@ A: `pytest tests/ -v` (1,436+ 테스트, ~48% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화 & 코드 품질 개선
+
+- 🧪 **테스트 커버리지 대폭 향상**: 1,436개 → 1,837개 (+401개), ~48% → ~81% — editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI 명령어 전체 커버
+- 🔧 **JSON 펜스 제거 유틸리티**: 4개 에이전트에 중복 분산된 패턴을 `utils/json_utils.py`의 `strip_json_fence()` / `parse_json_response()`로 통합
+- 🧹 **Techdebt safe fixes**: 불필요한 import 제거, 사문화된 commented-out 코드 삭제
+- 🌐 **에디터 UX 개선**: '섹션 저장' 버튼 항상 표시, 편집 영역 배경색, 미리보기 마크다운 렌더링 CSS
 
 ### v0.5.3 (2026-03-05) - 🔒 패키징 안정화
 

@@ -567,5 +567,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-03-05
-**Version**: 0.5.3
+**Last Updated**: 2026-04-03
+**Version**: 0.5.4

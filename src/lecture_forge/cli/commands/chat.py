@@ -85,9 +85,3 @@ def chat(knowledge_base: Optional[str]) -> None:
         logger.exception("Q&A mode failed")
         sys.exit(1)
 
-
-# NOTE: This 'improve' command is disabled due to name conflict with the newer improve command at line 1201
-# TODO: Rename this to 'evaluate' or 'improve-quality' if this functionality is still needed
-# @click.command()
-# @click.argument("lecture_path", type=click.Path(exists=True))
-# @click.option("--threshold", "-t", type=int, default=80, help="Quality threshold (0-100)", show_default=True)

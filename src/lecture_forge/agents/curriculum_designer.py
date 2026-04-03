@@ -467,8 +467,7 @@ Example: ["추가 주제 1", "추가 주제 2"]"""
                                 raw = raw.split("```json")[1].split("```")[0].strip()
                             elif "```" in raw:
                                 raw = raw.split("```")[1].split("```")[0].strip()
-                            import json as _json
-                            new_topics = _json.loads(raw)
+                            new_topics = json.loads(raw)
                             if isinstance(new_topics, list):
                                 existing_titles = {s.title.lower() for s in validated}
                                 used_time = sum(s.estimated_time for s in validated)

@@ -534,10 +534,6 @@ def collect_llm_settings(
         cur_embed = cur.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
         embed = Prompt.ask("   Ollama 임베딩 모델", default=cur_embed, console=console)
         settings["OLLAMA_EMBEDDING_MODEL"] = embed.strip() or cur_embed
-
-        cur_vision = cur.get("OLLAMA_VISION_MODEL", "llama3.2-vision")
-        vision = Prompt.ask("   Ollama Vision 모델", default=cur_vision, console=console)
-        settings["OLLAMA_VISION_MODEL"] = vision.strip() or cur_vision
     else:
         cur_model = cur.get("DEFAULT_MODEL", "gpt-4o-mini")
         preset_hint = "/".join(_OPENAI_MODEL_PRESETS)
@@ -685,7 +681,6 @@ def show_current_config(console: Console, env_path: Path) -> None:
         llm_table.add_row("Ollama Base URL", env.get("OLLAMA_BASE_URL", "http://localhost:11434"))
         llm_table.add_row("Ollama 모델", env.get("OLLAMA_MODEL", "llama3.2"))
         llm_table.add_row("Ollama 임베딩", env.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"))
-        llm_table.add_row("Ollama Vision", env.get("OLLAMA_VISION_MODEL", "llama3.2-vision"))
     else:
         llm_table.add_row("기본 모델", env.get("DEFAULT_MODEL", "gpt-4o-mini"))
         llm_table.add_row("Vision 모델", env.get("VISION_MODEL", "gpt-4o"))

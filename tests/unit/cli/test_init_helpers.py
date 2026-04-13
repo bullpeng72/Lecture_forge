@@ -461,7 +461,6 @@ class TestCollectLlmSettings:
                 "http://localhost:11434",
                 "llama3.2",
                 "nomic-embed-text",
-                "llama3.2-vision",
                 "0.5",
             ],
         ):

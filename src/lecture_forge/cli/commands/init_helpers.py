@@ -556,6 +556,8 @@ def collect_llm_settings(
             default=cur_temp,
             console=console,
         )
+        if not temp_str:          # stdin EOF / empty → keep current
+            temp_str = cur_temp
         try:
             temp_val = float(temp_str)
             if 0.0 <= temp_val <= 1.0:
@@ -614,6 +616,8 @@ def collect_quality_settings(
             default=cur_iter,
             console=console,
         )
+        if not iter_str:          # stdin EOF / empty → keep current
+            iter_str = cur_iter
         try:
             iter_val = int(iter_str)
             if 1 <= iter_val <= 5:

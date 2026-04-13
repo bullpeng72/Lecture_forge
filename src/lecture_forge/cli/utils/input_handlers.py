@@ -103,6 +103,13 @@ def prompt_masked_input(console: Console, prompt_text: str, mask_char: str = "*"
             return result
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            # Discard any bytes that accumulated in the stdin buffer during raw
+            # mode (e.g. fast keystrokes) so subsequent Prompt.ask calls get a
+            # clean stdin and don't spin in a tight loop reading stale data.
+            try:
+                termios.tcflush(fd, termios.TCIFLUSH)
+            except Exception:
+                pass
 from lecture_forge.agents.image_collector import ImageCollectorAgent
 from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture

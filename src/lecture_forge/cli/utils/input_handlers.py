@@ -79,7 +79,7 @@ def prompt_masked_input(console: Console, prompt_text: str, mask_char: str = "*"
                 char = sys.stdin.read(1)
 
                 if char in ("\r", "\n"):  # Enter
-                    sys.stdout.write("\n")
+                    sys.stdout.write("\r\n")  # raw mode: \n alone doesn't carriage-return
                     sys.stdout.flush()
                     break
                 elif char in ("\x7f", "\x08"):  # Backspace/Delete
@@ -89,7 +89,7 @@ def prompt_masked_input(console: Console, prompt_text: str, mask_char: str = "*"
                         sys.stdout.write("\b \b")
                         sys.stdout.flush()
                 elif char == "\x03":  # Ctrl+C
-                    sys.stdout.write("\n")
+                    sys.stdout.write("\r\n")  # raw mode: \n alone doesn't carriage-return
                     sys.stdout.flush()
                     raise KeyboardInterrupt
                 elif char >= " ":  # Printable character

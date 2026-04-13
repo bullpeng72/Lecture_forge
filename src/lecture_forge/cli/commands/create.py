@@ -31,7 +31,7 @@ from lecture_forge.cli.utils import (
 )
 from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture
-from lecture_forge.utils import logger
+from lecture_forge.utils import logger, reconfigure_logging_console
 from lecture_forge.utils.html_parser import parse_html_to_lecture
 from lecture_forge.utils.token_tracker import get_tracker
 
@@ -46,6 +46,9 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary with generation results
     """
+    # Share console between RichHandler and Progress to prevent double-rendering
+    reconfigure_logging_console(console)
+
     # Reset token tracker
     tracker = get_tracker()
     tracker.reset()
@@ -75,7 +78,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         console=console,
     ) as progress:
         # Phase 1: Content Collection
-        task1 = progress.add_task("[cyan]📚 Phase 1: Collecting content...", total=None)
+        task1 = progress.add_task("[cyan]📚 Phase 1: Collecting content...", total=1)
 
         existing_kb_path = inputs.get("existing_kb_path")
         kb_mode = inputs.get("kb_mode", "new")
@@ -112,7 +115,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                         "vector_db": stats,
                     },
                 }
-                progress.update(task1, completed=True)
+                progress.update(task1, description="[green]✅ Phase 1: Content collected", advance=1)
                 console.print(
                     f"   ✅ Reusing KB '{collection_name}': {stats['document_count']} chunks"
                 )
@@ -127,8 +130,8 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                         "hada_keywords": inputs.get("hada_keywords", []),
                     }
                 )
-                progress.update(task1, completed=True)
                 total_after = content_agent.vector_store.get_stats()["document_count"]
+                progress.update(task1, description="[green]✅ Phase 1: Content collected", advance=1)
                 console.print(
                     f"   ✅ Extended KB '{collection_name}': "
                     f"+{content_result['metadata']['total_chunks']} new chunks "
@@ -146,14 +149,14 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                     "hada_keywords": inputs.get("hada_keywords", []),
                 }
             )
-            progress.update(task1, completed=True)
+            progress.update(task1, description="[green]✅ Phase 1: Content collected", advance=1)
             console.print(
                 f"   ✅ Content collected: {content_result['metadata']['total_docs']} docs, "
                 f"{content_result['metadata']['total_chunks']} chunks"
             )
 
         # Phase 2: Image Collection
-        task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=None)
+        task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=1)
         image_agent = ImageCollectorAgent(
             session_id=collection_name, vector_store=content_agent.vector_store  # Share vector store for RAG integration
         )
@@ -187,24 +190,24 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
                 if new_from_store:
                     console.print(f"   📸 Loaded {len(new_from_store)} existing images from KB")
 
-        progress.update(task2, completed=True)
+        progress.update(task2, description="[green]✅ Phase 2: Images collected", advance=1)
         console.print(f"   ✅ Images collected: {image_result['total_collected']}")
 
         # Phase 3a: Content Analysis
-        task3a = progress.add_task("[cyan]🔍 Phase 3a: Analyzing content...", total=None)
+        task3a = progress.add_task("[cyan]🔍 Phase 3a: Analyzing content...", total=1)
         analyzer = ContentAnalyzerAgent(vector_store=content_agent.vector_store)
         analysis_result = analyzer.analyze(
             collection_result=content_result,
             image_result=image_result,
             topic=inputs["topic"],
         )
-        progress.update(task3a, completed=True)
+        progress.update(task3a, description="[green]✅ Phase 3a: Analysis complete", advance=1)
         console.print(
             f"   ✅ Analysis complete: {len(analysis_result.key_topics)} topics, " f"{len(analysis_result.entities)} entities"
         )
 
         # Phase 3b: Curriculum Design
-        task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=None)
+        task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=1)
         designer = CurriculumDesignerAgent(vector_store=content_agent.vector_store)
         curriculum = designer.design(
             analysis_result=analysis_result,
@@ -212,21 +215,64 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             duration=inputs["duration"],
             audience_level=inputs["audience_level"],
         )
-        progress.update(task3b, completed=True)
+        progress.update(task3b, description="[green]✅ Phase 3b: Curriculum designed", advance=1)
         console.print(
             f"   ✅ Curriculum designed: {len(curriculum.sections)} sections, " f"{curriculum.total_estimated_time} min"
         )
 
-        # Phase 4a: Content Writing
-        task4a = progress.add_task("[cyan]✍️  Phase 4a: Writing content (RAG)...", total=None)
+        # Phase 4a: Content Writing (section-level progress)
+        num_sections = len(curriculum.sections)
+        task4a = progress.add_task(
+            f"[cyan]✍️  Phase 4a: Writing content (0/{num_sections} sections)...",
+            total=num_sections,
+        )
         writer = ContentWriterAgent(
             vector_store=content_agent.vector_store,
         )
-        section_contents = writer.write_all_sections(
-            curriculum=curriculum,
-            available_images=image_result.get("images", []),
-        )
-        progress.update(task4a, completed=True)
+
+        # Write sections one by one to update progress incrementally
+        section_contents = []
+        writer.used_image_ids.clear()
+        writer.image_usage_count.clear()
+        writer.used_chunk_ids.clear()
+        if writer.vector_store:
+            writer._pre_assign_chunks_to_sections(curriculum)
+
+        available_images_list = image_result.get("images", [])
+        for sec_idx, section in enumerate(curriculum.sections):
+            available_for_section = [
+                img for img in available_images_list if img.get("id") not in writer.used_image_ids
+            ]
+            content = writer.write_section(
+                section=section,
+                curriculum=curriculum,
+                available_images=available_for_section,
+            )
+            for img_ref in content.images:
+                writer.used_image_ids.add(img_ref.image_id)
+                writer.image_usage_count[img_ref.image_id] = writer.image_usage_count.get(img_ref.image_id, 0) + 1
+            section_contents.append(content)
+            progress.update(
+                task4a,
+                description=f"[cyan]✍️  Phase 4a: Writing content ({sec_idx + 1}/{num_sections} sections)...",
+                advance=1,
+            )
+
+        # Coverage sweep (same as original write_all_sections)
+        if writer.vector_store:
+            try:
+                total_chunks = int(writer.vector_store.get_total_chunk_count())
+            except (TypeError, ValueError):
+                total_chunks = 0
+            if total_chunks > 0:
+                coverage_ratio = len(writer.used_chunk_ids) / total_chunks
+                for _round in range(2):
+                    coverage_ratio = len(writer.used_chunk_ids) / max(1, total_chunks)
+                    if coverage_ratio >= Config.RAG_COVERAGE_MIN_RATIO:
+                        break
+                    writer._expand_sections_for_coverage(section_contents, curriculum)
+
+        progress.update(task4a, description="[green]✅ Phase 4a: Content written")
         total_words = sum(s.word_count for s in section_contents)
         total_code_blocks = sum(len(s.code_blocks) for s in section_contents)
         console.print(
@@ -235,15 +281,15 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         )
 
         # Phase 4b: Diagram Generation
-        task4b = progress.add_task("[cyan]📊 Phase 4b: Generating diagrams...", total=None)
+        task4b = progress.add_task("[cyan]📊 Phase 4b: Generating diagrams...", total=1)
         diagram_gen = DiagramGeneratorAgent()
         section_contents = diagram_gen.generate_diagrams(section_contents, curriculum=curriculum)
-        progress.update(task4b, completed=True)
+        progress.update(task4b, description="[green]✅ Phase 4b: Diagrams generated", advance=1)
         total_diagrams = sum(len(s.diagrams) for s in section_contents)
         console.print(f"   ✅ Diagrams generated: {total_diagrams}")
 
         # Phase 4c: HTML Assembly
-        task4c = progress.add_task("[cyan]🎨 Phase 4c: Assembling HTML...", total=None)
+        task4c = progress.add_task("[cyan]🎨 Phase 4c: Assembling HTML...", total=1)
         lecture = Lecture(
             title=f"{inputs['topic']} - {inputs['audience_level'].capitalize()} Level",
             topic=inputs["topic"],
@@ -264,7 +310,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             output_path=inputs.get("output_name"),
             image_search_enabled=inputs.get("image_search", True),
         )
-        progress.update(task4c, completed=True)
+        progress.update(task4c, description="[green]✅ Phase 4c: HTML assembled", advance=1)
         console.print(f"   ✅ HTML assembled: {html_path}")
 
         # Phase 5: Quality Assurance (optional but enabled by default)
@@ -276,7 +322,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         evaluator = QualityEvaluator()
         revision_agent = RevisionAgent()
 
-        task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=None)
+        task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=1)
 
         iteration = 0
         previous_score = 0
@@ -354,7 +400,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             )
             lecture = improved_lecture
 
-        progress.update(task5, completed=True)
+        progress.update(task5, description="[green]✅ Phase 5: Quality assurance done", advance=1)
 
         if iteration >= max_iterations:
             console.print(f"   ⚠️  Reached max iterations ({max_iterations})")

@@ -5,33 +5,80 @@ Utility functions for LectureForge.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+from rich.console import Console
 from rich.logging import RichHandler
 
 from lecture_forge.config import Config
 
 
-def setup_logging(level: str = None) -> logging.Logger:
+def setup_logging(level: str = None, console: Optional[Console] = None) -> logging.Logger:
     """
     Set up logging with Rich handler.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        console: Optional shared Rich Console instance. When provided, the
+                 RichHandler uses the same console as Progress bars so that
+                 log messages are rendered inside the live display without
+                 causing the progress bar to re-draw (double-render).
 
     Returns:
         Logger instance
     """
     level = level or Config.LOG_LEVEL
 
+    handler_kwargs: dict = {"rich_tracebacks": True, "show_path": False}
+    if console is not None:
+        handler_kwargs["console"] = console
+
     logging.basicConfig(
         level=level,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
+        handlers=[RichHandler(**handler_kwargs)],
     )
 
     return logging.getLogger("lecture_forge")
+
+
+def reconfigure_logging_console(console: Console) -> None:
+    """
+    Replace the lecture_forge logger's RichHandler with one that uses
+    the given console.  Call this once (e.g. at CLI start-up) so that
+    Progress bars and log output share the same live display context.
+
+    Args:
+        console: The Rich Console instance used by Progress / CLI output.
+    """
+    lf_logger = logging.getLogger("lecture_forge")
+    for handler in lf_logger.handlers[:]:
+        if isinstance(handler, RichHandler):
+            level = handler.level
+            lf_logger.removeHandler(handler)
+            new_handler = RichHandler(
+                rich_tracebacks=True,
+                show_path=False,
+                console=console,
+            )
+            new_handler.setLevel(level)
+            lf_logger.addHandler(new_handler)
+            return
+    # If no RichHandler found on the named logger, check root
+    root = logging.getLogger()
+    for handler in root.handlers[:]:
+        if isinstance(handler, RichHandler):
+            level = handler.level
+            root.removeHandler(handler)
+            new_handler = RichHandler(
+                rich_tracebacks=True,
+                show_path=False,
+                console=console,
+            )
+            new_handler.setLevel(level)
+            root.addHandler(new_handler)
+            return
 
 
 def timestamp() -> str:
@@ -137,6 +184,7 @@ from lecture_forge.utils.language_utils import (
 
 __all__ = [
     "setup_logging",
+    "reconfigure_logging_console",
     "timestamp",
     "sanitize_filename",
     "format_duration",

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.4 | **최종 수정**: 2026-04-03
+> **버전**: 0.5.5 | **최종 수정**: 2026-04-13
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -378,7 +378,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,837+ 테스트, ~81% 커버리지)
+A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 
 ---
 
@@ -403,7 +403,7 @@ A: `pytest tests/ -v` (1,837+ 테스트, ~81% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,837+, ~81% 커버리지 |
+| 테스트 | 1,870+, ~81% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -414,6 +414,14 @@ A: `pytest tests/ -v` (1,837+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화
+
+- 🔧 **`init` 명령어 3모드 추가**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정, Phase 3 품질 설정 포함
+- 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True` 포함)
+- 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시 (`Writing content (3/7 sections)...`), RichHandler Console 공유로 이중 렌더링 제거
+- 📝 **도움말 현행화**: `--help` 통계 수정 (12 Agents, 1,870+ Tests), init `--reconfigure`/`--show` 옵션 반영
+- 🧪 **테스트 추가**: retry 정책 8개 테스트, init_helpers 43개 테스트
 
 ### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화 & 코드 품질 개선
 

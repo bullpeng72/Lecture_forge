@@ -60,7 +60,7 @@ def cli(ctx, version: bool) -> None:
     Multi-agent pipeline system with RAG-based knowledge management and multilingual support.
 
     \b
-    📊 Stats: 10 Agents | 9 Tools | 1,370+ Tests | ~$0.035 per 60min lecture
+    📊 Stats: 12 Agents | 9 Tools | 1,870+ Tests | ~$0.035 per 60min lecture
     📂 Data: ~/Documents/LectureForge/ (easily accessible folder)
     🌐 Multilingual: Auto language detection, Cross-lingual search (v0.3.2+)
     ⚡ Async I/O: 70% faster content collection with --async-mode (v0.3.4+)
@@ -73,15 +73,17 @@ def cli(ctx, version: bool) -> None:
     \b
     🎉 FIRST TIME HERE?
        Run: lecture-forge init
-       → Set up your API keys (OpenAI, Serper)
+       → Set up API keys (OpenAI, Serper), LLM provider, and quality settings
        → Creates config in ~/Documents/LectureForge/.env
+       → To reconfigure later: lecture-forge init --reconfigure
+       → To view current settings: lecture-forge init --show
 
     \b
     📚 Commands Overview:
        ┌─────────────┬──────────────────────────────────────┬────────────────────┐
        │ Command     │ Description                          │ Key Option         │
        ├─────────────┼──────────────────────────────────────┼────────────────────┤
-       │ init        │ Configure API keys (first-time)      │ --path             │
+       │ init        │ Configure API keys + LLM/quality     │ -r / -s / --path   │
        │ create      │ Generate lecture from sources        │ --image-search     │
        │ translate   │ Translate English PDF to Korean HTML │ --no-translate     │
        │ chat        │ Interactive Q&A with knowledge base  │ -kb PATH           │

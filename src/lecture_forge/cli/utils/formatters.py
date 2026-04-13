@@ -92,13 +92,17 @@ def print_basic_help() -> None:
             "[bold cyan]📚 LectureForge Pro[/bold cyan]\n\n"
             "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
             "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-            "[dim]12 Agents | 9 Tools | 9 Commands | 1,437+ Tests | ~$0.035 per 60min lecture[/dim]",
+            "[dim]12 Agents | 9 Tools | 9 Commands | 1,870+ Tests | ~$0.035 per 60min lecture[/dim]",
             border_style="cyan",
         )
     )
 
     # First-time user notice
-    console.print("\n[bold magenta]🎉 First time here?[/bold magenta] Run [bold cyan]lecture-forge init[/bold cyan] to set up your API keys!")
+    console.print(
+        "\n[bold magenta]🎉 First time here?[/bold magenta] Run [bold cyan]lecture-forge init[/bold cyan] to set up API keys, LLM provider, and quality settings!\n"
+        "  [dim]To reconfigure later: [cyan]lecture-forge init --reconfigure[/cyan]  |  "
+        "To view config: [cyan]lecture-forge init --show[/cyan][/dim]"
+    )
 
     console.print("\n[bold yellow]🚀 Quick Start:[/bold yellow]")
     console.print("  [bold cyan]1.[/bold cyan] [cyan]lecture-forge init[/cyan]                        [dim]# First-time setup (required)[/dim]")
@@ -115,8 +119,8 @@ def print_basic_help() -> None:
 
     table.add_row(
         "[bold magenta]init[/bold magenta]",
-        "[bold]Set up API keys[/bold] (first-time setup)",
-        "--path"
+        "[bold]Set up API keys + LLM/quality[/bold] settings",
+        "-r / -s / --path"
     )
     table.add_row("create", "Generate lecture materials", "--image-search")
     table.add_row("translate", "Translate English PDF to Korean HTML", "--no-translate")
@@ -154,6 +158,12 @@ def print_basic_help() -> None:
     console.print("\n[bold yellow]💡 Usage Examples:[/bold yellow]")
     console.print("  [dim]# First-time setup (interactive wizard)[/dim]")
     console.print("  $ [bold magenta]lecture-forge init[/bold magenta]")
+    console.print()
+    console.print("  [dim]# Reconfigure (keep existing values, edit per field)[/dim]")
+    console.print("  $ [bold magenta]lecture-forge init --reconfigure[/bold magenta]")
+    console.print()
+    console.print("  [dim]# Show current config (no file modification)[/dim]")
+    console.print("  $ [bold magenta]lecture-forge init --show[/bold magenta]")
     console.print()
     console.print("  [dim]# Basic usage (interactive)[/dim]")
     console.print("  $ [cyan]lecture-forge create[/cyan]")

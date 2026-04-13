@@ -8,7 +8,7 @@
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.5** | CLI 안정성 & 도움말 현행화 — init 3모드, retry 정책, create Progress 개선
+> 🚀 **v0.5.5** | CLI 안정성 & 도움말 현행화 & Ollama 지원 — init 3모드, retry 정책, create Progress 개선, 로컬 LLM
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -65,11 +65,13 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 🔧 **타입 힌트**: ~70% 타입 안정성 (340/489 함수)
 - 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
 - 📝 **프롬프트 관리**: 템플릿 기반 프롬프트 시스템
+- 🦙 **Ollama 지원** (v0.5.5+): `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성 가능
 
 ---
 
 ## 🚀 최근 개선사항 (v0.5.5)
 
+- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama` + `OLLAMA_MODEL=llama3.2`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성 가능, `create_llm()` 팩토리로 provider 추상화
 - 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정·Phase 3 품질 설정 포함
 - 🐛 **AuthenticationError 즉시 실패**: 인증·권한·404 오류는 재시도 없이 즉시 실패 처리
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 (`Writing content (3/7 sections)...`), 이중 렌더링 제거
@@ -172,13 +174,22 @@ cp .env.example .env
 
 `.env` 파일을 열어 다음 항목을 설정하세요:
 
-**필수 API 키**:
+**필수 API 키 (OpenAI 사용 시)**:
 ```bash
-# OpenAI API (필수)
+# OpenAI API (OpenAI 사용 시 필수, Ollama 사용 시 불필요)
 OPENAI_API_KEY=sk-proj-...
 
 # 검색 API (필수)
 SERPER_API_KEY=...                # 무료: 2,500회/월
+```
+
+**Ollama 로컬 LLM 사용 시** (OpenAI API 키 불필요):
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+SERPER_API_KEY=...                # 웹 검색은 여전히 필요
 ```
 
 **선택 사항**:
@@ -214,6 +225,7 @@ LectureForge는 다음 순서로 `.env` 파일을 탐색합니다:
 - **Serper**: [serper.dev](https://serper.dev/) (무료 2,500회/월)
 - **Pexels**: [pexels.com/api](https://www.pexels.com/api/) (무료)
 - **Unsplash**: [unsplash.com/developers](https://unsplash.com/developers) (무료 50회/시간)
+- **Ollama**: [ollama.com](https://ollama.com/) (무료, 로컬 실행) — `OPENAI_API_KEY` 불필요
 
 ### 3️⃣ 첫 강의 생성
 
@@ -231,7 +243,7 @@ lecture-forge create
 
 | 명령어 | 설명 | 주요 옵션 |
 |--------|------|----------|
-| **init** | 초기 설정 | `--path` |
+| **init** | 초기 설정 | `--path`, `--reconfigure/-r`, `--show/-s` |
 | **create** | 강의 생성 | `--interactive`, `--image-search`, `--quality-level`, `--existing-kb` |
 | **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
@@ -288,6 +300,8 @@ lecture-forge init
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
 | `--path PATH` | 커스텀 디렉토리 지정 | `--path /custom/path` |
+| `-r, --reconfigure` | 기존 설정 유지하며 항목별 수정 | `--reconfigure` |
+| `-s, --show` | 현재 설정값 출력 (수정 없음) | `--show` |
 
 **기본 저장 위치:**
 - **Windows**: `C:\Users\<username>\Documents\LectureForge\.env`
@@ -295,22 +309,26 @@ lecture-forge init
 
 **예제:**
 ```bash
-# 기본 위치에 설정 (권장)
+# 처음 설정 (권장)
 lecture-forge init
+
+# 특정 항목만 수정 (기존 API 키 유지)
+lecture-forge init --reconfigure
+
+# 현재 설정 확인
+lecture-forge init --show
 
 # 커스텀 디렉토리 사용
 lecture-forge init --path /my/config/dir
-
-# 현재 디렉토리에 생성
-lecture-forge init --path .
 ```
 
-**하는 일:**
-1. 필수 API 키 입력 (OpenAI, Serper)
-2. 선택적 이미지 API 설정 (Pexels, Unsplash)
-3. `.env` 파일 자동 생성
-4. 기본 설정 값 자동 설정
-5. 파일 권한 보안 설정 (Unix/Mac)
+**하는 일 (기본 모드):**
+1. 필수 API 키 입력 (OpenAI, Serper) — Ollama 사용 시 OpenAI 불필요
+2. LLM 공급자 선택 (OpenAI / Ollama)
+3. 선택적 이미지 API 설정 (Pexels, Unsplash)
+4. `.env` 파일 자동 생성
+5. 기본 설정 값 자동 설정
+6. 파일 권한 보안 설정 (Unix/Mac)
 
 ---
 
@@ -877,8 +895,9 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화
+### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 
+- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — `create_llm()` 팩토리 추상화, `BaseAgent`/`EmbeddingManager`/slides/language_utils 전체 적용, OpenAI API 키 없이 강의 생성 가능
 - 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정·Phase 3 품질 설정 포함
 - 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True`)
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시, RichHandler Console 공유로 이중 렌더링 제거

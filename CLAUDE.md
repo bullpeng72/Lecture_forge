@@ -29,10 +29,11 @@
 17. **Async I/O 지원**: 병렬 I/O 처리로 컨텐츠 수집 70% 성능 향상
 18. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
 19. **웹 기반 강의 편집기**: 3-패널 SPA 에디터 — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색 (`edit` 명령어, v0.5.0)
+20. **Ollama LLM 지원** (v0.5.5+): 로컬 LLM(`LLM_PROVIDER=ollama`)으로 OpenAI 없이 강의 생성 — `create_llm()` 팩토리로 provider 추상화, `OLLAMA_MODEL`/`OLLAMA_BASE_URL` 환경변수 설정
 
 ### 기술 스택
 - **Framework**: LangChain
-- **LLM**: OpenAI GPT-4o-mini (기본), GPT-4o (Vision)
+- **LLM**: OpenAI GPT-4o-mini (기본), GPT-4o (Vision); **Ollama** (로컬 LLM, `LLM_PROVIDER=ollama`)
 - **Vector DB**: ChromaDB (로컬)
 - **CLI**: Click, Rich, prompt-toolkit (Enhanced Input)
 - **다국어**: langdetect (언어 감지), GPT-4o-mini (번역)
@@ -316,13 +317,15 @@ lecture-forge --help
 
 | API | URL | 비용 | 용도 |
 |-----|-----|------|------|
-| **OpenAI** | [platform.openai.com](https://platform.openai.com) | 사용량 기반 | LLM, 임베딩 (필수) |
+| **OpenAI** | [platform.openai.com](https://platform.openai.com) | 사용량 기반 | LLM, 임베딩 (OpenAI 모드) |
+| **Ollama** | [ollama.com](https://ollama.com) | 무료 (로컬) | LLM, 임베딩 (Ollama 모드, 선택) |
 | **Serper** | [serper.dev](https://serper.dev) | 2,500회/월 무료 | 웹 검색 (필수) |
 | **Pexels** | [pexels.com/api](https://pexels.com/api) | 무료 | 이미지 검색 (선택) |
 | **Unsplash** | [unsplash.com/developers](https://unsplash.com/developers) | 50회/시간 무료 | 이미지 검색 (선택) |
 
 ### .env 파일 예시
 
+**OpenAI 사용 (기본)**:
 ```bash
 OPENAI_API_KEY=sk-proj-...
 DEFAULT_MODEL=gpt-4o-mini
@@ -332,6 +335,15 @@ PEXELS_API_KEY=...           # 선택
 UNSPLASH_ACCESS_KEY=...      # 선택
 QUALITY_THRESHOLD=80
 MAX_ITERATIONS=3
+```
+
+**Ollama 사용 (로컬 LLM, API 키 불필요)**:
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+SERPER_API_KEY=...           # 웹 검색용은 여전히 필요
 ```
 
 ---
@@ -415,8 +427,9 @@ A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 
 > 전체 변경 이력은 README.md 참조
 
-### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화
+### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 
+- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama` 환경변수로 로컬 LLM 사용 — `create_llm()` 팩토리 (`config.py`)로 OpenAI/Ollama provider 추상화, `OLLAMA_MODEL`/`OLLAMA_BASE_URL`/`OLLAMA_EMBEDDING_MODEL` 설정
 - 🔧 **`init` 명령어 3모드 추가**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정, Phase 3 품질 설정 포함
 - 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True` 포함)
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시 (`Writing content (3/7 sections)...`), RichHandler Console 공유로 이중 렌더링 제거

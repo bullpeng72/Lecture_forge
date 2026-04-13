@@ -6,14 +6,8 @@ from typing import Optional
 
 from langdetect import LangDetectException, detect
 
-from lecture_forge.config import Config
+from lecture_forge.config import Config, create_llm
 from lecture_forge.utils import logger
-
-# Import LLM for translation
-try:
-    from langchain_openai import ChatOpenAI
-except ImportError:
-    ChatOpenAI = None
 
 
 def detect_language(text: str, default: str = "unknown") -> str:
@@ -122,12 +116,7 @@ def translate_text(
 
     # Initialize LLM for translation
     try:
-        llm = ChatOpenAI(
-            model=model,
-            temperature=0.0,  # Deterministic translation
-            openai_api_key=Config.OPENAI_API_KEY,
-            max_tokens=2000,
-        )
+        llm = create_llm(model=model, temperature=0.0, max_tokens=2000)
 
         # Create translation prompt
         prompt = f"""Translate the following text from {source_lang_name} to {target_lang_name}.

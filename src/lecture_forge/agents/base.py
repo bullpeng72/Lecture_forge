@@ -4,10 +4,10 @@ Base agent class for common functionality.
 
 from typing import Optional
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
-from langchain_openai import ChatOpenAI
 
-from lecture_forge.config import Config
+from lecture_forge.config import Config, create_llm
 from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 from lecture_forge.utils.token_tracker import track_tokens
@@ -26,22 +26,24 @@ class BaseAgent:
         Initialize base agent.
 
         Args:
-            model: LLM model name (default: Config.DEFAULT_MODEL)
+            model: LLM model name (default: Config.DEFAULT_MODEL or Config.OLLAMA_MODEL)
             temperature: Temperature for LLM (default: Config.TEMPERATURE)
             max_tokens: Maximum tokens per LLM response (default: Config.MAX_LLM_TOKENS)
         """
-        self.model = model if model is not None else Config.DEFAULT_MODEL
+        # Resolve default model based on provider
+        if model is None:
+            model = Config.OLLAMA_MODEL if Config.LLM_PROVIDER == "ollama" else Config.DEFAULT_MODEL
+        self.model = model
         self.temperature = temperature if temperature is not None else Config.TEMPERATURE
         self.max_tokens = max_tokens if max_tokens is not None else Config.MAX_LLM_TOKENS
         self.llm = self._create_llm()
         self.agent_name = self.__class__.__name__
 
-    def _create_llm(self) -> ChatOpenAI:
-        """Create LLM instance."""
-        return ChatOpenAI(
+    def _create_llm(self) -> BaseChatModel:
+        """Create LLM instance based on configured provider."""
+        return create_llm(
             model=self.model,
             temperature=self.temperature,
-            openai_api_key=Config.OPENAI_API_KEY,
             max_tokens=self.max_tokens,
         )
 
@@ -59,10 +61,21 @@ class BaseAgent:
         """
         response = self.llm.invoke(prompt)
 
-        # Track token usage
-        if hasattr(response, "response_metadata"):
+        # Track token usage — structure differs between OpenAI and Ollama.
+        # Priority: LangChain standard usage_metadata (dict with int values)
+        #           → OpenAI response_metadata["token_usage"]
+        usage_metadata = getattr(response, "usage_metadata", None)
+        if isinstance(usage_metadata, dict):
+            track_tokens(
+                model=self.model,
+                prompt_tokens=usage_metadata.get("input_tokens", 0),
+                completion_tokens=usage_metadata.get("output_tokens", 0),
+                phase=phase,
+                agent=self.agent_name,
+            )
+        elif hasattr(response, "response_metadata"):
             metadata = response.response_metadata
-            if "token_usage" in metadata:
+            if isinstance(metadata, dict) and "token_usage" in metadata:
                 usage = metadata["token_usage"]
                 track_tokens(
                     model=self.model,

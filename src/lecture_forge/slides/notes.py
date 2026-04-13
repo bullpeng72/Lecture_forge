@@ -20,14 +20,9 @@ _MAX_CONTENT_CHARS = 400  # truncate slide text sent to LLM to save tokens
 @make_api_retry("SlideNotes")
 def _invoke_notes_llm(messages: list):
     """Invoke LLM for notes generation with retry."""
-    from langchain_openai import ChatOpenAI
+    from lecture_forge.config import create_llm
 
-    llm = ChatOpenAI(
-        model=Config.DEFAULT_MODEL,
-        temperature=0.5,
-        api_key=Config.OPENAI_API_KEY,
-        max_tokens=1000,
-    )
+    llm = create_llm(temperature=0.5, max_tokens=1000)
     return llm.invoke(messages)
 
 

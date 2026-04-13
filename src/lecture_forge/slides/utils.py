@@ -6,9 +6,8 @@ import re
 from typing import List
 
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 
-from lecture_forge.config import Config
+from lecture_forge.config import Config, create_llm
 from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 
@@ -57,12 +56,7 @@ def _truncate_bullet(text: str, max_chars: int = _MAX_BULLET_CHARS) -> str:
 @make_api_retry("Slides")
 def _invoke_llm(messages: list) -> AIMessage:
     """Invoke the slides LLM with retry logic."""
-    llm = ChatOpenAI(
-        model=Config.DEFAULT_MODEL,
-        temperature=0.3,
-        api_key=Config.OPENAI_API_KEY,
-        max_tokens=800,
-    )
+    llm = create_llm(temperature=0.3, max_tokens=800)
     return llm.invoke(messages)
 
 

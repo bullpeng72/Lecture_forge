@@ -39,7 +39,7 @@ def mock_openai_response():
 @pytest.fixture
 def mock_llm(mock_openai_response):
     """Mock LangChain LLM."""
-    with patch("lecture_forge.agents.base.ChatOpenAI") as mock:
+    with patch("lecture_forge.agents.base.create_llm") as mock:
         mock_instance = MagicMock()
         mock_instance.invoke.return_value = mock_openai_response
         mock.return_value = mock_instance

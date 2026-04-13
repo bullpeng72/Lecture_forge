@@ -4,8 +4,6 @@ Embedding generation and management.
 
 from typing import List
 
-from langchain_openai import OpenAIEmbeddings
-
 from lecture_forge.config import Config
 from lecture_forge.utils import logger
 
@@ -17,16 +15,35 @@ class EmbeddingManager:
         """
         Initialize embedding manager.
 
-        Args:
-            model: Embedding model name (default: Config.EMBEDDING_MODEL)
-        """
-        self.model = model or Config.EMBEDDING_MODEL
-        logger.info(f"Initializing embedding manager with model: {self.model}")
+        Automatically selects the embedding backend based on LLM_PROVIDER:
+          - openai  → OpenAIEmbeddings (text-embedding-3-small by default)
+          - ollama  → OllamaEmbeddings (nomic-embed-text by default)
 
-        self.embeddings = OpenAIEmbeddings(
-            model=self.model,
-            openai_api_key=Config.OPENAI_API_KEY,
-        )
+        Args:
+            model: Embedding model name (default: provider-specific default)
+        """
+        if Config.LLM_PROVIDER == "ollama":
+            self.model = model or Config.OLLAMA_EMBEDDING_MODEL
+            logger.info(f"Initializing Ollama embedding manager with model: {self.model}")
+            try:
+                from langchain_ollama import OllamaEmbeddings
+            except ImportError as exc:
+                raise ImportError(
+                    "langchain-ollama is required for Ollama support.\n"
+                    "Install with: pip install langchain-ollama"
+                ) from exc
+            self.embeddings = OllamaEmbeddings(
+                model=self.model,
+                base_url=Config.OLLAMA_BASE_URL,
+            )
+        else:
+            from langchain_openai import OpenAIEmbeddings
+            self.model = model or Config.EMBEDDING_MODEL
+            logger.info(f"Initializing OpenAI embedding manager with model: {self.model}")
+            self.embeddings = OpenAIEmbeddings(
+                model=self.model,
+                openai_api_key=Config.OPENAI_API_KEY,
+            )
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """

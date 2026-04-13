@@ -245,12 +245,22 @@ class Config:
     # Templates are always in the package directory
     TEMPLATES_DIR = Path(__file__).parent / "templates"
 
+    # ===== LLM Provider =====
+    # "openai" (default) or "ollama" (local)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai")
+
     # ===== OpenAI API =====
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
     VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     TEMPERATURE: float = _env_float("TEMPERATURE", 0.7)
+
+    # ===== Ollama (local LLM) =====
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
+    OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+    OLLAMA_VISION_MODEL: str = os.getenv("OLLAMA_VISION_MODEL", "llama3.2-vision")
 
     # ===== Search API =====
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")
@@ -516,15 +526,15 @@ class Config:
 
             errors.append(error_msg)
 
-        # Required keys
-        if not cls.OPENAI_API_KEY:
-            errors.append(
-                "❌ OPENAI_API_KEY is required\n"
-                "   Get your key from: https://platform.openai.com"
-            )
-        else:
-            # Validate OpenAI API key format
-            if not (
+        # Required keys — OpenAI key only needed when using OpenAI provider
+        if cls.LLM_PROVIDER == "openai":
+            if not cls.OPENAI_API_KEY:
+                errors.append(
+                    "❌ OPENAI_API_KEY is required\n"
+                    "   Get your key from: https://platform.openai.com\n"
+                    "   (To use a local LLM instead, set LLM_PROVIDER=ollama in your .env)"
+                )
+            elif not (
                 cls.OPENAI_API_KEY.startswith(("sk-", "sk-proj-"))
                 and len(cls.OPENAI_API_KEY) > 20
             ):
@@ -623,3 +633,53 @@ class Config:
         cls.VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
         (cls.DATA_DIR / "images").mkdir(parents=True, exist_ok=True)
         (cls.DATA_DIR / "cache").mkdir(parents=True, exist_ok=True)
+
+
+def create_llm(
+    model: Optional[str] = None,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+):
+    """
+    Create a LangChain chat LLM based on the configured LLM_PROVIDER.
+
+    Returns ChatOllama when LLM_PROVIDER=ollama, ChatOpenAI otherwise.
+    All parameters fall back to Config values when not specified.
+
+    Args:
+        model: Override model name
+        temperature: Override temperature
+        max_tokens: Override max tokens per response
+
+    Returns:
+        BaseChatModel instance (ChatOpenAI or ChatOllama)
+    """
+    temp = temperature if temperature is not None else Config.TEMPERATURE
+    tokens = max_tokens if max_tokens is not None else Config.MAX_LLM_TOKENS
+
+    if Config.LLM_PROVIDER == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError as exc:
+            raise ImportError(
+                "langchain-ollama is required for Ollama support.\n"
+                "Install with: pip install langchain-ollama"
+            ) from exc
+
+        mdl = model if model is not None else Config.OLLAMA_MODEL
+        return ChatOllama(
+            model=mdl,
+            base_url=Config.OLLAMA_BASE_URL,
+            temperature=temp,
+            num_predict=tokens,  # Ollama uses num_predict instead of max_tokens
+        )
+    else:
+        from langchain_openai import ChatOpenAI
+
+        mdl = model if model is not None else Config.DEFAULT_MODEL
+        return ChatOpenAI(
+            model=mdl,
+            temperature=temp,
+            openai_api_key=Config.OPENAI_API_KEY,
+            max_tokens=tokens,
+        )

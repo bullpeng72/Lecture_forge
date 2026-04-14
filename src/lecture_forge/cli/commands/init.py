@@ -68,9 +68,10 @@ def init(path: Optional[str], reconfigure: bool, show: bool) -> None:
 
     \b
     Setup Phases:
-      Phase 1 — API Keys   (OpenAI, Serper 필수 / Pexels, Unsplash 선택)
-      Phase 2 — LLM 설정   (provider, 모델, temperature)
+      Phase 1 — LLM 설정   (provider, 모델, temperature)
+      Phase 2 — API Keys   (OpenAI*, Serper 필수 / Pexels, Unsplash 선택)
       Phase 3 — 품질 설정  (품질 레벨, 최대 반복 횟수)
+      * Ollama 모드 시 OpenAI Key 불필요
 
     \b
     Examples:
@@ -145,11 +146,14 @@ def init(path: Optional[str], reconfigure: bool, show: bool) -> None:
                 f"({len(current_env)}개 설정).[/dim]\n"
             )
 
-            # Phase 1 — API Keys (with current defaults)
-            api_keys = collect_api_keys_reconfigure(console, prompt_masked_input, current_env)
-
-            # Phase 2 — LLM Settings
+            # Phase 1 — LLM Settings (provider must be known before API key collection)
             llm_settings = collect_llm_settings(console, current=current_env)
+            provider = llm_settings.get("LLM_PROVIDER", "openai")
+
+            # Phase 2 — API Keys (OpenAI skipped for Ollama)
+            api_keys = collect_api_keys_reconfigure(
+                console, prompt_masked_input, current_env, provider=provider
+            )
 
             # Phase 3 — Quality Settings
             quality_settings = collect_quality_settings(console, current=current_env)
@@ -205,11 +209,12 @@ def init(path: Optional[str], reconfigure: bool, show: bool) -> None:
         console.print(f"[red]❌ 디렉토리 생성 실패: {e}[/red]\n")
         sys.exit(1)
 
-    # ── Phase 1: API Keys ─────────────────────────────────
-    api_keys = collect_all_api_keys(console, prompt_masked_input)
-
-    # ── Phase 2: LLM Settings ────────────────────────────
+    # ── Phase 1: LLM Settings (provider must be known before API key collection) ──
     llm_settings = collect_llm_settings(console)
+    provider = llm_settings.get("LLM_PROVIDER", "openai")
+
+    # ── Phase 2: API Keys (OpenAI skipped for Ollama) ────
+    api_keys = collect_all_api_keys(console, prompt_masked_input, provider=provider)
 
     # ── Phase 3: Quality Settings ─────────────────────────
     quality_settings = collect_quality_settings(console)

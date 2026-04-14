@@ -169,6 +169,24 @@ class TestCollectAllAPIKeys:
         assert result["pexels"] == "pexels789"
         assert result["unsplash"] == "unsplash456"
 
+    def test_ollama_provider_skips_openai_key(self):
+        """Test that Ollama mode skips OpenAI key prompt."""
+        console = MagicMock()
+        prompt_fn = MagicMock(
+            side_effect=[
+                "serper123456",  # Serper (first — OpenAI skipped)
+                "",              # Pexels (skip)
+                "",              # Unsplash (skip)
+            ]
+        )
+
+        result = collect_all_api_keys(console, prompt_fn, provider="ollama")
+
+        assert result["openai"] is None
+        assert result["serper"] == "serper123456"
+        # Exactly 3 calls — OpenAI was never prompted
+        assert prompt_fn.call_count == 3
+
 
 class TestTemplateGeneration:
     """Test template generation and population."""
@@ -459,15 +477,46 @@ class TestCollectLlmSettings:
             side_effect=[
                 "ollama",
                 "http://localhost:11434",
-                "llama3.2",
+                "qwen3.5:9b",
                 "nomic-embed-text",
+                "auto",           # OLLAMA_THINKING
                 "0.5",
             ],
         ):
             result = collect_llm_settings(console)
         assert result["LLM_PROVIDER"] == "ollama"
-        assert result["OLLAMA_MODEL"] == "llama3.2"
+        assert result["OLLAMA_MODEL"] == "qwen3.5:9b"
+        assert result["OLLAMA_THINKING"] == "auto"
         assert result["TEMPERATURE"] == "0.5"
+
+    def test_ollama_thinking_stored(self):
+        """Test that OLLAMA_THINKING setting is stored correctly."""
+        from lecture_forge.cli.commands.init_helpers import collect_llm_settings
+        console = MagicMock()
+        with patch(
+            "lecture_forge.cli.commands.init_helpers.Prompt.ask",
+            side_effect=[
+                "ollama",
+                "http://localhost:11434",
+                "qwen3.5:9b",
+                "nomic-embed-text",
+                "true",           # thinking always on
+                "0.7",
+            ],
+        ):
+            result = collect_llm_settings(console)
+        assert result["OLLAMA_THINKING"] == "true"
+
+    def test_ollama_thinking_not_in_openai_settings(self):
+        """Test that OLLAMA_THINKING is absent for OpenAI provider."""
+        from lecture_forge.cli.commands.init_helpers import collect_llm_settings
+        console = MagicMock()
+        with patch(
+            "lecture_forge.cli.commands.init_helpers.Prompt.ask",
+            side_effect=["openai", "gpt-4o-mini", "0.7"],
+        ):
+            result = collect_llm_settings(console)
+        assert "OLLAMA_THINKING" not in result
 
     def test_invalid_temperature_retried(self):
         from lecture_forge.cli.commands.init_helpers import collect_llm_settings
@@ -547,3 +596,47 @@ class TestCollectQualitySettings:
             collect_quality_settings(console, current=current)
         # Default for level prompt should be "strict" (mapped from 90)
         assert mock_ask.call_args_list[0][1]["default"] == "strict"
+
+
+class TestCollectApiKeysReconfigure:
+    """Tests for collect_api_keys_reconfigure."""
+
+    def test_openai_mode_prompts_for_openai_key(self):
+        """OpenAI mode asks for OpenAI key."""
+        from lecture_forge.cli.commands.init_helpers import collect_api_keys_reconfigure
+        console = MagicMock()
+        prompt_fn = MagicMock(side_effect=["", "", "", ""])  # keep all existing
+        current = {
+            "OPENAI_API_KEY": "sk-proj-existing",
+            "SERPER_API_KEY": "serper-existing",
+        }
+        result = collect_api_keys_reconfigure(console, prompt_fn, current, provider="openai")
+        # All 4 keys prompted (openai, serper, pexels, unsplash)
+        assert prompt_fn.call_count == 4
+        # Kept existing values
+        assert result["openai"] == "sk-proj-existing"
+
+    def test_ollama_mode_skips_openai_prompt(self):
+        """Ollama mode preserves existing OpenAI key without prompting."""
+        from lecture_forge.cli.commands.init_helpers import collect_api_keys_reconfigure
+        console = MagicMock()
+        prompt_fn = MagicMock(side_effect=["", "", ""])  # serper, pexels, unsplash only
+        current = {
+            "OPENAI_API_KEY": "sk-proj-existing",
+            "SERPER_API_KEY": "serper-existing",
+        }
+        result = collect_api_keys_reconfigure(console, prompt_fn, current, provider="ollama")
+        # Only 3 prompts (serper, pexels, unsplash) — OpenAI was not prompted
+        assert prompt_fn.call_count == 3
+        # Existing OpenAI key preserved
+        assert result["openai"] == "sk-proj-existing"
+
+    def test_ollama_mode_no_existing_openai_key(self):
+        """Ollama mode with no existing OpenAI key returns empty string."""
+        from lecture_forge.cli.commands.init_helpers import collect_api_keys_reconfigure
+        console = MagicMock()
+        prompt_fn = MagicMock(side_effect=["serper123456", "", ""])
+        current = {}
+        result = collect_api_keys_reconfigure(console, prompt_fn, current, provider="ollama")
+        assert result["openai"] == ""
+        assert result["serper"] == "serper123456"

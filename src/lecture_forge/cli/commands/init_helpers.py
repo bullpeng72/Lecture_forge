@@ -147,20 +147,30 @@ def collect_unsplash_key(console: Console, prompt_fn) -> Optional[str]:
     return unsplash_key
 
 
-def collect_all_api_keys(console: Console, prompt_fn) -> Dict[str, Optional[str]]:
+def collect_all_api_keys(
+    console: Console,
+    prompt_fn,
+    provider: str = "openai",
+) -> Dict[str, Optional[str]]:
     """
     Collect all API keys (required and optional).
 
     Args:
         console: Rich console for output
         prompt_fn: Function to prompt for masked input
+        provider: LLM provider ("openai" or "ollama"). When "ollama",
+                  OpenAI API key collection is skipped.
 
     Returns:
         Dictionary of API keys
     """
     console.print("[bold cyan]📝 Required API Keys[/bold cyan]\n")
 
-    openai_key = collect_openai_key(console, prompt_fn)
+    if provider == "ollama":
+        console.print("   [dim]Ollama 모드: OpenAI API Key 불필요 — 건너뜁니다[/dim]\n")
+        openai_key = None
+    else:
+        openai_key = collect_openai_key(console, prompt_fn)
     serper_key = collect_serper_key(console, prompt_fn)
 
     console.print("[bold cyan]📸 Optional: Image Search APIs[/bold cyan]")
@@ -423,6 +433,7 @@ def collect_api_keys_reconfigure(
     console: Console,
     prompt_fn,
     current: Dict[str, str],
+    provider: str = "openai",
 ) -> Dict[str, Optional[str]]:
     """
     Collect API keys in reconfigure mode.
@@ -434,6 +445,8 @@ def collect_api_keys_reconfigure(
         console: Rich Console instance
         prompt_fn: ``prompt_masked_input`` callable
         current: Existing env vars loaded from .env
+        provider: LLM provider ("openai" or "ollama"). When "ollama",
+                  OpenAI API key prompt is skipped (existing value preserved).
 
     Returns:
         Dict with keys ``openai``, ``serper``, ``pexels``, ``unsplash``
@@ -461,11 +474,16 @@ def collect_api_keys_reconfigure(
                     return cur
         return new_val
 
-    openai_key = _prompt_key(
-        "OpenAI API Key",
-        "OPENAI_API_KEY",
-        validator=lambda k: k.startswith(("sk-", "sk-proj-")),
-    )
+    if provider == "ollama":
+        # Preserve existing OpenAI key silently; no prompt needed for Ollama
+        openai_key = current.get("OPENAI_API_KEY", "")
+        console.print("   [dim]Ollama 모드: OpenAI API Key 건너뜀 (기존 값 유지)[/dim]")
+    else:
+        openai_key = _prompt_key(
+            "OpenAI API Key",
+            "OPENAI_API_KEY",
+            validator=lambda k: k.startswith(("sk-", "sk-proj-")),
+        )
     serper_key = _prompt_key(
         "Serper API Key",
         "SERPER_API_KEY",
@@ -527,13 +545,30 @@ def collect_llm_settings(
         base_url = Prompt.ask("   Ollama Base URL", default=cur_url, console=console)
         settings["OLLAMA_BASE_URL"] = base_url.strip() or cur_url
 
-        cur_model = cur.get("OLLAMA_MODEL", "llama3.2")
-        model = Prompt.ask("   Ollama 모델명", default=cur_model, console=console)
+        cur_model = cur.get("OLLAMA_MODEL", "qwen3.5:9b")
+        model = Prompt.ask(
+            "   Ollama 모델명 [dim](추천: qwen3.5:9b · qwen3:14b · exaone3.5:7.8b)[/dim]",
+            default=cur_model,
+            console=console,
+        )
         settings["OLLAMA_MODEL"] = model.strip() or cur_model
 
         cur_embed = cur.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-        embed = Prompt.ask("   Ollama 임베딩 모델", default=cur_embed, console=console)
+        embed = Prompt.ask(
+            "   Ollama 임베딩 모델 [dim](추천: nomic-embed-text · mxbai-embed-large)[/dim]",
+            default=cur_embed,
+            console=console,
+        )
         settings["OLLAMA_EMBEDDING_MODEL"] = embed.strip() or cur_embed
+
+        cur_thinking = cur.get("OLLAMA_THINKING", "auto")
+        thinking = Prompt.ask(
+            "   Thinking 모드 [dim](auto: qwen3/qwq/deepseek-r1 자동 감지)[/dim]",
+            choices=["auto", "true", "false"],
+            default=cur_thinking,
+            console=console,
+        )
+        settings["OLLAMA_THINKING"] = thinking
     else:
         cur_model = cur.get("DEFAULT_MODEL", "gpt-4o-mini")
         preset_hint = "/".join(_OPENAI_MODEL_PRESETS)
@@ -679,8 +714,9 @@ def show_current_config(console: Console, env_path: Path) -> None:
     llm_table.add_row("Provider", f"[cyan]{provider}[/cyan]")
     if provider == "ollama":
         llm_table.add_row("Ollama Base URL", env.get("OLLAMA_BASE_URL", "http://localhost:11434"))
-        llm_table.add_row("Ollama 모델", env.get("OLLAMA_MODEL", "llama3.2"))
+        llm_table.add_row("Ollama 모델", env.get("OLLAMA_MODEL", "qwen3.5:9b"))
         llm_table.add_row("Ollama 임베딩", env.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"))
+        llm_table.add_row("Thinking 모드", env.get("OLLAMA_THINKING", "auto"))
     else:
         llm_table.add_row("기본 모델", env.get("DEFAULT_MODEL", "gpt-4o-mini"))
         llm_table.add_row("Vision 모델", env.get("VISION_MODEL", "gpt-4o"))

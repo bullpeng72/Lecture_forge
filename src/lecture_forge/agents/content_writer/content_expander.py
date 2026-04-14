@@ -96,7 +96,7 @@ class ContentExpander(BaseAgent):
             model: LLM model name (default: Config.DEFAULT_MODEL)
             temperature: Temperature for LLM (default: Config.TEMPERATURE)
         """
-        super().__init__(model=model, temperature=temperature)
+        super().__init__(model=model, temperature=temperature, thinking=False)
         self.vector_store = vector_store
 
     def expand_content(

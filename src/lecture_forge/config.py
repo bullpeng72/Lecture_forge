@@ -260,6 +260,17 @@ class Config:
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
     OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+    # Thinking mode: "auto" (enable for known reasoning models), "true", "false"
+    OLLAMA_THINKING: str = os.getenv("OLLAMA_THINKING", "auto")
+
+    # Model name patterns that support thinking / chain-of-thought mode
+    _THINKING_PATTERNS: tuple = ("qwen3", "qwq", "deepseek-r1", "r1-", "phi4-reasoning")
+
+    @classmethod
+    def is_thinking_model(cls, model_name: str) -> bool:
+        """Return True if model_name matches a known thinking-capable pattern."""
+        name = model_name.lower()
+        return any(p in name for p in cls._THINKING_PATTERNS)
 
     # ===== Search API =====
     SERPER_API_KEY: Optional[str] = os.getenv("SERPER_API_KEY")
@@ -638,6 +649,7 @@ def create_llm(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
+    thinking: Optional[bool] = None,
 ):
     """
     Create a LangChain chat LLM based on the configured LLM_PROVIDER.
@@ -649,6 +661,8 @@ def create_llm(
         model: Override model name
         temperature: Override temperature
         max_tokens: Override max tokens per response
+        thinking: Enable/disable thinking mode for Ollama (None = use OLLAMA_THINKING config).
+                  True forces on, False forces off, None uses auto-detection.
 
     Returns:
         BaseChatModel instance (ChatOpenAI or ChatOllama)
@@ -666,12 +680,28 @@ def create_llm(
             ) from exc
 
         mdl = model if model is not None else Config.OLLAMA_MODEL
-        return ChatOllama(
+
+        # Resolve thinking mode
+        if thinking is True:
+            use_thinking = True
+        elif thinking is False:
+            use_thinking = False
+        elif Config.OLLAMA_THINKING == "true":
+            use_thinking = True
+        elif Config.OLLAMA_THINKING == "auto":
+            use_thinking = Config.is_thinking_model(mdl)
+        else:  # "false"
+            use_thinking = False
+
+        ollama_kwargs: dict = dict(
             model=mdl,
             base_url=Config.OLLAMA_BASE_URL,
             temperature=temp,
             num_predict=tokens,  # Ollama uses num_predict instead of max_tokens
         )
+        if use_thinking:
+            ollama_kwargs["think"] = True
+        return ChatOllama(**ollama_kwargs)
     else:
         from langchain_openai import ChatOpenAI
 

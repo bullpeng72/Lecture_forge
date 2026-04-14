@@ -2,6 +2,7 @@
 Base agent class for common functionality.
 """
 
+import re
 from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
@@ -13,6 +14,16 @@ from lecture_forge.utils.retry import make_api_retry
 from lecture_forge.utils.token_tracker import track_tokens
 
 
+def _strip_think_block(text: str) -> str:
+    """Remove <think>...</think> blocks produced by reasoning models (Qwen3, DeepSeek-R1 etc.).
+
+    The thinking content is discarded; only the final answer is returned.
+    If no think block is present the original text is returned unchanged.
+    """
+    cleaned = re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
+    return cleaned.strip()
+
+
 class BaseAgent:
     """Base class for all agents."""
 
@@ -21,6 +32,7 @@ class BaseAgent:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        thinking: Optional[bool] = None,
     ) -> None:
         """
         Initialize base agent.
@@ -29,6 +41,9 @@ class BaseAgent:
             model: LLM model name (default: Config.DEFAULT_MODEL or Config.OLLAMA_MODEL)
             temperature: Temperature for LLM (default: Config.TEMPERATURE)
             max_tokens: Maximum tokens per LLM response (default: Config.MAX_LLM_TOKENS)
+            thinking: Enable/disable Ollama thinking mode.
+                      None = use OLLAMA_THINKING config (auto-detect),
+                      True = force on, False = force off.
         """
         # Resolve default model based on provider
         if model is None:
@@ -36,6 +51,7 @@ class BaseAgent:
         self.model = model
         self.temperature = temperature if temperature is not None else Config.TEMPERATURE
         self.max_tokens = max_tokens if max_tokens is not None else Config.MAX_LLM_TOKENS
+        self.thinking = thinking
         self.llm = self._create_llm()
         self.agent_name = self.__class__.__name__
 
@@ -45,6 +61,7 @@ class BaseAgent:
             model=self.model,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            thinking=self.thinking,
         )
 
     @make_api_retry()
@@ -60,6 +77,13 @@ class BaseAgent:
             LLM response
         """
         response = self.llm.invoke(prompt)
+
+        # Strip <think>...</think> blocks emitted by reasoning models.
+        # The block is removed in-place so downstream code sees only the
+        # final answer.  Works for Qwen3, DeepSeek-R1, etc.
+        if isinstance(getattr(response, "content", None), str) and "<think>" in response.content:
+            response.content = _strip_think_block(response.content)
+            logger.debug(f"[{self.agent_name}] Stripped <think> block from response")
 
         # Track token usage — structure differs between OpenAI and Ollama.
         # Priority: LangChain standard usage_metadata (dict with int values)

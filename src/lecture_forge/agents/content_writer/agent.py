@@ -235,7 +235,7 @@ class ContentWriterAgent(BaseAgent):
         Args:
             vector_store: Vector store for RAG queries
         """
-        super().__init__()
+        super().__init__(thinking=False)  # per-section calls: speed > deep reasoning
         logger.info("Initializing Content Writer Agent")
         self.vector_store = vector_store
 

@@ -263,8 +263,9 @@ class Config:
     # Thinking mode: "auto" (enable for known reasoning models), "true", "false"
     OLLAMA_THINKING: str = os.getenv("OLLAMA_THINKING", "auto")
 
-    # Model name patterns that support thinking / chain-of-thought mode
-    _THINKING_PATTERNS: tuple = ("qwen3", "qwq", "deepseek-r1", "r1-", "phi4-reasoning")
+    # Model name patterns that support thinking / chain-of-thought mode.
+    # Covers: Qwen3/3.5, QwQ, DeepSeek-R1 (full + distill variants), Phi-4 Reasoning.
+    _THINKING_PATTERNS: tuple = ("qwen3", "qwq", "deepseek-r1", "r1-distill", "phi4-reasoning")
 
     @classmethod
     def is_thinking_model(cls, model_name: str) -> bool:

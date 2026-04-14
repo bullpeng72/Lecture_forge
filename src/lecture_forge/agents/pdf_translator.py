@@ -32,7 +32,7 @@ class PDFTranslatorAgent(BaseAgent):
     TRANSLATION_TOKEN_LIMIT = 2500  # word count per LLM call
 
     def __init__(self, pdf_path: str) -> None:
-        super().__init__()
+        super().__init__(thinking=False)
         self.pdf_path = str(Path(pdf_path).resolve())
         self.image_selector = ImageSelector()
 

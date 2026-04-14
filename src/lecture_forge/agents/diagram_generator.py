@@ -18,7 +18,7 @@ class DiagramGeneratorAgent(BaseAgent):
     """Agent for generating Mermaid diagrams."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(thinking=False)
         self.validator = MermaidValidator()
         logger.info("Initializing Diagram Generator Agent with validator")
 

@@ -24,7 +24,7 @@ class HTMLAssemblerAgent(BaseAgent):
     """Agent for assembling final HTML output."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(thinking=False)
         logger.info("Initializing HTML Assembler Agent")
         templates_dir = Path(__file__).parent.parent / "templates"
         self.jinja_env = Environment(

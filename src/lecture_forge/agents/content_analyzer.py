@@ -26,7 +26,7 @@ class ContentAnalyzerAgent(BaseAgent):
         Args:
             vector_store: Vector store to query for content
         """
-        super().__init__()
+        super().__init__(thinking=False)
         logger.info("Initializing Content Analyzer Agent")
         self.vector_store = vector_store
 

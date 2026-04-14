@@ -15,7 +15,7 @@ class RevisionAgent(BaseAgent):
     """Agent for revising lecture content."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(thinking=False)
         logger.info("Initializing Revision Agent")
 
     def revise(self, lecture: Lecture, evaluation: EvaluationResult) -> Lecture:

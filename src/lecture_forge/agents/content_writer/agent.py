@@ -1282,6 +1282,12 @@ class ContentWriterAgent(BaseAgent):
         Returns revised content, or original if review fails or produces something shorter.
         """
         original_word_count = len(content.split())
+
+        # Skip RMC review if the initial content is empty — nothing to review
+        if original_word_count == 0:
+            logger.warning("RMC content review skipped: initial content is empty")
+            return content
+
         # Slice content to avoid token overload while keeping enough for review
         content_slice = content[:4000] if len(content) > 4000 else content
         truncated_note = f"\n[Note: content truncated to 4000 chars for review; full word count: {original_word_count}]" if len(content) > 4000 else ""

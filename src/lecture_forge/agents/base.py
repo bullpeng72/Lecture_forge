@@ -82,8 +82,14 @@ class BaseAgent:
         # The block is removed in-place so downstream code sees only the
         # final answer.  Works for Qwen3, DeepSeek-R1, etc.
         if isinstance(getattr(response, "content", None), str) and "<think>" in response.content:
+            before_len = len(response.content)
             response.content = _strip_think_block(response.content)
             logger.debug(f"[{self.agent_name}] Stripped <think> block from response")
+            if not response.content.strip():
+                logger.warning(
+                    f"[{self.agent_name}] Response is empty after stripping <think> block "
+                    f"({before_len} chars before strip). Model may need think=False explicitly."
+                )
 
         # Track token usage — structure differs between OpenAI and Ollama.
         # Priority: LangChain standard usage_metadata (dict with int values)

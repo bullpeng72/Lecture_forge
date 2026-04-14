@@ -73,7 +73,7 @@ def translate_text(
     text: str,
     target_language: str,
     source_language: Optional[str] = None,
-    model: str = "gpt-4o-mini",
+    model: Optional[str] = None,
 ) -> str:
     """
     Translate text to target language using LLM.

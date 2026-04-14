@@ -700,10 +700,12 @@ def create_llm(
             temperature=temp,
             num_predict=tokens,  # Ollama uses num_predict instead of max_tokens
         )
-        # Always set "think" explicitly so agents that pass thinking=False
-        # suppress the model's built-in thinking behavior (e.g. qwen3.5 defaults
-        # to thinking=ON — omitting the key causes blank responses).
-        ollama_kwargs["think"] = use_thinking
+        # Always set "reasoning" explicitly (langchain_ollama uses "reasoning",
+        # not "think" — passing "think" is silently ignored).
+        # reasoning=False disables thinking; reasoning=True enables it and
+        # separates <think> content into additional_kwargs["reasoning_content"]
+        # so response.content is always clean.
+        ollama_kwargs["reasoning"] = use_thinking
         return ChatOllama(**ollama_kwargs)
     else:
         from langchain_openai import ChatOpenAI

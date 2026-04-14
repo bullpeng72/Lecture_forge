@@ -88,7 +88,7 @@ class BaseAgent:
             if not response.content.strip():
                 logger.warning(
                     f"[{self.agent_name}] Response is empty after stripping <think> block "
-                    f"({before_len} chars before strip). Model may need think=False explicitly."
+                    f"({before_len} chars). Check that reasoning=False is passed to ChatOllama."
                 )
 
         # Track token usage — structure differs between OpenAI and Ollama.

@@ -486,6 +486,10 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.7: Code Quality — Unused Import Cleanup
+
+- **20-file unused import removal** (techdebt safe fix): Removed confirmed-unused imports across `slides/notes.py`, `slides/section_rewriter.py`, `slides/utils.py`, `tools/async_web_scraper.py`, `tools/image_extractor.py`, `utils/language_utils.py`, `utils/prompt_manager.py`, `agents/content_writer/agent.py`, `agents/content_writer/image_selector.py`, `agents/content_writer/content_expander.py`, `agents/curriculum_designer.py`, `agents/qa_agent.py`, `models/curriculum.py`, and all `cli/commands/*.py`. Removed unneeded `typing` aliases (Dict, Optional, List), Rich components (Panel, Prompt, Table), `pathlib.Path`, and internal utility imports that were no longer referenced. No functional changes — 540 tests pass (4 pre-existing failures in `slides/test_utils.py` unrelated).
+
 ### v0.5.6: Ollama Compatibility Fix & Docs Accuracy
 
 - **`PDFImageDescriber` Ollama compatibility** (bug fix): `tools/pdf_image_describer.py` hardcoded `from openai import OpenAI` — when `LLM_PROVIDER=ollama`, calling `translate` caused HTTP 401 on every image description call. Fixed by replacing direct OpenAI client with `create_llm(temperature=0.3, max_tokens=300, thinking=False)`. This tool is text-only (page text → image description inference, no Vision), so all providers work. Cost estimation now gated on `Config.LLM_PROVIDER == "openai"`.
@@ -592,4 +596,4 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 ---
 
 **Last Updated**: 2026-04-15
-**Version**: 0.5.6
+**Version**: 0.5.7

@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.7-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.6** | PDFImageDescriber Ollama 호환, TokenTracker Ollama 모델명 오표시 수정, README FAQ Ollama 반영
+> 🚀 **v0.5.7** | 미사용 import 20개 파일 정리 (techdebt safe fixes)
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -69,12 +69,9 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.6)
+## 🚀 최근 개선사항 (v0.5.7)
 
-- 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 Ollama 모드에서 OpenAI API 직접 호출 → 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체
-- 🐛 **토큰 사용량 Ollama 모델명 오표시 수정**: Ollama 모델(`qwen3.5:9b`, `llama3.2` 등)이 `gpt-4o-mini`로 잘못 표시되던 버그 수정 — 원본 모델명 유지, 비용 $0.00, 로컬 LLM 안내 표시
-- 📝 **README FAQ Ollama 반영**: API 키 필수 여부를 OpenAI/Ollama 모드별로 구분, 비용·오프라인 FAQ 현행화
-- 📝 **docs/ 현행화**: api/cli.md ToC 구조 수정, `select_pdf_files` 문서화, `generate_lecture()` 반환값 추가
+- 🧹 **미사용 import 20개 파일 정리**: slides/notes·section_rewriter·utils, tools/async_web_scraper·image_extractor, utils/language_utils·prompt_manager, agents/content_writer·curriculum_designer·qa_agent, models/curriculum, cli/commands 전체 — 불필요한 typing/rich/pathlib import 제거 (기능 변경 없음)
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -898,6 +895,10 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.7 (2026-04-15) - 🧹 코드 품질 개선
+
+- 🧹 **미사용 import 20개 파일 정리**: slides/notes·section_rewriter·utils, tools/async_web_scraper·image_extractor, utils/language_utils·prompt_manager, agents/content_writer·curriculum_designer·qa_agent, models/curriculum, cli/commands 전체 — 불필요한 typing/rich/pathlib import 제거 (기능 변경 없음)
 
 ### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
 

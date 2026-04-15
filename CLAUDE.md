@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.6 | **최종 수정**: 2026-04-15
+> **버전**: 0.5.7 | **최종 수정**: 2026-04-15
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -426,6 +426,10 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.7 (2026-04-15) - 🧹 코드 품질 개선 (Techdebt Safe Fixes)
+
+- 🧹 **미사용 import 20개 파일 제거**: slides/notes·section_rewriter·utils, tools/async_web_scraper·image_extractor, utils/language_utils·prompt_manager, agents/content_writer·curriculum_designer·qa_agent, models/curriculum, cli/commands 전체 — 불필요한 typing/rich/pathlib import 정리 (기능 변경 없음)
 
 ### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
 

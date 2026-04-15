@@ -434,6 +434,9 @@ A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 - 🐛 **Ollama reasoning 파라미터 수정**: `ChatOllama`에 `think=` 대신 `reasoning=` 사용 — 이전엔 silently ignored로 thinking이 꺼지지 않던 버그 수정
 - 🐛 **gpt-4o-mini 404 수정**: `language_utils.translate_text(model=None)` — Ollama 모드에서 `create_llm("gpt-4o-mini")` 호출로 404 발생하던 버그 수정
 - ⚡ **5개 에이전트 thinking=False 고정**: ContentAnalyzer·DiagramGenerator·HTMLAssembler·RevisionAgent·PDFTranslator — reasoning 불필요한 에이전트의 불필요한 thinking 제거
+- 🐛 **slides 모듈 thinking=False**: `section_rewriter`·`notes`·`utils` — `num_predict=800~1000`에서 qwen3.5 thinking이 전체 토큰 소비 → empty result 후 원문 사용 버그 수정
+- 🐛 **`language_utils.translate_text` thinking=False**: `max_tokens=2000`에서 thinking phase가 토큰 전부 소비 → 번역 결과 빈 문자열 버그 수정
+- 🔧 **4개 에이전트 thinking=False 방어적 고정**: ContentCollector·ImageCollector·AsyncBase + content_writer/ContentExpander — invoke_llm 미사용이지만 일관성 확보
 - 🔧 **`init` LLM-first 설정 순서**: Phase 1=LLM 설정, Phase 2=API 키 (Ollama 모드시 OpenAI 키 자동 스킵), Phase 3=품질 — provider 먼저 선택 후 관련 API 키 수집
 - 🔧 **`init` 명령어 3모드 추가**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정, Phase 3 품질 설정 포함
 - ✏️ **`improve --to-slides` 노트 기본 포함**: `--with-notes` 제거, 발표자 노트 기본 ON — `--without-notes`로 opt-out

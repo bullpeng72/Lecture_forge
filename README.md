@@ -78,6 +78,8 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - ✏️ **`improve --to-slides` 노트 기본 포함**: 발표자 노트 ON by default, `--without-notes`로 opt-out
 - 🐛 **AuthenticationError 즉시 실패**: 인증·권한·404 오류는 재시도 없이 즉시 실패 처리
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 (`Writing content (3/7 sections)...`), 이중 렌더링 제거
+- 🐛 **slides 모듈 `thinking=False`**: `section_rewriter`·`notes`·`utils` — qwen3.5 thinking이 `num_predict` 전체 소비 → empty result 후 원문 사용 버그 수정
+- 🐛 **`language_utils.translate_text` `thinking=False`**: thinking phase가 `max_tokens=2000` 전부 소비 → 번역 결과 빈 문자열 버그 수정
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -911,6 +913,9 @@ lecture-forge create
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시, RichHandler Console 공유로 이중 렌더링 제거
 - 📝 **도움말 현행화**: `--help` 통계 수정 (12 Agents, 1,870+ Tests), init `--reconfigure`/`--show` 반영
 - 🧪 **테스트 추가**: retry 정책 8개, init_helpers 43개 (총 1,877개)
+- 🐛 **slides 모듈 `thinking=False`**: `section_rewriter`·`notes`·`utils` — `num_predict=800~1000`에서 qwen3.5 thinking이 전체 토큰 소비 → empty result 후 원문 사용 버그 수정
+- 🐛 **`language_utils.translate_text` `thinking=False`**: `max_tokens=2000`에서 thinking phase가 토큰 전부 소비 → 번역 결과 빈 문자열 버그 수정
+- 🔧 **4개 에이전트 `thinking=False` 방어적 고정**: ContentCollector·ImageCollector·AsyncBase·ContentExpander — invoke_llm 미사용이지만 일관성 확보
 
 ### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화
 

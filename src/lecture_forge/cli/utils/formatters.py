@@ -10,6 +10,7 @@ from rich.table import Table
 from rich import box
 
 from lecture_forge.__version__ import __version__
+from lecture_forge.config import Config
 
 # Shared console instance
 console = Console()
@@ -63,9 +64,13 @@ def display_token_usage(usage_summary: Dict[str, Any]) -> None:
             console.print(f"       • {model}: ${cost:.4f}")
 
     # Pricing info
-    console.print(f"\n   [dim]ℹ️  Pricing (as of 2026-02-07):[/dim]")
-    console.print(f"   [dim]   • gpt-4o-mini: $0.150/1M input, $0.600/1M output[/dim]")
-    console.print(f"   [dim]   • gpt-4o: $2.50/1M input, $10.00/1M output[/dim]")
+    if Config.LLM_PROVIDER == "ollama":
+        ollama_model = Config.OLLAMA_MODEL or "ollama"
+        console.print(f"\n   [dim]ℹ️  로컬 LLM ({ollama_model}) — API 비용 없음[/dim]")
+    else:
+        console.print(f"\n   [dim]ℹ️  Pricing (as of 2026-02-07):[/dim]")
+        console.print(f"   [dim]   • gpt-4o-mini: $0.150/1M input, $0.600/1M output[/dim]")
+        console.print(f"   [dim]   • gpt-4o: $2.50/1M input, $10.00/1M output[/dim]")
 
 
 def print_banner() -> None:
@@ -92,7 +97,7 @@ def print_basic_help() -> None:
             "[bold cyan]📚 LectureForge Pro[/bold cyan]\n\n"
             "[bold]AI-Powered Lecture Material Generator[/bold]\n\n"
             "Transform PDFs, URLs, and web content into comprehensive lecture materials\n"
-            "[dim]12 Agents | 9 Tools | 9 Commands | 1,870+ Tests | ~$0.035 per 60min lecture[/dim]",
+            "[dim]12 Agents | 9 Tools | 9 Commands | 1,877+ Tests | ~$0.035 per 60min lecture[/dim]",
             border_style="cyan",
         )
     )

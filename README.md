@@ -8,7 +8,7 @@
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.6** | PDFImageDescriber Ollama 호환, README FAQ Ollama 반영
+> 🚀 **v0.5.6** | PDFImageDescriber Ollama 호환, TokenTracker Ollama 모델명 오표시 수정, README FAQ Ollama 반영
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -72,6 +72,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 ## 🚀 최근 개선사항 (v0.5.6)
 
 - 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 Ollama 모드에서 OpenAI API 직접 호출 → 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체
+- 🐛 **토큰 사용량 Ollama 모델명 오표시 수정**: Ollama 모델(`qwen3.5:9b`, `llama3.2` 등)이 `gpt-4o-mini`로 잘못 표시되던 버그 수정 — 원본 모델명 유지, 비용 $0.00, 로컬 LLM 안내 표시
 - 📝 **README FAQ Ollama 반영**: API 키 필수 여부를 OpenAI/Ollama 모드별로 구분, 비용·오프라인 FAQ 현행화
 - 📝 **docs/ 현행화**: api/cli.md ToC 구조 수정, `select_pdf_files` 문서화, `generate_lecture()` 반환값 추가
 
@@ -901,6 +902,7 @@ lecture-forge create
 ### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
 
 - 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 `LLM_PROVIDER=ollama`이면 `pdf_image_describer.py`가 OpenAI API를 직접 호출해 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체 (텍스트 전용, 모든 프로바이더 호환)
+- 🐛 **토큰 사용량 Ollama 모델명 오표시 수정**: Ollama 모델(`qwen3.5:9b`, `llama3.2` 등)이 `gpt-4o-mini`로 잘못 표시되던 버그 수정 — 원본 모델명 유지, 비용 $0.00, `로컬 LLM — API 비용 없음` 표시
 - 📝 **README FAQ 수정**: "API 키 필수" 항목을 OpenAI/Ollama 모드로 구분, 비용 FAQ에 Ollama 무료 안내, 오프라인 FAQ에 Ollama 생성 오프라인 가능 반영
 - 📝 **docs/ 현행화**: api/cli.md ToC 재구성, `select_pdf_files` 문서 추가, `generate_lecture()` 반환값 문서화, init 3모드 반영
 

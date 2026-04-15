@@ -107,12 +107,11 @@ class TokenTracker:
             # Normalize model name
             model_key = self._normalize_model_name(usage.model)
 
-            # Get pricing
+            # Get pricing — unknown models (e.g., Ollama local models) are free
             if model_key not in self.PRICING:
-                # Use gpt-4o-mini as fallback
-                model_key = "gpt-4o-mini"
-
-            pricing = self.PRICING[model_key]
+                pricing = {"input": 0.0, "output": 0.0}
+            else:
+                pricing = self.PRICING[model_key]
 
             # Calculate cost
             input_cost = usage.prompt_tokens * pricing["input"]
@@ -199,8 +198,8 @@ class TokenTracker:
         elif "text-embedding-3-small" in model_lower:
             return "text-embedding-3-small"
         else:
-            # Default to gpt-4o-mini for unknown models
-            return "gpt-4o-mini"
+            # Return original model name for unknown models (e.g., Ollama: qwen3.5:9b, llama3.2)
+            return model
 
 
 # Global tracker instance

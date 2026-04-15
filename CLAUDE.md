@@ -430,6 +430,8 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 ### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
 
 - 🐛 **PDFImageDescriber Ollama 호환**: `translate` 명령어에서 `LLM_PROVIDER=ollama` 사용 시 `pdf_image_describer.py`가 OpenAI API 직접 호출 → 401 에러 발생하던 버그 수정 — `from openai import OpenAI` 제거, `create_llm()` 팩토리로 교체 (텍스트 전용 도구이므로 모든 프로바이더 호환)
+- 🐛 **TokenTracker Ollama 모델명 오표시 수정**: Ollama 모델(`qwen3.5:9b`, `llama3.2` 등)이 `gpt-4o-mini`로 잘못 표시되던 버그 수정 — `_normalize_model_name()`에서 미인식 모델을 gpt-4o-mini로 fallback하지 않고 원본명 그대로 반환, 비용 $0.00 처리
+- 🔧 **토큰 사용량 표시 Ollama 대응**: `display_token_usage()`에서 `LLM_PROVIDER=ollama` 시 OpenAI 가격표 대신 `로컬 LLM ({모델명}) — API 비용 없음` 출력
 - 📝 **README FAQ Ollama 반영**: "API 키 필수" FAQ를 OpenAI 모드/Ollama 모드로 구분, 비용 FAQ에 Ollama 무료 사용 안내 추가, 오프라인 FAQ에 Ollama 생성 가능 여부 반영
 - 📝 **docs/ 현행화**: api/cli.md (ToC 구조, `select_pdf_files` 추가, `generate_lecture()` 반환값, init 3모드), system-overview.md (Ollama 기술스택, v0.5.5 항목), getting-started.md (init LLM-first 순서 반영)
 

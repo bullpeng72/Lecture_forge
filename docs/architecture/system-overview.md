@@ -489,7 +489,8 @@ Logged to conversation_log.txt (v0.3.6+)
 ### v0.5.6: Ollama Compatibility Fix & Docs Accuracy
 
 - **`PDFImageDescriber` Ollama compatibility** (bug fix): `tools/pdf_image_describer.py` hardcoded `from openai import OpenAI` — when `LLM_PROVIDER=ollama`, calling `translate` caused HTTP 401 on every image description call. Fixed by replacing direct OpenAI client with `create_llm(temperature=0.3, max_tokens=300, thinking=False)`. This tool is text-only (page text → image description inference, no Vision), so all providers work. Cost estimation now gated on `Config.LLM_PROVIDER == "openai"`.
-- **Test update**: `test_raises_without_api_key` → `test_creates_without_openai_key` — verifies Ollama mode no longer requires `OPENAI_API_KEY`.
+- **`TokenTracker` Ollama model name display** (bug fix): `_normalize_model_name()` fell back to `"gpt-4o-mini"` for any unrecognized model — Ollama models (`qwen3.5:9b`, `llama3.2`, `deepseek-r1:7b`, etc.) were all misreported as `gpt-4o-mini` with incorrect cost estimates. Fixed: unknown models now return original name as-is; `calculate_cost()` uses zero-cost pricing for models not in `PRICING` dict. `display_token_usage()` in `formatters.py` now shows `로컬 LLM ({model}) — API 비용 없음` footer when `LLM_PROVIDER=ollama`.
+- **Test update**: `test_raises_without_api_key` → `test_creates_without_openai_key` — verifies Ollama mode no longer requires `OPENAI_API_KEY`. `test_calculate_cost_unknown_model_fallback` → `test_calculate_cost_unknown_model_zero_cost`.
 - **Documentation accuracy**: README FAQ sections corrected — "Required APIs" now distinguishes OpenAI mode vs Ollama mode; cost FAQ adds Ollama free-tier note; offline FAQ reflects Ollama generation being offline-capable (web search excluded).
 
 ### v0.5.5: Ollama Support & Pipeline Stability

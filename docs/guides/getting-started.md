@@ -254,7 +254,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.5.5 - Lecture Material Generator
+📚 LectureForge Pro v0.5.6 - Lecture Material Generator
 
 Starting lecture generation...
 

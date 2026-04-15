@@ -120,12 +120,14 @@ class TestTokenTracker:
         assert "writing" in cost.by_phase
         assert "evaluation" in cost.by_phase
 
-    def test_calculate_cost_unknown_model_fallback(self):
+    def test_calculate_cost_unknown_model_zero_cost(self):
         tracker = TokenTracker()
-        # Unknown model → falls back to gpt-4o-mini pricing
+        # Unknown model (e.g., Ollama local model) → zero cost, not gpt-4o-mini fallback
         tracker.add_usage("some-unknown-model", 1_000_000, 0)
         cost = tracker.calculate_cost()
-        assert abs(cost.input_cost - 0.15) < 1e-6
+        assert cost.input_cost == 0.0
+        assert cost.total_cost == 0.0
+        assert "some-unknown-model" in cost.by_model
 
     def test_get_summary_empty(self):
         tracker = TokenTracker()
@@ -159,7 +161,10 @@ class TestTokenTracker:
         assert tracker._normalize_model_name("gpt-4o-mini-2024-07-18") == "gpt-4o-mini"
         assert tracker._normalize_model_name("gpt-4o-2024-11-20") == "gpt-4o"
         assert tracker._normalize_model_name("text-embedding-3-small") == "text-embedding-3-small"
-        assert tracker._normalize_model_name("completely-unknown") == "gpt-4o-mini"
+        # Unknown models (e.g., Ollama) are returned as-is
+        assert tracker._normalize_model_name("completely-unknown") == "completely-unknown"
+        assert tracker._normalize_model_name("qwen3.5:9b") == "qwen3.5:9b"
+        assert tracker._normalize_model_name("llama3.2") == "llama3.2"
 
     def test_embedding_model_pricing(self):
         tracker = TokenTracker()

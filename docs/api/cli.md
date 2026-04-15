@@ -7,8 +7,10 @@ Complete reference for the refactored CLI module structure.
 1. [Overview](#overview)
 2. [Module Structure](#module-structure)
 3. [Commands](#commands)
-4. [Utilities](#utilities)
-5. [Usage Examples](#usage-examples)
+4. [Usage Examples](#usage-examples)
+5. [Error Handling](#error-handling)
+6. [Configuration](#configuration)
+7. [Testing](#testing)
 
 ---
 
@@ -26,7 +28,7 @@ cli.py (3,603 lines)
 **After (v0.3+)**:
 ```
 cli/
-├── __init__.py (146 lines) - Main entry point
+├── __init__.py (147 lines) - Main entry point
 ├── utils/ - Shared utilities
 │   ├── formatters.py - Output formatting
 │   ├── helpers.py - Helper functions
@@ -129,6 +131,7 @@ from lecture_forge.cli.utils import (
     select_knowledge_base,
     handle_kb_deletion_interactive,
     find_pdf_files,
+    select_pdf_files,
 )
 ```
 
@@ -151,12 +154,20 @@ if kb_path:
 ```
 
 ##### `find_pdf_files(max_depth: int = 2) -> List[Path]`
-Find PDF files in current directory.
+Find PDF files in current directory (up to `max_depth` levels deep).
 
 ```python
 pdfs = find_pdf_files(max_depth=3)
 for pdf in pdfs:
     print(f"Found: {pdf}")
+```
+
+##### `select_pdf_files() -> List[str]`
+Interactive PDF file selector — displays found PDFs in a table and prompts for multi-selection.
+
+```python
+selected = select_pdf_files()
+# Returns list of selected PDF path strings
 ```
 
 #### input_handlers.py
@@ -306,6 +317,22 @@ print(f"KB: {result['vector_db_path']}")
 ```python
 def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     """Generate lecture using multi-agent pipeline."""
+```
+
+**Returns:**
+```python
+{
+    "html_path": str,            # Path to generated HTML file
+    "vector_db_path": str,       # Path to ChromaDB knowledge base
+    "sections_count": int,       # Number of lecture sections
+    "total_words": int,          # Total word count
+    "code_blocks": int,          # Total code blocks across all sections
+    "diagrams": int,             # Number of Mermaid diagrams
+    "images": int,               # Number of images used
+    "quality_score": float,      # Final quality score (0-100)
+    "quality_iterations": int,   # Number of quality improvement iterations run
+    "token_usage": dict,         # Token usage summary (total, prompt, completion, cost)
+}
 ```
 
 ---

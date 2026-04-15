@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.5 | **최종 수정**: 2026-04-13
+> **버전**: 0.5.5 | **최종 수정**: 2026-04-15
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -430,11 +430,17 @@ A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 ### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 
 - 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama` 환경변수로 로컬 LLM 사용 — `create_llm()` 팩토리 (`config.py`)로 OpenAI/Ollama provider 추상화, `OLLAMA_MODEL`/`OLLAMA_BASE_URL`/`OLLAMA_EMBEDDING_MODEL` 설정
+- 🦙 **Ollama Thinking 모드**: `OLLAMA_THINKING=auto` (qwen3/qwq/deepseek-r1 자동 감지), `reasoning=` 파라미터 수정 (`think=` 아님), qwen3.5:9b 기본값
+- 🐛 **Ollama reasoning 파라미터 수정**: `ChatOllama`에 `think=` 대신 `reasoning=` 사용 — 이전엔 silently ignored로 thinking이 꺼지지 않던 버그 수정
+- 🐛 **gpt-4o-mini 404 수정**: `language_utils.translate_text(model=None)` — Ollama 모드에서 `create_llm("gpt-4o-mini")` 호출로 404 발생하던 버그 수정
+- ⚡ **5개 에이전트 thinking=False 고정**: ContentAnalyzer·DiagramGenerator·HTMLAssembler·RevisionAgent·PDFTranslator — reasoning 불필요한 에이전트의 불필요한 thinking 제거
+- 🔧 **`init` LLM-first 설정 순서**: Phase 1=LLM 설정, Phase 2=API 키 (Ollama 모드시 OpenAI 키 자동 스킵), Phase 3=품질 — provider 먼저 선택 후 관련 API 키 수집
 - 🔧 **`init` 명령어 3모드 추가**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정, Phase 3 품질 설정 포함
+- ✏️ **`improve --to-slides` 노트 기본 포함**: `--with-notes` 제거, 발표자 노트 기본 ON — `--without-notes`로 opt-out
 - 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True` 포함)
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시 (`Writing content (3/7 sections)...`), RichHandler Console 공유로 이중 렌더링 제거
 - 📝 **도움말 현행화**: `--help` 통계 수정 (12 Agents, 1,870+ Tests), init `--reconfigure`/`--show` 옵션 반영
-- 🧪 **테스트 추가**: retry 정책 8개 테스트, init_helpers 43개 테스트
+- 🧪 **테스트 추가**: retry 정책 8개 테스트, init_helpers 43개 테스트 (총 1,877개)
 
 ### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화 & 코드 품질 개선
 

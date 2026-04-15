@@ -658,7 +658,7 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-04-13
+**Last Updated**: 2026-04-15
 **Version**: 0.5.5
 
 **Ready to create amazing lectures? Start with:**

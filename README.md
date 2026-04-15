@@ -71,11 +71,13 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ## 🚀 최근 개선사항 (v0.5.5)
 
-- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama` + `OLLAMA_MODEL=llama3.2`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성 가능, `create_llm()` 팩토리로 provider 추상화
-- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정·Phase 3 품질 설정 포함
+- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성, `create_llm()` 팩토리로 provider 추상화
+- 🦙 **Ollama Thinking 모드**: `OLLAMA_THINKING=auto` qwen3/qwq/deepseek-r1 자동 감지, `reasoning=` 파라미터 수정 (`think=` 아님)
+- 🔧 **`init` LLM-first 순서**: LLM 설정 → API 키 (Ollama 모드는 OpenAI 키 자동 스킵) → 품질 설정
+- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지·수정), `--show/-s` (설정 출력)
+- ✏️ **`improve --to-slides` 노트 기본 포함**: 발표자 노트 ON by default, `--without-notes`로 opt-out
 - 🐛 **AuthenticationError 즉시 실패**: 인증·권한·404 오류는 재시도 없이 즉시 실패 처리
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 (`Writing content (3/7 sections)...`), 이중 렌더링 제거
-- 📝 **도움말 현행화**: 12 Agents, 1,870+ 테스트 통계 반영
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -898,11 +900,17 @@ lecture-forge create
 ### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 
 - 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — `create_llm()` 팩토리 추상화, `BaseAgent`/`EmbeddingManager`/slides/language_utils 전체 적용, OpenAI API 키 없이 강의 생성 가능
-- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력), Phase 2 LLM 설정·Phase 3 품질 설정 포함
+- 🦙 **Ollama Thinking 모드**: `OLLAMA_THINKING=auto` (qwen3/qwq/deepseek-r1 자동 감지), `reasoning=` 파라미터 수정, qwen3.5:9b 기본값
+- 🐛 **Ollama reasoning 파라미터 수정**: `ChatOllama`에서 `think=` 대신 `reasoning=` 사용 — thinking이 꺼지지 않아 빈 응답 생성되던 버그 수정
+- 🐛 **gpt-4o-mini 404 수정**: `language_utils.translate_text(model=None)` — Ollama 모드에서 OpenAI 모델명으로 ChatOllama 호출하던 버그 수정
+- ⚡ **5개 에이전트 thinking=False**: ContentAnalyzer·DiagramGenerator·HTMLAssembler·RevisionAgent·PDFTranslator — deep reasoning 불필요한 에이전트 응답 속도 개선
+- 🔧 **`init` LLM-first 설정 순서**: Phase 1=LLM, Phase 2=API 키 (Ollama 모드는 OpenAI 키 스킵), Phase 3=품질
+- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력)
+- ✏️ **`improve --to-slides` 노트 기본 포함**: `--with-notes` 제거, 발표자 노트 기본 ON — `--without-notes`로 opt-out
 - 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True`)
 - 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시, RichHandler Console 공유로 이중 렌더링 제거
 - 📝 **도움말 현행화**: `--help` 통계 수정 (12 Agents, 1,870+ Tests), init `--reconfigure`/`--show` 반영
-- 🧪 **테스트 추가**: retry 정책 8개, init_helpers 43개 (총 1,870+개)
+- 🧪 **테스트 추가**: retry 정책 8개, init_helpers 43개 (총 1,877개)
 
 ### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화
 

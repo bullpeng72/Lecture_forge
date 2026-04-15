@@ -485,6 +485,19 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.5: Ollama Support & Pipeline Stability
+
+- **Ollama LLM provider**: `LLM_PROVIDER=ollama` env var routes all `create_llm()` calls to `ChatOllama`. Provider abstraction covers `BaseAgent`, `EmbeddingManager`, `SlideConverter`, `language_utils.translate_text`.
+- **Thinking mode control**: `OLLAMA_THINKING=auto/true/false` — auto-detect for qwen3/qwq/deepseek-r1/r1-distill/phi4-reasoning via `Config.is_thinking_model()`. `ChatOllama` `reasoning=` parameter (not `think=`) controls thinking.
+- **`thinking=False` for non-reasoning agents**: `ContentAnalyzerAgent`, `DiagramGeneratorAgent`, `HTMLAssemblerAgent`, `RevisionAgent`, `PDFTranslatorAgent` — deep reasoning adds no value here; disabling it removes 5+ min overhead per call.
+- **`improve --to-slides` default notes**: Presenter notes now ON by default; `--without-notes` flag opts out. `--with-notes` removed.
+- **`init` LLM-first setup flow**: Phase 1=LLM settings (provider selected first), Phase 2=API keys (Ollama mode skips OpenAI key), Phase 3=quality. Ensures provider is known before API key collection.
+
+### v0.5.4: Test Coverage & Code Quality
+
+- **Test coverage**: 1,436 → 1,877 test functions (+441), ~48% → ~81% — editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI fully covered.
+- **`utils/json_utils.py`**: `strip_json_fence()` / `parse_json_response()` — 4-agent duplicated pattern consolidated into shared utility.
+
 ### v0.5.3: Packaging Stability
 
 - **`edit` TemplateNotFound prevention**: `editor/server.py` now reads `index.html` via `Path(__file__).parent.parent / "templates/editor/index.html"` — bypasses Flask's template discovery, immune to incomplete PyPI wheel packaging.
@@ -567,5 +580,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-04-13
+**Last Updated**: 2026-04-15
 **Version**: 0.5.5

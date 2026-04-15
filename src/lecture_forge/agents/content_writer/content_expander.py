@@ -10,9 +10,7 @@ from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
 from lecture_forge.utils import logger
 from lecture_forge.utils.content_metrics import (
-    calculate_target_metrics,
     evaluate_content_quality,
-    format_quality_report,
 )
 from lecture_forge.utils.prompt_manager import load_prompt
 

@@ -4,7 +4,7 @@ Q&A Agent - Answers questions using knowledge base.
 
 import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -13,7 +13,6 @@ from prompt_toolkit.styles import Style as PromptStyle
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.prompt import Prompt
 from rich.table import Table
 
 from lecture_forge.agents.base import BaseAgent

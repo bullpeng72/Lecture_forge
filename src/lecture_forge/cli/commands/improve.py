@@ -9,7 +9,6 @@ from rich.panel import Panel
 
 from lecture_forge.cli.utils import console
 from lecture_forge.slides import SlideConverter
-from lecture_forge.utils import logger
 
 
 @click.command()

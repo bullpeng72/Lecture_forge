@@ -2,14 +2,12 @@
 Slide notes generator for adding presenter notes to Reveal.js slides.
 """
 
-import html as _html
 import re
 from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup
 from langchain_core.messages import HumanMessage
 
-from lecture_forge.config import Config
 from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 

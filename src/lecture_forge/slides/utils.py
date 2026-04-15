@@ -7,7 +7,7 @@ from typing import List
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from lecture_forge.config import Config, create_llm
+from lecture_forge.config import create_llm
 from lecture_forge.utils import logger
 from lecture_forge.utils.retry import make_api_retry
 

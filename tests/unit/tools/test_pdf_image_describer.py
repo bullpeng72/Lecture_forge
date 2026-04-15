@@ -10,10 +10,10 @@ import pytest
 
 @pytest.fixture
 def describer(test_env_vars):
-    """Create PDFImageDescriber instance with mocked OpenAI."""
+    """Create PDFImageDescriber instance with mocked LLM."""
     from lecture_forge.tools.pdf_image_describer import PDFImageDescriber
     with patch("lecture_forge.tools.pdf_image_describer.fitz"):
-        with patch("openai.OpenAI"):
+        with patch("lecture_forge.config.create_llm", return_value=MagicMock()):
             return PDFImageDescriber()
 
 
@@ -118,16 +118,16 @@ class TestParseDescriptions:
 # ===== __init__() and enhance_images() =====
 
 class TestPDFImageDescriberInit:
-    def test_raises_without_api_key(self, test_env_vars):
-        """Missing OPENAI_API_KEY raises ValueError."""
+    def test_creates_without_openai_key(self, test_env_vars):
+        """PDFImageDescriber works with Ollama (no OpenAI key needed)."""
         from lecture_forge.tools.pdf_image_describer import PDFImageDescriber
         from lecture_forge.config import Config
         original = Config.OPENAI_API_KEY
         try:
             Config.OPENAI_API_KEY = None
-            with pytest.raises(ValueError, match="OPENAI_API_KEY"):
-                with patch("openai.OpenAI"):
-                    PDFImageDescriber()
+            with patch("lecture_forge.config.create_llm", return_value=MagicMock()):
+                describer = PDFImageDescriber()
+            assert describer.llm is not None
         finally:
             Config.OPENAI_API_KEY = original
 
@@ -254,8 +254,8 @@ class TestGenerateDescriptionsForPage:
     """Tests for _generate_descriptions_for_page() exception path."""
 
     def test_llm_exception_returns_generic(self, describer):
-        describer.client = MagicMock()
-        describer.client.chat.completions.create.side_effect = Exception("LLM error")
+        describer.llm = MagicMock()
+        describer.llm.invoke.side_effect = Exception("LLM error")
         result = describer._generate_descriptions_for_page(1, "Some page text", 2)
         assert len(result) == 2
         assert all("page 1" in r for r in result)

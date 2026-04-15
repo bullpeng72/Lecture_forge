@@ -25,16 +25,12 @@ class PDFImageDescriber:
         Args:
             model: LLM model to use (default: Config.DEFAULT_MODEL)
         """
-        from openai import OpenAI
-
-        if not Config.OPENAI_API_KEY:
-            raise ValueError(
-                "OPENAI_API_KEY not configured. "
-                "Set it in .env or run 'lecture-forge init'."
-            )
+        from lecture_forge.config import create_llm
 
         self.model = model or Config.DEFAULT_MODEL
-        self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
+        # Use create_llm() so Ollama and OpenAI both work.
+        # This tool is text-only (no Vision); any provider is fine.
+        self.llm = create_llm(temperature=0.3, max_tokens=300, thinking=False)
 
     def enhance_images(self, pdf_path: str, image_dir: str, batch_size: int = 5) -> Dict:
         """
@@ -94,11 +90,12 @@ class PDFImageDescriber:
 
                 logger.info(f"   ✅ Page {page_num}: Generated {len(descriptions)} descriptions")
 
-                # Estimate cost (very rough)
+                # Estimate cost (very rough, OpenAI only)
                 # gpt-4o-mini: ~$0.15/1M input, ~$0.6/1M output
                 # Assume ~500 tokens input, ~100 tokens output per page
-                page_cost = (500 * 0.15 + 100 * 0.6) / 1_000_000
-                total_cost += page_cost
+                if Config.LLM_PROVIDER == "openai":
+                    page_cost = (500 * 0.15 + 100 * 0.6) / 1_000_000
+                    total_cost += page_cost
 
             except Exception as e:
                 logger.error(f"   ❌ Page {page_num}: Error - {e}")
@@ -187,20 +184,16 @@ Image 2: [description]
 If you can't infer from text, describe the general topic of the page."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a technical document analyst. Generate concise, keyword-rich descriptions for images based on surrounding text.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,  # Low temperature for consistent, factual image descriptions
-                max_tokens=300,
-            )
+            from langchain_core.messages import HumanMessage, SystemMessage
 
-            content = response.choices[0].message.content.strip()
+            messages = [
+                SystemMessage(
+                    content="You are a technical document analyst. Generate concise, keyword-rich descriptions for images based on surrounding text."
+                ),
+                HumanMessage(content=prompt),
+            ]
+            response = self.llm.invoke(messages)
+            content = response.content.strip()
 
             # Parse descriptions
             descriptions = self._parse_descriptions(content, num_images)

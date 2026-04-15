@@ -4,7 +4,6 @@ Home command - Home.
 
 import platform
 import subprocess
-from pathlib import Path
 
 import click
 

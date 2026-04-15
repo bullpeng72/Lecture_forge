@@ -3,7 +3,7 @@ Image Selector - Handles intelligent image selection for lecture sections.
 """
 
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 from PIL import Image

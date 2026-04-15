@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 import click
-from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 

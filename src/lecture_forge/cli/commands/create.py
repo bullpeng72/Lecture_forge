@@ -5,13 +5,11 @@ Create command - Generate lecture materials from various sources.
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import click
 import yaml
-from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 
 from lecture_forge.agents.content_analyzer import ContentAnalyzerAgent
 from lecture_forge.agents.content_collector import ContentCollectorAgent
@@ -32,7 +30,6 @@ from lecture_forge.cli.utils import (
 from lecture_forge.config import Config
 from lecture_forge.models.lecture import Lecture
 from lecture_forge.utils import logger, reconfigure_logging_console
-from lecture_forge.utils.html_parser import parse_html_to_lecture
 from lecture_forge.utils.token_tracker import get_tracker
 
 

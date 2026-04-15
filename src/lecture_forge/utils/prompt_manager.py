@@ -3,7 +3,7 @@ Prompt Manager - Loads and formats prompt templates.
 """
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from lecture_forge.config import Config
 from lecture_forge.utils import logger

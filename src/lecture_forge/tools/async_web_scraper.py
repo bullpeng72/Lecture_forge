@@ -8,8 +8,6 @@ import httpx
 from typing import Dict, List
 from bs4 import BeautifulSoup
 
-from lecture_forge.config import Config
-from lecture_forge.exceptions import WebScrapingError
 from lecture_forge.utils import logger
 
 

@@ -3,7 +3,6 @@ Edit-images command - Interactive image editing for generated lectures.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import click
 from rich.console import Console

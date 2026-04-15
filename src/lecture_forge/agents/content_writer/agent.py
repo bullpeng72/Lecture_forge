@@ -7,7 +7,6 @@ This is the refactored version with extracted components:
 - ContentExpander: Handles content expansion
 """
 
-from pathlib import Path
 from typing import List
 
 from lecture_forge.agents.base import BaseAgent

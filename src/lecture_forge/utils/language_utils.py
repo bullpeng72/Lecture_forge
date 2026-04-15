@@ -6,7 +6,7 @@ from typing import Optional
 
 from langdetect import LangDetectException, detect
 
-from lecture_forge.config import Config, create_llm
+from lecture_forge.config import create_llm
 from lecture_forge.utils import logger
 
 

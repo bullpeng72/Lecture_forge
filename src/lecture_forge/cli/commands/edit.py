@@ -2,7 +2,6 @@
 Edit command - Web-based lecture editor.
 """
 
-from pathlib import Path
 from typing import Optional
 
 import click

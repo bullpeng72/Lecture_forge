@@ -3,7 +3,7 @@ Curriculum Designer Agent - Designs lecture structure and curriculum.
 """
 
 import json
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from lecture_forge.agents.base import BaseAgent
 from lecture_forge.config import Config

@@ -6,12 +6,9 @@ import sys
 from typing import Optional
 
 import click
-from rich.panel import Panel
-from rich.prompt import Prompt
 
 from lecture_forge.agents.qa_agent import QAAgent
 from lecture_forge.cli.utils import console, select_knowledge_base
-from lecture_forge.config import Config
 from lecture_forge.utils import logger
 
 

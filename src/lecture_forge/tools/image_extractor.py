@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image
 
 from lecture_forge.config import Config
-from lecture_forge.exceptions import ImageExtractionError, ImageProcessingError
+from lecture_forge.exceptions import ImageExtractionError
 from lecture_forge.utils import logger
 
 

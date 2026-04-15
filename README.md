@@ -165,7 +165,7 @@ lecture-forge init
 - ✅ 플랫폼별 최적 위치에 `.env` 파일 자동 생성
   - **Windows**: `%USERPROFILE%\Documents\LectureForge\.env`
   - **Mac/Linux**: `~/Documents/LectureForge/.env`
-- ✅ 필수 API 키 입력 안내 (OpenAI, Serper)
+- ✅ LLM 공급자 선택 (OpenAI / Ollama) 및 API 키 입력 안내 — Ollama 선택 시 OpenAI 불필요
 - ✅ 선택적 이미지 검색 API 설정 (Pexels, Unsplash)
 - ✅ 파일 권한 자동 설정 (Unix/Mac: 600)
 
@@ -762,20 +762,23 @@ pip install lecture-forge
 <summary><b>Q: API 키가 꼭 필요한가요?</b></summary>
 
 A:
-- **필수**: OpenAI API, Serper API
+- **OpenAI 모드** — 필수: OpenAI API, Serper API
+- **Ollama 모드** (로컬 LLM, `LLM_PROVIDER=ollama`) — 필수: Serper API만 (OpenAI API 불필요)
 - **선택**: Pexels API, Unsplash API (이미지 검색용)
 
-이미지 API 없이도 PDF/웹 이미지만으로 작동합니다.
+이미지 API(Pexels, Unsplash) 없이도 PDF/웹 이미지만으로 작동합니다.
 </details>
 
 <details>
 <summary><b>Q: 비용이 얼마나 드나요?</b></summary>
 
-A: **실제 측정 비용** (v0.2.4+ 기준):
+A: **실제 측정 비용** (OpenAI GPT-4o-mini 사용 시):
 - 60분 강의: 약 **$0.035**
 - 180분 강의: 약 **$0.105**
 
-(GPT-4o-mini 사용. 보수적 이론 추정: $0.22/180분)
+(보수적 이론 추정: $0.22/180분)
+
+💡 **Ollama 사용 시**: `LLM_PROVIDER=ollama`로 로컬 LLM을 사용하면 LLM 비용 무료 (하드웨어만 필요)
 
 생성 완료 후 정확한 비용이 표시됩니다.
 </details>
@@ -804,9 +807,10 @@ WEB_SCRAPER_TIMEOUT=60
 <summary><b>Q: 오프라인에서 사용 가능한가요?</b></summary>
 
 A:
-- **생성 시**: API 필요 (OpenAI, Serper 등)
-- **생성 후**: HTML 파일과 지식창고는 오프라인 사용 가능
-- **Chat 모드**: 지식창고는 오프라인 작동하지만 LLM API는 필요
+- **Ollama 사용 시** (`LLM_PROVIDER=ollama`): 강의 생성도 오프라인 가능 (웹 검색 기능 제외)
+- **OpenAI 사용 시**: 생성 시 API 필요 (OpenAI, Serper)
+- **생성 후**: HTML 파일과 지식창고는 어느 모드에서든 오프라인 사용 가능
+- **Chat 모드**: Ollama라면 완전 오프라인 가능, OpenAI라면 LLM API 필요
 </details>
 
 <details>

@@ -29,7 +29,7 @@ class ContentCollectorAgent(BaseAgent):
         Args:
             collection_name: Name for the vector DB collection
         """
-        super().__init__()
+        super().__init__(thinking=False)
         logger.info("Initializing Content Collector Agent")
 
         # Initialize tools

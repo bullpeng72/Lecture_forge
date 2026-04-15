@@ -116,7 +116,7 @@ def translate_text(
 
     # Initialize LLM for translation
     try:
-        llm = create_llm(model=model, temperature=0.0, max_tokens=2000)
+        llm = create_llm(model=model, temperature=0.0, max_tokens=2000, thinking=False)
 
         # Create translation prompt
         prompt = f"""Translate the following text from {source_lang_name} to {target_lang_name}.

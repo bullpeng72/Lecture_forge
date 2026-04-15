@@ -30,7 +30,7 @@ class AsyncBaseAgent(BaseAgent):
         Args:
             max_workers: Max threads for CPU-bound tasks (default: CPU count)
         """
-        super().__init__()
+        super().__init__(thinking=False)
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self._rate_limiters = {}
         logger.debug(f"Initialized {self.__class__.__name__} with async support")

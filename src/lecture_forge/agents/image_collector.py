@@ -27,7 +27,7 @@ class ImageCollectorAgent(BaseAgent):
             session_id: Session identifier for organizing images
             vector_store: VectorStore instance for storing image descriptions (optional)
         """
-        super().__init__(model=vision_model or Config.DEFAULT_MODEL)
+        super().__init__(model=vision_model or Config.DEFAULT_MODEL, thinking=False)
         logger.info("Initializing Image Collector Agent")
 
         # Generate session ID

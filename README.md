@@ -8,7 +8,7 @@
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.5** | CLI 안정성 & 도움말 현행화 & Ollama 지원 — init 3모드, retry 정책, create Progress 개선, 로컬 LLM
+> 🚀 **v0.5.5** | CLI 안정성 & 도움말 현행화 & Ollama 지원 — init LLM-first·3모드, slides/translate thinking 버그수정, retry 정책, 로컬 LLM
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -37,7 +37,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 📍 **Location-based 이미지 매칭**: RAG 컨텍스트 기반 자동 이미지 배치 (+750% 활용률)
 - 🖼️ **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 - 🎨 **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 코드 하이라이팅
-- 🎬 **프레젠테이션 슬라이드**: Reveal.js 기반 자동 변환 (v0.3.0 대폭 개선)
+- 🎬 **프레젠테이션 슬라이드**: Reveal.js 기반 자동 변환 (`--to-slides`) — 섹션별 LLM 재작성 (≤35자, 말줄임표 없음), 발표자 노트 기본 포함 (`--without-notes`로 제외)
 
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
@@ -253,7 +253,7 @@ lecture-forge create
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit** | 웹 기반 강의 편집기 (v0.5.0+) | `--port`, `--no-browser` |
 | **edit-images** | 이미지 편집 (CLI) | `--output` |
-| **improve** | 강의 향상 / 재평가 | `--to-slides`, `--re-evaluate` |
+| **improve** | 강의 향상 / 재평가 | `--to-slides`, `--without-notes`, `--re-evaluate` |
 | **cleanup** | 지식베이스 관리 | `--all` (`-a`) |
 | **home** | 폴더 열기 (v0.3.1+) | `outputs`, `data`, `kb`, `env` |
 
@@ -327,12 +327,13 @@ lecture-forge init --path /my/config/dir
 ```
 
 **하는 일 (기본 모드):**
-1. 필수 API 키 입력 (OpenAI, Serper) — Ollama 사용 시 OpenAI 불필요
-2. LLM 공급자 선택 (OpenAI / Ollama)
-3. 선택적 이미지 API 설정 (Pexels, Unsplash)
-4. `.env` 파일 자동 생성
-5. 기본 설정 값 자동 설정
-6. 파일 권한 보안 설정 (Unix/Mac)
+1. LLM 공급자 선택 (OpenAI / Ollama)
+2. 필수 API 키 입력 (OpenAI, Serper) — Ollama 사용 시 OpenAI 불필요
+3. 품질 설정 (기본값으로 건너뛰기 가능)
+4. 선택적 이미지 API 설정 (Pexels, Unsplash)
+5. `.env` 파일 자동 생성
+6. 기본 설정 값 자동 설정
+7. 파일 권한 보안 설정 (Unix/Mac)
 
 ---
 

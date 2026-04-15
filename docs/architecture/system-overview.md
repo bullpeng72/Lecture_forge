@@ -486,6 +486,12 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.6: Ollama Compatibility Fix & Docs Accuracy
+
+- **`PDFImageDescriber` Ollama compatibility** (bug fix): `tools/pdf_image_describer.py` hardcoded `from openai import OpenAI` — when `LLM_PROVIDER=ollama`, calling `translate` caused HTTP 401 on every image description call. Fixed by replacing direct OpenAI client with `create_llm(temperature=0.3, max_tokens=300, thinking=False)`. This tool is text-only (page text → image description inference, no Vision), so all providers work. Cost estimation now gated on `Config.LLM_PROVIDER == "openai"`.
+- **Test update**: `test_raises_without_api_key` → `test_creates_without_openai_key` — verifies Ollama mode no longer requires `OPENAI_API_KEY`.
+- **Documentation accuracy**: README FAQ sections corrected — "Required APIs" now distinguishes OpenAI mode vs Ollama mode; cost FAQ adds Ollama free-tier note; offline FAQ reflects Ollama generation being offline-capable (web search excluded).
+
 ### v0.5.5: Ollama Support & Pipeline Stability
 
 - **Ollama LLM provider**: `LLM_PROVIDER=ollama` env var routes all `create_llm()` calls to `ChatOllama`. Provider abstraction covers `BaseAgent`, `EmbeddingManager`, `SlideConverter`, `language_utils.translate_text`.
@@ -585,4 +591,4 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 ---
 
 **Last Updated**: 2026-04-15
-**Version**: 0.5.5
+**Version**: 0.5.6

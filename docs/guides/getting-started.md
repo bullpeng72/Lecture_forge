@@ -685,7 +685,7 @@ lecture-forge home outputs
 ---
 
 **Last Updated**: 2026-04-15
-**Version**: 0.5.5
+**Version**: 0.5.6
 
 **Ready to create amazing lectures? Start with:**
 ```bash

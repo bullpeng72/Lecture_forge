@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.5-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.6-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.5** | CLI 안정성 & 도움말 현행화 & Ollama 지원 — init LLM-first·3모드, slides/translate thinking 버그수정, retry 정책, 로컬 LLM
+> 🚀 **v0.5.6** | PDFImageDescriber Ollama 호환, README FAQ Ollama 반영
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,870+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,877+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,870+ 테스트 함수 (~81% 커버리지)
+- 🧪 **테스트 커버리지**: 1,877+ 테스트 함수 (~81% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -69,17 +69,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.5)
+## 🚀 최근 개선사항 (v0.5.6)
 
-- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성, `create_llm()` 팩토리로 provider 추상화
-- 🦙 **Ollama Thinking 모드**: `OLLAMA_THINKING=auto` qwen3/qwq/deepseek-r1 자동 감지, `reasoning=` 파라미터 수정 (`think=` 아님)
-- 🔧 **`init` LLM-first 순서**: LLM 설정 → API 키 (Ollama 모드는 OpenAI 키 자동 스킵) → 품질 설정
-- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지·수정), `--show/-s` (설정 출력)
-- ✏️ **`improve --to-slides` 노트 기본 포함**: 발표자 노트 ON by default, `--without-notes`로 opt-out
-- 🐛 **AuthenticationError 즉시 실패**: 인증·권한·404 오류는 재시도 없이 즉시 실패 처리
-- 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 (`Writing content (3/7 sections)...`), 이중 렌더링 제거
-- 🐛 **slides 모듈 `thinking=False`**: `section_rewriter`·`notes`·`utils` — qwen3.5 thinking이 `num_predict` 전체 소비 → empty result 후 원문 사용 버그 수정
-- 🐛 **`language_utils.translate_text` `thinking=False`**: thinking phase가 `max_tokens=2000` 전부 소비 → 번역 결과 빈 문자열 버그 수정
+- 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 Ollama 모드에서 OpenAI API 직접 호출 → 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체
+- 📝 **README FAQ Ollama 반영**: API 키 필수 여부를 OpenAI/Ollama 모드별로 구분, 비용·오프라인 FAQ 현행화
+- 📝 **docs/ 현행화**: api/cli.md ToC 구조 수정, `select_pdf_files` 문서화, `generate_lecture()` 반환값 추가
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -903,6 +897,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
+
+- 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 `LLM_PROVIDER=ollama`이면 `pdf_image_describer.py`가 OpenAI API를 직접 호출해 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체 (텍스트 전용, 모든 프로바이더 호환)
+- 📝 **README FAQ 수정**: "API 키 필수" 항목을 OpenAI/Ollama 모드로 구분, 비용 FAQ에 Ollama 무료 안내, 오프라인 FAQ에 Ollama 생성 오프라인 가능 반영
+- 📝 **docs/ 현행화**: api/cli.md ToC 재구성, `select_pdf_files` 문서 추가, `generate_lecture()` 반환값 문서화, init 3모드 반영
 
 ### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 

@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.5 | **최종 수정**: 2026-04-15
+> **버전**: 0.5.6 | **최종 수정**: 2026-04-15
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -390,7 +390,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
+A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 
 ---
 
@@ -415,7 +415,7 @@ A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,870+, ~81% 커버리지 |
+| 테스트 | 1,877+, ~81% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -426,6 +426,12 @@ A: `pytest tests/ -v` (1,870+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
+
+- 🐛 **PDFImageDescriber Ollama 호환**: `translate` 명령어에서 `LLM_PROVIDER=ollama` 사용 시 `pdf_image_describer.py`가 OpenAI API 직접 호출 → 401 에러 발생하던 버그 수정 — `from openai import OpenAI` 제거, `create_llm()` 팩토리로 교체 (텍스트 전용 도구이므로 모든 프로바이더 호환)
+- 📝 **README FAQ Ollama 반영**: "API 키 필수" FAQ를 OpenAI 모드/Ollama 모드로 구분, 비용 FAQ에 Ollama 무료 사용 안내 추가, 오프라인 FAQ에 Ollama 생성 가능 여부 반영
+- 📝 **docs/ 현행화**: api/cli.md (ToC 구조, `select_pdf_files` 추가, `generate_lecture()` 반환값, init 3모드), system-overview.md (Ollama 기술스택, v0.5.5 항목), getting-started.md (init LLM-first 순서 반영)
 
 ### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
 

@@ -28,12 +28,6 @@ class TestImproveCommand:
         assert result.exit_code == 0
         assert "No improvement options" in result.output
 
-    def test_with_notes_without_to_slides_warns(self, runner, lecture_html):
-        from lecture_forge.cli.commands.improve import improve
-        result = runner.invoke(improve, [lecture_html, "--with-notes"])
-        assert result.exit_code == 0
-        assert "--with-notes requires --to-slides" in result.output
-
     def test_to_slides_success(self, runner, lecture_html):
         from lecture_forge.cli.commands.improve import improve
         mock_converter = MagicMock()
@@ -54,19 +48,44 @@ class TestImproveCommand:
         assert result.exit_code == 0
         assert "failed" in result.output.lower()
 
-    def test_to_slides_with_notes(self, runner, lecture_html):
+    def test_to_slides_includes_notes_by_default(self, runner, lecture_html):
+        """--to-slides should include presenter notes by default (with_notes=True)."""
         from lecture_forge.cli.commands.improve import improve
         mock_converter = MagicMock()
         mock_converter.convert.return_value = True
         with patch("lecture_forge.cli.commands.improve.SlideConverter",
                    return_value=mock_converter):
-            result = runner.invoke(improve, [lecture_html, "--to-slides", "--with-notes"])
+            result = runner.invoke(improve, [lecture_html, "--to-slides"])
         assert result.exit_code == 0
         mock_converter.convert.assert_called_once_with(
-            Path(lecture_html), Path(lecture_html).parent / f"{Path(lecture_html).stem}_slides.html",
-            with_notes=True
+            Path(lecture_html),
+            Path(lecture_html).parent / f"{Path(lecture_html).stem}_slides.html",
+            with_notes=True,
         )
         assert "발표자 노트" in result.output
+
+    def test_to_slides_without_notes(self, runner, lecture_html):
+        """--to-slides --without-notes should pass with_notes=False."""
+        from lecture_forge.cli.commands.improve import improve
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value = True
+        with patch("lecture_forge.cli.commands.improve.SlideConverter",
+                   return_value=mock_converter):
+            result = runner.invoke(improve, [lecture_html, "--to-slides", "--without-notes"])
+        assert result.exit_code == 0
+        mock_converter.convert.assert_called_once_with(
+            Path(lecture_html),
+            Path(lecture_html).parent / f"{Path(lecture_html).stem}_slides.html",
+            with_notes=False,
+        )
+        assert "without-notes" in result.output.lower() or "노트 없음" in result.output
+
+    def test_without_notes_alone_ignored(self, runner, lecture_html):
+        """--without-notes without --to-slides should show the 'no options' hint."""
+        from lecture_forge.cli.commands.improve import improve
+        result = runner.invoke(improve, [lecture_html, "--without-notes"])
+        assert result.exit_code == 0
+        assert "No improvement options" in result.output
 
     def test_re_evaluate_success(self, runner, lecture_html):
         from lecture_forge.cli.commands.improve import improve

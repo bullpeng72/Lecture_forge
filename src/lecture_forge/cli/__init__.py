@@ -89,7 +89,7 @@ def cli(ctx, version: bool) -> None:
        │ chat        │ Interactive Q&A with knowledge base  │ -kb PATH           │
        │ edit        │ Web-based lecture editor (GUI)       │ --port --no-browser│
        │ edit-images │ Edit/replace lecture images (CLI)    │ -o FILE            │
-       │ improve     │ Enhance: slides, re-evaluate, KB     │ --to-slides        │
+       │ improve     │ Slides(노트 포함), re-evaluate, KB   │ --to-slides        │
        │ cleanup     │ Delete knowledge bases (free space)  │ --all              │
        │ home        │ Open folders in file manager         │ outputs/env        │
        └─────────────┴──────────────────────────────────────┴────────────────────┘

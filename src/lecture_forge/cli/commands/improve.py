@@ -14,8 +14,8 @@ from lecture_forge.utils import logger
 
 @click.command()
 @click.argument("lecture_path", type=click.Path(exists=True))
-@click.option("--to-slides", is_flag=True, help="Convert lecture to presentation slides format (Reveal.js)")
-@click.option("--with-notes", is_flag=True, help="Auto-generate presenter notes for each slide (requires --to-slides, uses LLM)")
+@click.option("--to-slides", is_flag=True, help="Convert lecture to Reveal.js presentation slides (발표자 노트 자동 포함)")
+@click.option("--without-notes", is_flag=True, help="발표자 노트 없이 슬라이드 생성 (--to-slides와 함께 사용)")
 @click.option(
     "--re-evaluate",
     is_flag=True,
@@ -36,7 +36,7 @@ from lecture_forge.utils import logger
 def improve(
     lecture_path: str,
     to_slides: bool,
-    with_notes: bool,
+    without_notes: bool,
     re_evaluate: bool,
     quality_level: str,
     kb: str,
@@ -45,7 +45,7 @@ def improve(
     Improve existing lecture quality with optional enhancements.
 
     Apply post-generation improvements to enhance lecture quality:
-    - Convert lecture to presentation slides format
+    - Convert lecture to presentation slides format (발표자 노트 기본 포함)
     - Re-evaluate quality and supplement with KB content
 
     \b
@@ -54,9 +54,10 @@ def improve(
                             · Creates a separate *_slides.html file
                             · Splits content into slides; preserves images & diagrams
                             · Per-section LLM rewrite included (≤35자, 말줄임표 없음)
-      --with-notes          Auto-generate presenter notes (requires --to-slides)
-                            · LLM writes 2-4 sentences per slide
-                            · Press S in browser to open speaker view
+                            · 발표자 노트 자동 생성 포함 (기본값)
+                            · 노트 제외: --without-notes 추가
+      --without-notes       발표자 노트 없이 슬라이드 생성 (--to-slides와 함께 사용)
+                            · 기본적으로 노트가 포함되므로, 제외하려면 이 옵션 사용
       --re-evaluate         KB 기반 품질 재평가 후 미반영 내용 보충 추가
                             · 기존 섹션 보존, 누락 청크를 말미에 추가
                             · HTML 메타데이터에서 KB 경로 자동 감지
@@ -75,12 +76,12 @@ def improve(
 
     \b
     Examples:
-      # Convert to presentation slides
+      # Convert to presentation slides (발표자 노트 자동 포함)
       $ lecture-forge improve outputs/lecture.html --to-slides
 
     \b
-      # Convert with auto-generated presenter notes
-      $ lecture-forge improve outputs/lecture.html --to-slides --with-notes
+      # Convert WITHOUT presenter notes
+      $ lecture-forge improve outputs/lecture.html --to-slides --without-notes
 
     \b
       # 기본 재평가 및 보강
@@ -109,10 +110,6 @@ def improve(
         console.print(f"[red]❌ Lecture file not found: {lecture_path}[/red]")
         return
 
-    if with_notes and not to_slides:
-        console.print("[yellow]⚠️  --with-notes requires --to-slides. Ignoring --with-notes.[/yellow]")
-        console.print()
-
     if re_evaluate:
         console.print("[bold]KB 기반 품질 재평가 및 콘텐츠 보강[/bold]")
         console.print("━" * 50)
@@ -138,6 +135,9 @@ def improve(
         console.print("━" * 50)
         console.print()
 
+        # Notes are ON by default; --without-notes opts out
+        with_notes = not without_notes
+
         slides_path = lecture_path.parent / f"{lecture_path.stem}_slides.html"
 
         converter = SlideConverter(console=console)
@@ -148,7 +148,7 @@ def improve(
             if with_notes:
                 console.print(f"[green]   발표자 노트 포함 — 브라우저에서 S키로 발표자 뷰 열기[/green]")
             else:
-                console.print(f"[green]   Open in browser and press 's' for speaker notes[/green]")
+                console.print(f"[green]   발표자 노트 없음 (--without-notes)[/green]")
             console.print()
         else:
             console.print(f"[red]❌ Slides conversion failed[/red]")
@@ -156,4 +156,4 @@ def improve(
     if not re_evaluate and not to_slides:
         console.print("[yellow]No improvement options specified[/yellow]")
         console.print("Use --re-evaluate to re-evaluate and supplement content")
-        console.print("Use --to-slides to convert to presentation format")
+        console.print("Use --to-slides to convert to presentation format (발표자 노트 자동 포함)")

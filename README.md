@@ -543,7 +543,7 @@ lecture-forge improve outputs/lecture.html --to-slides
 | 옵션 | 설명 | 사용 예 |
 |------|------|---------|
 | `--to-slides` | Reveal.js 슬라이드 변환 (`*_slides.html`) — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음) | `--to-slides` |
-| `--with-notes` | 슬라이드별 발표자 노트 자동 생성 (LLM) | `--with-notes` |
+| `--without-notes` | 발표자 노트 없이 슬라이드 생성 (`--to-slides` 시 노트는 기본 포함) | `--to-slides --without-notes` |
 | `--re-evaluate` | KB 기반 품질 재평가 + 미반영 내용 보충 추가 (`*_enhanced.html`) | `--re-evaluate` |
 | `--quality-level LEVEL` | 재평가 품질 기준: `lenient`(70) / `balanced`(80) / `strict`(90) | `--quality-level strict` |
 | `--kb PATH` | KB 경로 수동 지정 (HTML 메타데이터 없는 기존 파일용 fallback) | `--kb /path/to/vector_db/...` |
@@ -553,8 +553,8 @@ lecture-forge improve outputs/lecture.html --to-slides
 # 슬라이드 변환 (기본)
 lecture-forge improve outputs/lecture.html --to-slides
 
-# 발표자 노트 포함 (브라우저에서 S키)
-lecture-forge improve outputs/lecture.html --to-slides --with-notes
+# 발표자 노트 없이 슬라이드 변환
+lecture-forge improve outputs/lecture.html --to-slides --without-notes
 
 # KB 기반 품질 재평가 + 보충 (→ *_enhanced.html)
 lecture-forge improve outputs/lecture.html --re-evaluate

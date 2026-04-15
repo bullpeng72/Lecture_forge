@@ -20,7 +20,7 @@
 8. **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 9. **자동 품질 보증**: 6차원 평가 + 반복적 개선 (최대 3회)
 10. **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 이미지/다이어그램 클릭 확대
-11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (`--to-slides`, `--with-notes`) — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음)
+11. **프레젠테이션 슬라이드**: Reveal.js 기반 자동 슬라이드 변환 (`--to-slides`) — 발표자 노트 기본 포함, `--without-notes`로 제외 — 섹션별 LLM 재작성 기본 포함 (≤35자, 말줄임표 없음)
 12. **KB 기반 재평가·보충**: 기존 강의 품질 재평가 + 미반영 청크 보충 추가 (`--re-evaluate`, `→ *_enhanced.html`)
 13. **영문 PDF 번역** (v0.4.1+): 영어 PDF → 한국어 강의자료 (`translate` 명령어) — TOC 감지, 아티팩트 제거, 용어 사전, 이미지 자동 배치
 14. **사용자 친화적 디렉토리**: `~/Documents/LectureForge/` + `home` 커맨드로 빠른 접근
@@ -290,8 +290,8 @@ lecture-forge edit-images <html_path>             # 대화형 이미지 편집
 lecture-forge edit-images <html_path> -o output   # 출력 파일 지정
 
 # ===== IMPROVE: 강의 향상 =====
-lecture-forge improve <html_path> --to-slides              # 슬라이드 변환
-lecture-forge improve <html_path> --to-slides --with-notes # 발표자 노트 포함
+lecture-forge improve <html_path> --to-slides              # 슬라이드 변환 (발표자 노트 자동 포함)
+lecture-forge improve <html_path> --to-slides --without-notes # 발표자 노트 없이 슬라이드 변환
 lecture-forge improve <html_path> --re-evaluate            # KB 기반 재평가 + 보충 (→ *_enhanced.html)
 lecture-forge improve <html_path> --re-evaluate --quality-level strict  # 엄격한 기준
 lecture-forge improve <html_path> --re-evaluate --kb <vector_db_path>   # KB 수동 지정

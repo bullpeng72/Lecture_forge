@@ -464,7 +464,7 @@ lecture-forge improve LECTURE_PATH [OPTIONS]
 
 **Options:**
 - `--to-slides`: Convert lecture HTML to a Reveal.js presentation (creates `*_slides.html`); includes per-section LLM rewrite by default — concise bullets ≤35자, no truncation
-- `--with-notes`: Auto-generate presenter notes for each slide using LLM (requires `--to-slides`; press **S** in browser to view speaker notes)
+- `--without-notes`: Skip presenter notes when converting to slides (notes are included by default with `--to-slides`; press **S** in browser to view)
 - `--re-evaluate`: KB 기반 품질 재평가 후 미반영 내용을 각 섹션 말미에 추가 → `*_enhanced.html` 생성 (v0.4.0+)
 - `--quality-level [lenient|balanced|strict]`: 재평가 품질 기준 — lenient(70), balanced(80), strict(90) (기본값: `balanced`, `--re-evaluate`와 함께 사용)
 - `--kb PATH`: 지식 DB 경로 — HTML에 `lf:vector_db_path` 메타데이터가 없는 기존 파일에 대한 fallback (v0.4.0+)
@@ -477,8 +477,8 @@ from lecture_forge.cli.commands.improve import improve
 # Convert to slides
 improve(['lecture.html', '--to-slides'])
 
-# Convert with presenter notes
-improve(['lecture.html', '--to-slides', '--with-notes'])
+# Convert without presenter notes (notes are on by default)
+improve(['lecture.html', '--to-slides', '--without-notes'])
 
 # Re-evaluate and supplement (v0.4.0+)
 improve(['lecture.html', '--re-evaluate'])

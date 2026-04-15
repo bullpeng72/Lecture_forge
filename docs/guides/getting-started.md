@@ -489,14 +489,14 @@ Convert your lecture to presentation slides:
 # Basic conversion (per-section LLM rewrite included by default: ≤35자, no truncation)
 lecture-forge improve outputs/your_lecture.html --to-slides
 
-# With auto-generated presenter notes (LLM writes 2-4 sentences per slide)
-lecture-forge improve outputs/your_lecture.html --to-slides --with-notes
+# Without presenter notes (notes are included by default)
+lecture-forge improve outputs/your_lecture.html --to-slides --without-notes
 ```
 
 This creates a Reveal.js presentation with:
 - Keyboard navigation (Arrow keys, Space)
 - Overview mode (Esc)
-- Speaker notes (S) — press S to open speaker view (requires `--with-notes`)
+- Speaker notes (S) — press S to open speaker view (included by default; use `--without-notes` to disable)
 - Full screen (F)
 
 ### 6. Translate English PDF (Optional)

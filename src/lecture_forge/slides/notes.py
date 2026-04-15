@@ -22,7 +22,7 @@ def _invoke_notes_llm(messages: list):
     """Invoke LLM for notes generation with retry."""
     from lecture_forge.config import create_llm
 
-    llm = create_llm(temperature=0.5, max_tokens=1000)
+    llm = create_llm(temperature=0.5, max_tokens=1000, thinking=False)
     return llm.invoke(messages)
 
 

@@ -56,7 +56,7 @@ def _truncate_bullet(text: str, max_chars: int = _MAX_BULLET_CHARS) -> str:
 @make_api_retry("Slides")
 def _invoke_llm(messages: list) -> AIMessage:
     """Invoke the slides LLM with retry logic."""
-    llm = create_llm(temperature=0.3, max_tokens=800)
+    llm = create_llm(temperature=0.3, max_tokens=800, thinking=False)
     return llm.invoke(messages)
 
 

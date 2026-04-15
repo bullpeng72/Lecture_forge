@@ -22,7 +22,7 @@ _TARGET_BULLET_CHARS = 35  # Aim for this length; hard truncation limits are 80
 @make_api_retry("SectionRewriter")
 def _invoke_llm(messages: list) -> AIMessage:
     """Invoke LLM with retry logic."""
-    llm = create_llm(temperature=0.3, max_tokens=800)
+    llm = create_llm(temperature=0.3, max_tokens=800, thinking=False)
     return llm.invoke(messages)
 
 

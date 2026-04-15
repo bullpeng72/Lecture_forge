@@ -217,6 +217,13 @@ lecture-forge init [OPTIONS]
 
 **Options:**
 - `--path PATH`: Custom directory for .env (default: ~/Documents/LectureForge/)
+- `-r, --reconfigure`: Re-run setup while preserving existing values — prompts each item individually (v0.5.5+)
+- `-s, --show`: Print current configuration values without modifying anything (v0.5.5+)
+
+**Setup flow (v0.5.5 LLM-first):**
+- Phase 1: LLM provider selection (OpenAI / Ollama)
+- Phase 2: API keys (OpenAI key auto-skipped in Ollama mode)
+- Phase 3: Quality settings
 
 #### Python API
 
@@ -225,11 +232,21 @@ from lecture_forge.cli.commands.init import init
 
 # As Click command
 init(['--path', '/custom/path'])
+
+# Reconfigure (keep existing values, change only what's prompted)
+init(['--reconfigure'])
+
+# Show current settings
+init(['--show'])
 ```
 
 **Function Signature:**
 ```python
-def init(path: Optional[str]) -> None:
+def init(
+    path: Optional[str],
+    reconfigure: bool,
+    show: bool,
+) -> None:
     """Initialize LectureForge configuration."""
 ```
 
@@ -726,31 +743,39 @@ except LectureForgeError as e:
 CLI commands respect these environment variables (loaded from .env):
 
 ```bash
-# Required
+# ===== OpenAI mode (default) =====
 OPENAI_API_KEY=sk-proj-...
-SERPER_API_KEY=...
-
-# Optional
-PEXELS_API_KEY=...
-UNSPLASH_ACCESS_KEY=...
-
-# Model settings
 DEFAULT_MODEL=gpt-4o-mini
 EMBEDDING_MODEL=text-embedding-3-small
 
-# Quality settings
+# ===== Ollama mode (v0.5.5+, no OpenAI key required) =====
+LLM_PROVIDER=ollama                        # "openai" (default) or "ollama"
+OLLAMA_BASE_URL=http://localhost:11434      # Ollama server URL
+OLLAMA_MODEL=llama3.2                      # Default: llama3.2 (or qwen3.5:9b etc.)
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text    # Embedding model for ChromaDB
+OLLAMA_THINKING=auto                       # auto / true / false
+                                           # auto: enable for qwen3/qwq/deepseek-r1/phi4-reasoning
+
+# ===== Required for web search (both modes) =====
+SERPER_API_KEY=...
+
+# ===== Optional image search =====
+PEXELS_API_KEY=...
+UNSPLASH_ACCESS_KEY=...
+
+# ===== Quality settings =====
 QUALITY_THRESHOLD=80
 MAX_ITERATIONS=3
 
-# LLM cost control (v0.5.2+)
+# ===== LLM cost control (v0.5.2+) =====
 MAX_LLM_TOKENS=4096     # Max tokens per LLM response (default: 4096)
 MAX_RMC_ROUNDS=1        # Max RMC self-review iterations per agent (default: 1)
 
-# Search full-page fetch (v0.5.2+)
-SEARCH_FETCH_FULL_PAGES=false  # Fetch full page content from top search result URLs (default: false)
-SEARCH_FETCH_TOP_N=3           # Number of URLs to fetch in parallel when SEARCH_FETCH_FULL_PAGES=true
+# ===== Search full-page fetch (v0.5.2+) =====
+SEARCH_FETCH_FULL_PAGES=false  # Fetch full page content from top search result URLs
+SEARCH_FETCH_TOP_N=3           # Number of URLs to fetch in parallel
 
-# Paths
+# ===== Paths =====
 OUTPUT_DIR=./outputs
 DATA_DIR=./data
 ```

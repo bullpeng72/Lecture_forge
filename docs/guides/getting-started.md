@@ -25,13 +25,22 @@ Complete guide to installing and using LectureForge for the first time.
 ### Required API Keys
 
 You'll need API keys from:
-1. **OpenAI** (required)
+
+> **Ollama 사용 시 OpenAI 불필요**: `LLM_PROVIDER=ollama`로 로컬 LLM을 사용하면 OpenAI API 키 없이 강의 생성 가능. 단, 웹 검색을 위해 Serper는 여전히 필요합니다.
+
+1. **OpenAI** (required for OpenAI mode; optional if using Ollama)
    - Get from: [platform.openai.com](https://platform.openai.com)
    - Cost: Pay-per-use (~$0.035 per 60-min lecture, actual measured)
+   - *Not needed when `LLM_PROVIDER=ollama`*
 
-2. **Serper** (required)
+2. **Serper** (required for web search)
    - Get from: [serper.dev](https://serper.dev)
    - Free tier: 2,500 searches/month
+
+3. **Ollama** (optional — local LLM, no API key needed)
+   - Install from: [ollama.com](https://ollama.com)
+   - Free, runs locally — no internet for generation
+   - Set `LLM_PROVIDER=ollama` and `OLLAMA_MODEL=llama3.2` (or qwen3.5:9b etc.)
 
 ### Optional API Keys
 
@@ -128,20 +137,32 @@ Run the init command to set up your API keys:
 lecture-forge init
 ```
 
-This will:
-1. Create `~/Documents/LectureForge/` directory
-2. Prompt for required API keys (OpenAI, Serper)
-3. Prompt for optional API keys (Pexels, Unsplash)
-4. Create `.env` file with your settings
+This will (v0.5.5 LLM-first order):
+1. **LLM 공급자 선택** — OpenAI (기본) 또는 Ollama (로컬)
+2. **필수 API 키 입력** — OpenAI, Serper (Ollama 선택 시 OpenAI 자동 스킵)
+3. **품질 설정** — 기본값 사용 또는 커스텀
+4. **선택적 이미지 API** — Pexels, Unsplash
+5. **`.env` 파일 생성** + 파일 권한 보안 설정 (Unix/Mac: 600)
 
-**Example session:**
+**Example session (v0.5.5 LLM-first order):**
 
 ```
 🚀 LectureForge Configuration Setup
 
 📁 Using default directory: ~/Documents/LectureForge/
 
-📝 Required API Keys
+🤖 Phase 1: LLM Provider Setup
+
+Select LLM provider:
+  1. OpenAI (GPT-4o-mini, cloud, pay-per-use)
+  2. Ollama (local LLM, free, offline)
+Select (1-2) [1]:
+> 1
+
+Default model [gpt-4o-mini]: (Enter)
+✓ LLM provider: OpenAI, model: gpt-4o-mini
+
+📝 Phase 2: API Keys
 
 1. OpenAI API Key
    • Get from: https://platform.openai.com
@@ -158,6 +179,11 @@ This will:
 
    Enter your Serper API Key: xxxxx
    ✓ Serper key saved (32 characters)
+
+⚙️ Phase 3: Quality Settings (press Enter to use defaults)
+
+Quality threshold [80]: (Enter)
+Max iterations [3]: (Enter)
 
 📸 Optional: Image Search APIs
 

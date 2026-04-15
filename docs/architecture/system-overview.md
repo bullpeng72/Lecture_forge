@@ -300,7 +300,8 @@ Logged to conversation_log.txt (v0.3.6+)
 |----------|-----------|---------|
 | **Language** | Python 3.11-3.13 | Main language |
 | **Framework** | LangChain | LLM orchestration |
-| **LLM** | OpenAI GPT-4o-mini | Content generation |
+| **LLM** | OpenAI GPT-4o-mini (기본), GPT-4o (Vision) | Content generation |
+| **LLM (local)** | Ollama (`LLM_PROVIDER=ollama`, v0.5.5+) | Local LLM — qwen3.5, llama3.2, etc. |
 | **Vector DB** | ChromaDB | Embeddings storage |
 | **Embeddings** | text-embedding-3-small | Semantic search |
 | **CLI** | Click + Rich + prompt-toolkit | User interface |
@@ -490,12 +491,15 @@ Logged to conversation_log.txt (v0.3.6+)
 - **Ollama LLM provider**: `LLM_PROVIDER=ollama` env var routes all `create_llm()` calls to `ChatOllama`. Provider abstraction covers `BaseAgent`, `EmbeddingManager`, `SlideConverter`, `language_utils.translate_text`.
 - **Thinking mode control**: `OLLAMA_THINKING=auto/true/false` — auto-detect for qwen3/qwq/deepseek-r1/r1-distill/phi4-reasoning via `Config.is_thinking_model()`. `ChatOllama` `reasoning=` parameter (not `think=`) controls thinking.
 - **`thinking=False` for non-reasoning agents**: `ContentAnalyzerAgent`, `DiagramGeneratorAgent`, `HTMLAssemblerAgent`, `RevisionAgent`, `PDFTranslatorAgent` — deep reasoning adds no value here; disabling it removes 5+ min overhead per call.
+- **slides 모듈 `thinking=False`** (bug fix): `slides/section_rewriter.py`, `slides/notes.py`, `slides/utils.py` — qwen3.5 `reasoning=True` + `num_predict=800~1000` causes thinking to consume all tokens → `response.content` empty → `⚠️ Rewriter returned empty result` → all 12 sections fell back to original text. Fixed by `thinking=False` on all three `create_llm()` calls.
+- **`language_utils.translate_text` `thinking=False`** (bug fix): `max_tokens=2000` + `reasoning=True` → thinking phase consumed all tokens → empty translation string returned. Fixed.
+- **4개 에이전트 `thinking=False` 방어적 고정**: `ContentCollectorAgent`, `ImageCollectorAgent`, `AsyncBaseAgent`, `ContentExpander` — `invoke_llm` 미사용이지만 일관성 확보.
 - **`improve --to-slides` default notes**: Presenter notes now ON by default; `--without-notes` flag opts out. `--with-notes` removed.
 - **`init` LLM-first setup flow**: Phase 1=LLM settings (provider selected first), Phase 2=API keys (Ollama mode skips OpenAI key), Phase 3=quality. Ensures provider is known before API key collection.
 
 ### v0.5.4: Test Coverage & Code Quality
 
-- **Test coverage**: 1,436 → 1,877 test functions (+441), ~48% → ~81% — editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI fully covered.
+- **Test coverage**: 1,436 → 1,837 test functions (+401), ~48% → ~81% — editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI fully covered.
 - **`utils/json_utils.py`**: `strip_json_fence()` / `parse_json_response()` — 4-agent duplicated pattern consolidated into shared utility.
 
 ### v0.5.3: Packaging Stability

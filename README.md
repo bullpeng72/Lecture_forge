@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.7-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.8-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.7** | 미사용 import 20개 파일 정리 (techdebt safe fixes)
+> 🚀 **v0.5.8** | 이미지 번들링 & PDF 커버리지 균형 개선
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -69,9 +69,10 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.7)
+## 🚀 최근 개선사항 (v0.5.8)
 
-- 🧹 **미사용 import 20개 파일 정리**: slides/notes·section_rewriter·utils, tools/async_web_scraper·image_extractor, utils/language_utils·prompt_manager, agents/content_writer·curriculum_designer·qa_agent, models/curriculum, cli/commands 전체 — 불필요한 typing/rich/pathlib import 제거 (기능 변경 없음)
+- 📦 **이미지 번들링**: HTML 생성 시 참조 이미지를 `{강의명}_images/` 폴더로 자동 복사 — `cleanup` 후에도 이미지 영구 보존 (`html_assembler.py`)
+- 🔍 **PDF 커버리지 균형 개선**: 토픽 추출 프롬프트에 문서 전체 균형 배분 규칙 명시, probe query 10→14개 확장 (평가·배포·파인튜닝·안전성 추가) — 에이전트 편중 방지 (`content_analyzer.py`)
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -895,6 +896,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.8 (2026-04-16) - 🖼 이미지 번들링 & 커버리지 개선
+
+- 📦 **이미지 번들링** (`html_assembler.py`): `_bundle_images()` 메서드 추가 — HTML 생성 시 참조 이미지를 `{강의명}_images/` 폴더로 복사, `cleanup` 후에도 이미지 보존
+- 🔍 **토픽 추출 균형 배분** (`content_analyzer.py`): `_extract_key_topics` 프롬프트에 문서 전체 균형 배분 규칙 명시 — 초반·중반·후반 섹션 모두 포함 요구
+- 🔍 **probe query 확장**: 10개 → 14개 — `optimization/evaluation`, `deployment/production`, `fine-tuning/training`, `safety/alignment` 쿼리 추가로 PDF 후반부 샘플링 강화
 
 ### v0.5.7 (2026-04-15) - 🧹 코드 품질 개선
 

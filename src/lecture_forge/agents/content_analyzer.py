@@ -117,7 +117,9 @@ class ContentAnalyzerAgent(BaseAgent):
                 total = stats.get("document_count", 0)
 
                 if total > 0:
-                    # Probe queries that tend to surface different parts of any document (v0.4.0: 6→10)
+                    # Probe queries that surface different parts of any document.
+                    # Includes random-offset probes to reach mid/late document sections
+                    # that topic-focused queries may miss. (v0.4.0: 6→10, v0.5.8: 10→14)
                     probe_queries = [
                         topic,
                         topic + " 심화 고급",
@@ -129,6 +131,11 @@ class ContentAnalyzerAgent(BaseAgent):
                         "comparison alternative trade-off",
                         "implementation architecture component",
                         "summary conclusion future",
+                        # Extra probes to reach mid/late sections
+                        topic + " optimization evaluation benchmark",
+                        topic + " deployment production system",
+                        topic + " fine-tuning training data pipeline",
+                        topic + " safety alignment guardrail",
                     ]
 
                     # How many results per probe (scale with DB size, cap at 15)
@@ -172,12 +179,18 @@ class ContentAnalyzerAgent(BaseAgent):
         # built from diverse KB samples rather than just the first document. (v0.4.0: 20k→50k)
         text_sample = text[:50000] if len(text) > 50000 else text
 
-        prompt = f"""Analyze the following educational content about "{main_topic}" and identify the 5-15 most important topics or concepts that should be covered in a lecture.
+        prompt = f"""Analyze the following educational content about "{main_topic}" and identify 10-15 important topics or concepts to cover in a lecture.
 
 Content:
 {text_sample}
 
-IMPORTANT: Return topic names in KOREAN language.
+IMPORTANT RULES:
+1. Topics must span the FULL document — early, middle, AND late sections must all be represented.
+2. Do NOT cluster topics around one theme. Ensure breadth: include foundational concepts, core techniques, and advanced/applied topics.
+3. If the content has multiple major subject areas (e.g. model training, RAG, agents, fine-tuning), include at least one topic from each area.
+4. Aim for 10-15 topics that together give a balanced picture of the entire content.
+5. Return topic names in KOREAN language.
+
 Return ONLY a JSON array of topic names (strings), nothing else. Example: ["주제 1", "주제 2", "주제 3"]"""
 
         try:

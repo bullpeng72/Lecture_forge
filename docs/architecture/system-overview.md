@@ -486,6 +486,12 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.8: Image Bundling & Coverage Balance
+
+- **Image bundling** (`html_assembler.py`): Added `_bundle_images()` — on HTML generation, copies all referenced local images into a `{stem}_images/` folder alongside the HTML file. Prevents images from disappearing after `lecture-forge cleanup` deletes `data/images/`. The HTML `src` attributes are rewritten to the bundled paths using regex scan of the final HTML string (robust to path conversion in `_render_image_html`).
+- **Topic extraction balance** (`content_analyzer.py`): `_extract_key_topics` prompt now explicitly requires topics to span early, middle, and late sections of the document, and mandates representation of all major subject areas. Prevents agent-topic over-indexing on long technical books.
+- **Probe query expansion**: 10 → 14 probe queries — added `optimization/evaluation`, `deployment/production`, `fine-tuning/training`, `safety/alignment` to improve sampling of mid/late PDF sections.
+
 ### v0.5.7: Code Quality — Unused Import Cleanup
 
 - **20-file unused import removal** (techdebt safe fix): Removed confirmed-unused imports across `slides/notes.py`, `slides/section_rewriter.py`, `slides/utils.py`, `tools/async_web_scraper.py`, `tools/image_extractor.py`, `utils/language_utils.py`, `utils/prompt_manager.py`, `agents/content_writer/agent.py`, `agents/content_writer/image_selector.py`, `agents/content_writer/content_expander.py`, `agents/curriculum_designer.py`, `agents/qa_agent.py`, `models/curriculum.py`, and all `cli/commands/*.py`. Removed unneeded `typing` aliases (Dict, Optional, List), Rich components (Panel, Prompt, Table), `pathlib.Path`, and internal utility imports that were no longer referenced. No functional changes — 540 tests pass (4 pre-existing failures in `slides/test_utils.py` unrelated).
@@ -595,5 +601,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-04-15
-**Version**: 0.5.7
+**Last Updated**: 2026-04-16
+**Version**: 0.5.8

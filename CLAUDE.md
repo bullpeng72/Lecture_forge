@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.7 | **최종 수정**: 2026-04-15
+> **버전**: 0.5.8 | **최종 수정**: 2026-04-16
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -426,6 +426,12 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.8 (2026-04-16) - 🖼 이미지 번들링 & 커버리지 개선
+
+- 📦 **이미지 번들링** (`html_assembler.py`): `_bundle_images()` 메서드 추가 — HTML 생성 시 참조 이미지를 `{강의명}_images/` 폴더로 복사, `cleanup` 후에도 이미지 보존 (cleanup 독립성)
+- 🔍 **토픽 추출 균형 배분** (`content_analyzer.py`): `_extract_key_topics` 프롬프트에 "문서 전체 균형 배분" 규칙 명시 — 초반·중반·후반 섹션 모두 포함, 다중 주제 영역 대표 요구
+- 🔍 **probe query 확장** (`content_analyzer.py`): 10개 → 14개 — `optimization/evaluation`, `deployment/production`, `fine-tuning/training`, `safety/alignment` 쿼리 추가로 PDF 후반부 내용 샘플링 강화
 
 ### v0.5.7 (2026-04-15) - 🧹 코드 품질 개선 (Techdebt Safe Fixes)
 

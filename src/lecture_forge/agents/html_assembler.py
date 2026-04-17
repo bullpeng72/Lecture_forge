@@ -84,8 +84,6 @@ class HTMLAssemblerAgent(BaseAgent):
                 # but ensure .html extension
                 if not str(output_path_obj).endswith(".html"):
                     output_path = f"{output_path}.html"
-                # Bundle images next to the output file before writing
-                html_content = self._bundle_images(html_content, Path(output_path))
                 # Copy static assets to the target directory too
                 self._copy_static_assets(Path(output_path).parent)
                 # Write directly and return early
@@ -100,9 +98,6 @@ class HTMLAssemblerAgent(BaseAgent):
 
         # Construct full path in output directory
         output_path = str(output_dir / filename)
-
-        # Bundle images next to the HTML so they survive data/images cleanup
-        html_content = self._bundle_images(html_content, Path(output_path))
 
         # Write HTML file
         with open(output_path, "w", encoding="utf-8") as f:
@@ -128,69 +123,6 @@ class HTMLAssemblerAgent(BaseAgent):
             src = templates_dir / asset
             if src.exists():
                 shutil.copy2(src, dest_dir / asset)
-
-    def _bundle_images(self, html_content: str, html_path: Path) -> str:
-        """Copy local images into a {stem}_images/ folder next to the HTML.
-
-        Images stored in data/images/ are deleted when the user runs
-        ``lecture-forge cleanup``.  Bundling them alongside the HTML file
-        makes the output self-contained so that images survive cleanup.
-
-        Scans the generated HTML for local <img src="..."> attributes rather
-        than relying on ImageReference.path (which is absolute, different from
-        the relative src written into the HTML by _render_image_html).
-
-        Returns the HTML string with src attributes updated to the new paths.
-        """
-        import re as _re
-
-        # Find all img src attributes that are local (not http/https, not data:)
-        src_pattern = _re.compile(r'<img\b[^>]*\bsrc="([^"]+)"')
-        all_srcs = src_pattern.findall(html_content)
-
-        local_srcs: list[tuple[str, Path]] = []  # (src_attr_value, resolved_path)
-        for src in all_srcs:
-            if src.startswith(("http://", "https://", "data:", "//")):
-                continue
-            resolved = (html_path.parent / src).resolve()
-            if resolved.exists():
-                local_srcs.append((src, resolved))
-
-        if not local_srcs:
-            return html_content
-
-        # Create bundle directory: {html_stem}_images/ next to the HTML
-        bundle_dir = html_path.parent / f"{html_path.stem}_images"
-        bundle_dir.mkdir(parents=True, exist_ok=True)
-
-        copied = 0
-        replacements: dict[str, str] = {}
-
-        for src_attr, src_file in local_srcs:
-            if src_attr in replacements:
-                continue  # already handled
-            dest_file = bundle_dir / src_file.name
-            # If dest already exists with the same size, skip copy
-            if not dest_file.exists() or dest_file.stat().st_size != src_file.stat().st_size:
-                try:
-                    shutil.copy2(src_file, dest_file)
-                    copied += 1
-                except OSError as e:
-                    logger.warning(f"Could not copy image {src_file.name}: {e}")
-                    continue
-            # Build new relative src: "./{stem}_images/filename.ext"
-            new_src = f"./{bundle_dir.name}/{src_file.name}"
-            replacements[src_attr] = new_src
-
-        if not replacements:
-            return html_content
-
-        # Replace src attributes in HTML via exact string match
-        for old_src, new_src in replacements.items():
-            html_content = html_content.replace(f'src="{old_src}"', f'src="{new_src}"')
-
-        logger.info(f"   📦 Bundled {copied} images → {bundle_dir.name}/")
-        return html_content
 
     def _detect_lang(self, lecture: Lecture) -> str:
         """Detect primary language from lecture title and first section content.
@@ -426,11 +358,17 @@ class HTMLAssemblerAgent(BaseAgent):
 
         if img_path.is_absolute():
             try:
-                rel_to_data = img_path.relative_to(Config.DATA_DIR)
-                rel_data_dir = os.path.relpath(Config.DATA_DIR, Config.OUTPUT_DIR)
-                corrected_path = str(Path(rel_data_dir) / rel_to_data).replace("\\", "/")
+                # New: images already in OUTPUT_DIR (e.g. outputs/{stem}_images/)
+                rel_to_output = img_path.relative_to(Config.OUTPUT_DIR)
+                corrected_path = rel_to_output.as_posix()
             except ValueError:
-                corrected_path = str(img.path)
+                try:
+                    # Legacy: images in DATA_DIR (e.g. data/images/session/)
+                    rel_to_data = img_path.relative_to(Config.DATA_DIR)
+                    rel_data_dir = os.path.relpath(Config.DATA_DIR, Config.OUTPUT_DIR)
+                    corrected_path = str(Path(rel_data_dir) / rel_to_data).replace("\\", "/")
+                except ValueError:
+                    corrected_path = str(img.path)
         elif img.path.startswith(("http://", "https://")):
             corrected_path = img.path
         elif img.path.startswith("../"):

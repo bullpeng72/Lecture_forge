@@ -59,6 +59,11 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     collection_name = f"{topic_safe}_{timestamp}"
 
+    # Pre-compute output stem so images land directly in outputs/{stem}_images/
+    _raw_output = inputs.get("output_name")
+    output_stem = Path(_raw_output).stem if _raw_output else f"{inputs['topic'].replace(' ', '_')}_{timestamp}"
+    image_session_id = f"{output_stem}_images"
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -148,8 +153,9 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         # Phase 2: Image Collection (still sync for now)
         task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=1)
         image_agent = ImageCollectorAgent(
-            session_id=collection_name,
-            vector_store=content_agent.vector_store,  # Share vector store
+            session_id=image_session_id,
+            output_dir=str(Config.OUTPUT_DIR),
+            vector_store=content_agent.vector_store,
         )
 
         pdf_sources = (
@@ -394,8 +400,7 @@ async def generate_lecture_async(inputs: Dict) -> Dict:
         assembler = HTMLAssemblerAgent()
 
         # Use the lecture object from Phase 5 (includes quality improvements)
-        output_name = inputs.get("output_name") or f"{topic_safe}_{timestamp}"
-        html_path = assembler.assemble(lecture, output_path=output_name)
+        html_path = assembler.assemble(lecture, output_path=output_stem)
         progress.update(task6, description="[green]✅ Phase 6: HTML assembled", advance=1)
         console.print(f"   ✅ HTML assembled: {html_path}")
 

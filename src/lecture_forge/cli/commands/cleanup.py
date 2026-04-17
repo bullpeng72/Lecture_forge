@@ -34,10 +34,12 @@ def cleanup(all: bool) -> None:
       • Vector DB directories (data/vector_db/*)
       • Embeddings and metadata
       • Text chunks and indexes
+      • Legacy image cache (data/images/*) if present
 
     \b
     What's Preserved:
       • Generated HTML lecture files (outputs/)
+      • Bundled images (outputs/*_images/)
       • Original source files (PDFs, etc.)
       • Configuration files
 
@@ -201,5 +203,27 @@ def cleanup(all: bool) -> None:
 
         except (ValueError, IndexError) as e:
             console.print(f"\n[red]❌ Invalid selection: {e}[/red]\n")
+
+    # ── Legacy data/images cleanup ────────────────────────────────────────────
+    legacy_images_dir = Config.DATA_DIR / "images"
+    if legacy_images_dir.exists():
+        legacy_sessions = [d for d in legacy_images_dir.iterdir() if d.is_dir()]
+        if legacy_sessions:
+            legacy_size = sum(get_dir_size(d) for d in legacy_sessions)
+            console.print(
+                f"\n[bold yellow]🗂️  Legacy image cache found:[/bold yellow] "
+                f"{len(legacy_sessions)} session(s), {format_size(legacy_size)}"
+            )
+            console.print(
+                "[dim]  (Images from old versions stored in data/images/. "
+                "New versions store images in outputs/ directly.)[/dim]"
+            )
+            if Confirm.ask("Delete legacy image cache?", default=True):
+                for d in legacy_sessions:
+                    try:
+                        shutil.rmtree(d)
+                    except Exception as e:
+                        console.print(f"[yellow]⚠️  Failed to delete {d.name}: {e}[/yellow]")
+                console.print(f"[green]✓ Freed up {format_size(legacy_size)} (legacy images)[/green]\n")
 
 

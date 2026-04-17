@@ -59,7 +59,14 @@ def translate_lecture(
     topic = pdf_path_obj.stem  # Use filename (without extension) as topic
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_id = f"translate_{timestamp}"
+
+    # Pre-compute output stem so images land directly in outputs/{stem}_images/
+    if output_name:
+        output_stem = Path(output_name).stem
+    else:
+        suffix = "_structure" if no_translate else "_ko"
+        output_stem = f"{topic}{suffix}"
+    image_session_id = f"{output_stem}_images"
 
     translator = PDFTranslatorAgent(pdf_path=str(pdf_path_obj))
 
@@ -81,7 +88,10 @@ def translate_lecture(
         task2 = progress.add_task(
             "[cyan]🖼️  Phase 2: Collecting PDF images...", total=None
         )
-        image_agent = ImageCollectorAgent(session_id=session_id)
+        image_agent = ImageCollectorAgent(
+            session_id=image_session_id,
+            output_dir=str(Config.OUTPUT_DIR),
+        )
         image_result = image_agent.collect(
             {"pdfs": [str(pdf_path_obj)], "urls": [], "image_keywords": []},
             auto_describe_images=True,
@@ -171,14 +181,10 @@ def translate_lecture(
             created_at=datetime.now().isoformat(),
         )
 
-        if not output_name:
-            suffix = "_structure" if no_translate else "_ko"
-            output_name = f"{topic}{suffix}"
-
         html_assembler = HTMLAssemblerAgent()
         html_path = html_assembler.assemble(
             lecture,
-            output_path=output_name,
+            output_path=output_stem,
             image_search_enabled=False,  # Translation doesn't use web image search
         )
         progress.update(task7, completed=True)
@@ -261,7 +267,7 @@ def translate_lecture(
             console.print("   🎨 Regenerating HTML with improvements...")
             html_path = html_assembler.assemble(
                 improved_lecture,
-                output_path=output_name,
+                output_path=output_stem,
                 image_search_enabled=False,
             )
             lecture = improved_lecture

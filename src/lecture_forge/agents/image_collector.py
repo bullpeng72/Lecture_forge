@@ -18,13 +18,24 @@ from lecture_forge.utils import logger
 class ImageCollectorAgent(BaseAgent):
     """Agent for collecting images from PDFs, URLs, and image search APIs."""
 
-    def __init__(self, vision_model: Optional[str] = None, session_id: Optional[str] = None, vector_store: Optional[VectorStore] = None) -> None:
+    def __init__(
+        self,
+        vision_model: Optional[str] = None,
+        session_id: Optional[str] = None,
+        output_dir: Optional[str] = None,
+        vector_store: Optional[VectorStore] = None,
+    ) -> None:
         """
         Initialize Image Collector Agent.
 
         Args:
             vision_model: Model for vision tasks (default: Config.VISION_MODEL)
-            session_id: Session identifier for organizing images
+            session_id: Session identifier for organizing images (sub-folder name)
+            output_dir: Base directory for image storage. Defaults to
+                        ``Config.DATA_DIR / "images"``.  Pass
+                        ``str(Config.OUTPUT_DIR)`` together with a
+                        ``session_id`` of ``"{stem}_images"`` to store images
+                        directly in the outputs folder alongside the HTML file.
             vector_store: VectorStore instance for storing image descriptions (optional)
         """
         super().__init__(model=vision_model or Config.DEFAULT_MODEL, thinking=False)
@@ -33,14 +44,17 @@ class ImageCollectorAgent(BaseAgent):
         # Generate session ID
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
 
+        # Base directory where the session sub-folder will be created
+        self.images_dir = Path(output_dir) if output_dir else (Config.DATA_DIR / "images")
+
         # Vector store for RAG integration
         self.vector_store = vector_store
 
-        # Initialize tools
-        self.pdf_extractor = PDFImageExtractorTool()
-        self.web_scraper = WebImageScraperTool()
-        self.unsplash_search = UnsplashSearchTool()
-        self.pexels_search = PexelsSearchTool()
+        # Initialize tools — all tools share the same base directory
+        self.pdf_extractor = PDFImageExtractorTool(output_dir=str(self.images_dir))
+        self.web_scraper = WebImageScraperTool(output_dir=str(self.images_dir))
+        self.unsplash_search = UnsplashSearchTool(output_dir=str(self.images_dir))
+        self.pexels_search = PexelsSearchTool(output_dir=str(self.images_dir))
 
         # Track collected images
         self.all_images = []
@@ -201,7 +215,7 @@ class ImageCollectorAgent(BaseAgent):
             self._save_image_page_map(image_page_map)
 
         # 5. Organize results
-        storage_path = Path(Config.DATA_DIR) / "images" / self.session_id
+        storage_path = self.images_dir / self.session_id
 
         # Categorize images by source
         images_by_source = {
@@ -449,7 +463,7 @@ class ImageCollectorAgent(BaseAgent):
             return
 
         # Save to session directory
-        storage_path = Path(Config.DATA_DIR) / "images" / self.session_id
+        storage_path = self.images_dir / self.session_id
         storage_path.mkdir(parents=True, exist_ok=True)
 
         map_file = storage_path / "image_page_map.json"

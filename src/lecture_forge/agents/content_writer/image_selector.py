@@ -680,13 +680,15 @@ class ImageSelector:
         from lecture_forge.config import Config
 
         try:
-            # Try to find the most recent session's image map
-            images_dir = Path(Config.DATA_DIR) / "images"
-            if not images_dir.exists():
-                return {}
+            # Search both legacy data/images/** and new outputs/*_images/ locations
+            map_files = []
+            legacy_dir = Path(Config.DATA_DIR) / "images"
+            if legacy_dir.exists():
+                map_files.extend(legacy_dir.glob("*/image_page_map.json"))
+            output_dir = Path(Config.OUTPUT_DIR)
+            if output_dir.exists():
+                map_files.extend(output_dir.glob("*_images/image_page_map.json"))
 
-            # Find all session directories with image_page_map.json
-            map_files = list(images_dir.glob("*/image_page_map.json"))
             if not map_files:
                 return {}
 

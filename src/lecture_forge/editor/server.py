@@ -365,9 +365,8 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
 
         img_path = Path(path_str).resolve()
 
-        # Security: must be inside DATA_DIR/images or the html's directory
+        # Security: must be inside the html's parent directory (covers {stem}_images/)
         allowed_roots = [
-            (Config.DATA_DIR / "images").resolve(),
             Path(html_path).parent.resolve(),
         ]
         if not any(str(img_path).startswith(str(r)) for r in allowed_roots):

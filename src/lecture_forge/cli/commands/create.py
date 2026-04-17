@@ -69,6 +69,11 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     collection_name = f"{topic_safe}_{timestamp}"
 
+    # Pre-compute output stem so images land directly in outputs/{stem}_images/
+    _raw_output = inputs.get("output_name")
+    output_stem = Path(_raw_output).stem if _raw_output else f"{inputs['topic'].replace(' ', '_')}_{timestamp}"
+    image_session_id = f"{output_stem}_images"
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -155,7 +160,9 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Phase 2: Image Collection
         task2 = progress.add_task("[cyan]🖼️  Phase 2: Collecting images...", total=1)
         image_agent = ImageCollectorAgent(
-            session_id=collection_name, vector_store=content_agent.vector_store  # Share vector store for RAG integration
+            session_id=image_session_id,
+            output_dir=str(Config.OUTPUT_DIR),
+            vector_store=content_agent.vector_store,
         )
 
         # PDF images now recommended with location-based matching (v0.2.0+)
@@ -304,7 +311,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         html_assembler = HTMLAssemblerAgent()
         html_path = html_assembler.assemble(
             lecture,
-            output_path=inputs.get("output_name"),
+            output_path=output_stem,
             image_search_enabled=inputs.get("image_search", True),
         )
         progress.update(task4c, description="[green]✅ Phase 4c: HTML assembled", advance=1)
@@ -392,7 +399,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
             console.print(f"   🎨 Regenerating HTML with improvements...")
             html_path = html_assembler.assemble(
                 improved_lecture,
-                output_path=inputs.get("output_name"),
+                output_path=output_stem,
                 image_search_enabled=inputs.get("image_search", True),
             )
             lecture = improved_lecture

@@ -262,10 +262,23 @@ class Config:
     OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
     # Thinking mode: "auto" (enable for known reasoning models), "true", "false"
     OLLAMA_THINKING: str = os.getenv("OLLAMA_THINKING", "auto")
+    # Vision model for PDF image description (empty = fall back to OLLAMA_MODEL)
+    OLLAMA_VISION_MODEL: str = os.getenv("OLLAMA_VISION_MODEL", "")
 
     # Model name patterns that support thinking / chain-of-thought mode.
     # Covers: Qwen3/3.5, QwQ, DeepSeek-R1 (full + distill variants), Phi-4 Reasoning.
     _THINKING_PATTERNS: tuple = ("qwen3", "qwq", "deepseek-r1", "r1-distill", "phi4-reasoning")
+
+    @classmethod
+    def get_vision_model(cls) -> str:
+        """Return the model name to use for vision (image description) tasks.
+
+        OpenAI: VISION_MODEL (default gpt-4o-mini — supports vision).
+        Ollama: OLLAMA_VISION_MODEL if set, otherwise OLLAMA_MODEL.
+        """
+        if cls.LLM_PROVIDER == "ollama":
+            return cls.OLLAMA_VISION_MODEL or cls.OLLAMA_MODEL
+        return cls.VISION_MODEL or cls.DEFAULT_MODEL
 
     @classmethod
     def is_thinking_model(cls, model_name: str) -> bool:

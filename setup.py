@@ -19,7 +19,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="lecture-forge",
-    version="0.5.8",
+    version="0.5.9",
     author="Sungwoo Kim",
     author_email="sungwoo.kim@gmail.com",
     description="AI-powered lecture material generator with multilingual support using LangChain",

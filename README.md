@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.8-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.5.9-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.8** | 이미지 번들링 & PDF 커버리지 균형 개선
+> 🚀 **v0.5.9** | 이미지 단일 저장 & 배포 구조 개선
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -69,10 +69,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.8)
+## 🚀 최근 개선사항 (v0.5.9)
 
-- 📦 **이미지 번들링**: HTML 생성 시 참조 이미지를 `{강의명}_images/` 폴더로 자동 복사 — `cleanup` 후에도 이미지 영구 보존 (`html_assembler.py`)
-- 🔍 **PDF 커버리지 균형 개선**: 토픽 추출 프롬프트에 문서 전체 균형 배분 규칙 명시, probe query 10→14개 확장 (평가·배포·파인튜닝·안전성 추가) — 에이전트 편중 방지 (`content_analyzer.py`)
+- 📦 **이미지 단일 저장**: PDF/웹 이미지를 `data/images/` 없이 `outputs/{stem}_images/`에 직접 저장 — 복사 단계 제거, 이미지 한 벌만 생성
+- 🗂️ **배포 용이성**: HTML + `{stem}_images/` 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나로 완전 배포
+- 🧹 **cleanup 개선**: 레거시 `data/images/` 잔존 데이터 감지 및 정리 추가
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -896,6 +897,15 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선
+
+- 📦 **이미지 단일 저장**: `ImageCollectorAgent`에 `output_dir` 파라미터 추가 — `data/images/` 임시 경로 없이 `outputs/{stem}_images/`에 직접 저장, `_bundle_images()` 복사 단계 완전 제거
+- 🗂️ **배포 용이성**: HTML 파일과 이미지 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나만 복사해도 완전 배포 가능
+- 🔧 **create / translate / create_async**: `output_stem` Phase 1 전 조기 결정, 이미지·HTML 경로 일관성 확보
+- 🎨 **`_render_image_html` 개선**: `OUTPUT_DIR` 내 이미지 우선 처리, 레거시 `DATA_DIR` 경로 fallback 유지
+- 🔍 **`image_selector` 맵 탐색 확장**: `outputs/*_images/image_page_map.json`도 검색
+- 🧹 **cleanup 개선**: 레거시 `data/images/` 잔존 세션 감지·삭제 추가
 
 ### v0.5.8 (2026-04-16) - 🖼 이미지 번들링 & 커버리지 개선
 

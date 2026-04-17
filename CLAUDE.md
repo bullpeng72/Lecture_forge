@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.8 | **최종 수정**: 2026-04-16
+> **버전**: 0.5.9 | **최종 수정**: 2026-04-17
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -426,6 +426,17 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선
+
+- 📦 **이미지 단일 저장**: `ImageCollectorAgent`에 `output_dir` 파라미터 추가 — PDF/웹/검색 이미지를 `data/images/` 임시 경로 없이 `outputs/{stem}_images/`에 처음부터 직접 저장, 복사(bundle) 단계 완전 제거
+- 🗂️ **배포 용이성**: HTML 파일과 `{stem}_images/` 폴더가 항상 같은 `outputs/` 디렉토리에 위치 — 폴더 하나만 복사해도 이미지 깨짐 없이 배포 가능
+- 🔧 **`create` / `translate` / `create_async`**: `output_stem` 조기 결정 → Phase 1 전에 이미지 저장 경로 확정, `html_assembler.assemble()`에 동일 stem 전달
+- 🎨 **`_render_image_html` 개선**: `OUTPUT_DIR` 내 이미지 우선 처리 — 절대경로를 `{stem}_images/filename` 상대경로로 자동 변환, 레거시 `DATA_DIR` 경로 fallback 유지
+- 🗑️ **`_bundle_images()` 삭제** (`html_assembler.py`): 복사 단계 불필요로 메서드 제거
+- 🔍 **`image_selector` 맵 탐색 확장**: `outputs/*_images/image_page_map.json`도 검색 — location-based 이미지 매칭 정상 동작
+- 🛡️ **`editor/server.py` 보안 단순화**: `allowed_roots`에서 `DATA_DIR/images` 제거, `html_path` 인접 폴더만으로 충분
+- 🧹 **`cleanup` 레거시 정리**: `data/images/` 잔존 세션 감지·삭제 추가 (이전 버전 데이터 정리)
 
 ### v0.5.8 (2026-04-16) - 🖼 이미지 번들링 & 커버리지 개선
 

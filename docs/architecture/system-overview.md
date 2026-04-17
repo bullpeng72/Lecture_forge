@@ -486,6 +486,16 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.5.9: Single-Copy Image Storage & Distribution Structure
+
+- **Single image copy** (`image_collector.py`, `html_assembler.py`): Added `output_dir` parameter to `ImageCollectorAgent` — PDF/web/search images are now written directly to `outputs/{stem}_images/` from the start. The `_bundle_images()` copy step in `HTMLAssemblerAgent` has been completely removed. Images exist only once; no duplication.
+- **Distribution-ready layout**: HTML file and `{stem}_images/` folder always reside in the same `outputs/` directory — copy the folder once for complete, self-contained distribution.
+- **Pipeline path alignment** (`create.py`, `translate.py`, `create_async.py`): `output_stem` is determined before Phase 1 (image collection), ensuring the image session directory name matches the HTML filename. Both initial and quality-revision `assemble()` calls use the same pre-computed stem.
+- **`_render_image_html` improvement**: `OUTPUT_DIR`-based absolute paths now take priority over `DATA_DIR` paths when computing relative `src` attributes. Legacy `DATA_DIR/images/` fallback retained for backward compatibility.
+- **`image_selector` map search extended**: `_load_image_page_map()` now searches both `data/images/*/image_page_map.json` (legacy) and `outputs/*_images/image_page_map.json` (new) — location-based image matching continues to work correctly.
+- **`editor/server.py` security simplification**: `allowed_roots` now only includes `html_path.parent` — sufficient since images are always in a sibling `_images/` folder.
+- **`cleanup` legacy cleanup**: Detects and removes stale `data/images/` session directories from previous versions.
+
 ### v0.5.8: Image Bundling & Coverage Balance
 
 - **Image bundling** (`html_assembler.py`): Added `_bundle_images()` — on HTML generation, copies all referenced local images into a `{stem}_images/` folder alongside the HTML file. Prevents images from disappearing after `lecture-forge cleanup` deletes `data/images/`. The HTML `src` attributes are rewritten to the bundled paths using regex scan of the final HTML string (robust to path conversion in `_render_image_html`).

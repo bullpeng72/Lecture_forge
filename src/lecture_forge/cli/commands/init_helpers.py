@@ -569,6 +569,15 @@ def collect_llm_settings(
             console=console,
         )
         settings["OLLAMA_THINKING"] = thinking
+
+        cur_vision = cur.get("OLLAMA_VISION_MODEL", "")
+        vision = Prompt.ask(
+            "   Vision 모델 [dim](이미지 설명용; 비워두면 기본 모델 사용. 추천: qwen3.5:9b · llava)[/dim]",
+            default=cur_vision,
+            console=console,
+        )
+        if vision.strip():
+            settings["OLLAMA_VISION_MODEL"] = vision.strip()
     else:
         cur_model = cur.get("DEFAULT_MODEL", "gpt-4o-mini")
         preset_hint = "/".join(_OPENAI_MODEL_PRESETS)
@@ -578,6 +587,14 @@ def collect_llm_settings(
             console=console,
         )
         settings["DEFAULT_MODEL"] = model.strip() or cur_model
+
+        cur_vision = cur.get("VISION_MODEL", "gpt-4o")
+        vision = Prompt.ask(
+            "   Vision 모델 [dim](PDF 이미지 설명용. 추천: gpt-4o)[/dim]",
+            default=cur_vision,
+            console=console,
+        )
+        settings["VISION_MODEL"] = vision.strip() or cur_vision
 
     # ── Temperature (common) ─────────────────────────────
     cur_temp = cur.get("TEMPERATURE", "0.7")
@@ -717,6 +734,8 @@ def show_current_config(console: Console, env_path: Path) -> None:
         llm_table.add_row("Ollama 모델", env.get("OLLAMA_MODEL", "qwen3.5:9b"))
         llm_table.add_row("Ollama 임베딩", env.get("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"))
         llm_table.add_row("Thinking 모드", env.get("OLLAMA_THINKING", "auto"))
+        ollama_vision = env.get("OLLAMA_VISION_MODEL", "")
+        llm_table.add_row("Vision 모델", ollama_vision if ollama_vision else "[dim](기본 모델 사용)[/dim]")
     else:
         llm_table.add_row("기본 모델", env.get("DEFAULT_MODEL", "gpt-4o-mini"))
         llm_table.add_row("Vision 모델", env.get("VISION_MODEL", "gpt-4o"))

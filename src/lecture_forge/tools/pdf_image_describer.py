@@ -1,13 +1,12 @@
 """
-PDF Image Description Generator - Infers image descriptions from page text.
-
-This tool analyzes PDF page content to generate descriptions for extracted images,
-enabling better image matching without expensive Vision AI.
+PDF Image Description Generator - Infers image descriptions from page text,
+with optional Vision AI for models that support it (e.g. gpt-4o, qwen3.5).
 """
 
+import base64
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import fitz  # PyMuPDF
 
@@ -16,21 +15,77 @@ from lecture_forge.utils import logger
 
 
 class PDFImageDescriber:
-    """Generate descriptions for PDF images based on page text context."""
+    """Generate descriptions for PDF images using Vision AI or page-text inference."""
 
     def __init__(self, model: str = None):
-        """
-        Initialize PDF Image Describer.
-
-        Args:
-            model: LLM model to use (default: Config.DEFAULT_MODEL)
-        """
         from lecture_forge.config import create_llm
 
         self.model = model or Config.DEFAULT_MODEL
-        # Use create_llm() so Ollama and OpenAI both work.
-        # This tool is text-only (no Vision); any provider is fine.
         self.llm = create_llm(temperature=0.3, max_tokens=300, thinking=False)
+        # Vision: optimistic — disabled on first failure
+        self._vision_available: bool = True
+        self._vision_llm = None  # lazy init
+
+    def _get_vision_llm(self):
+        if self._vision_llm is None:
+            from lecture_forge.config import create_llm
+            vision_model = Config.get_vision_model()
+            self._vision_llm = create_llm(
+                model=vision_model, temperature=0.1, max_tokens=300, thinking=False
+            )
+        return self._vision_llm
+
+    def _describe_image_with_vision(self, img_path: Path, page_text: str) -> Optional[str]:
+        """Send image to vision LLM; return description or raise on failure."""
+        with open(img_path, "rb") as f:
+            img_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        suffix = img_path.suffix.lower().lstrip(".")
+        mime = "image/jpeg" if suffix in ("jpg", "jpeg") else f"image/{suffix}"
+
+        from langchain_core.messages import HumanMessage
+
+        context = f" Context from surrounding page text: {page_text[:500]}" if page_text.strip() else ""
+        msg = HumanMessage(
+            content=[
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{img_b64}"}},
+                {
+                    "type": "text",
+                    "text": (
+                        "Describe this image from a technical document in 1-2 concise sentences."
+                        " Use English with technical keywords for searchability."
+                        " Focus on: what type of visual it is (diagram, chart, screenshot, formula, etc.)"
+                        " and what concept it represents." + context
+                    ),
+                },
+            ]
+        )
+        response = self._get_vision_llm().invoke([msg])
+        return response.content.strip()
+
+    def _describe_page_images_vision(
+        self, page_num: int, image_files: List[Path], page_text: str
+    ) -> List[str]:
+        """Describe images using vision; falls back to text inference on first failure."""
+        descriptions = []
+        for img_file in image_files:
+            try:
+                desc = self._describe_image_with_vision(img_file, page_text)
+                descriptions.append(desc or f"Image from page {page_num}")
+            except Exception as e:
+                logger.warning(
+                    f"   ⚠️  Vision failed on page {page_num} ({e.__class__.__name__}). "
+                    f"Falling back to text inference. "
+                    f"Tip: set VISION_MODEL / OLLAMA_VISION_MODEL to a vision-capable model."
+                )
+                self._vision_available = False
+                # Fill remaining images with text-based descriptions
+                text_descs = self._generate_descriptions_for_page(
+                    page_num, page_text, len(image_files) - len(descriptions)
+                )
+                descriptions.extend(text_descs)
+                break
+        return descriptions
 
     def enhance_images(self, pdf_path: str, image_dir: str, batch_size: int = 5) -> Dict:
         """
@@ -79,8 +134,11 @@ class PDFImageDescriber:
                     logger.warning(f"   Page {page_num}: No text found, skipping")
                     continue
 
-                # Generate descriptions for all images on this page
-                descriptions = self._generate_descriptions_for_page(page_num, page_text, len(image_files))
+                # Generate descriptions — use vision when available, else text inference
+                if self._vision_available:
+                    descriptions = self._describe_page_images_vision(page_num, image_files, page_text)
+                else:
+                    descriptions = self._generate_descriptions_for_page(page_num, page_text, len(image_files))
 
                 # Update image files with descriptions
                 for img_file, description in zip(image_files, descriptions):

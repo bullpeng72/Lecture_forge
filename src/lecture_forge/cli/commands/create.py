@@ -455,7 +455,7 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
 @click.option(
     "--auto-describe-images/--no-auto-describe-images",
     default=True,
-    help="Automatically generate descriptions for PDF images using GPT-4o-mini (only if --include-pdf-images is enabled)",
+    help="Automatically generate descriptions for PDF images using Vision LLM (GPT-4o / Ollama Vision, only if --include-pdf-images is enabled)",
     show_default=True,
 )
 @click.option(

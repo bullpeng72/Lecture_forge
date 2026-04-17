@@ -282,7 +282,7 @@ lecture-forge create [OPTIONS]
 - `--quality-level [lenient|balanced|strict]`: Quality threshold — lenient(70), balanced(80), strict(90) (default: balanced)
 - `-o, --output TEXT`: Output filename without extension (auto-generated if omitted)
 - `--include-pdf-images/--no-include-pdf-images`: Extract images from PDFs with location-based matching (default: enabled)
-- `--auto-describe-images/--no-auto-describe-images`: Auto-generate GPT-4o-mini descriptions for PDF images (default: enabled, requires `--include-pdf-images`)
+- `--auto-describe-images/--no-auto-describe-images`: Auto-generate Vision LLM descriptions for PDF images (GPT-4o or Ollama Vision model; default: enabled, requires `--include-pdf-images`)
 - `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
 - `--existing-kb PATH`: Reuse or extend an existing knowledge base directory instead of building a new one
 - `--kb-mode [reuse_only|extend]`: How to use `--existing-kb` — `reuse_only` (read-only, default) or `extend` (add new sources to the KB)
@@ -366,7 +366,7 @@ lecture-forge translate PDF_PATH [OPTIONS]
 | Phase | Description |
 |-------|-------------|
 | 1 | Extract PDF chapter structure (TOC → font size → page groups) |
-| 2 | Collect PDF images with GPT-4o Vision descriptions |
+| 2 | Collect PDF images with Vision LLM descriptions (GPT-4o or Ollama Vision) |
 | 3 | Build curriculum from PDF order (bypasses CurriculumDesigner) |
 | 4 | Translate chapters to Korean (or keep original if `--no-translate`) |
 | 5 | Assign images to sections by page range |
@@ -782,6 +782,8 @@ OLLAMA_MODEL=llama3.2                      # Default: llama3.2 (or qwen3.5:9b et
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text    # Embedding model for ChromaDB
 OLLAMA_THINKING=auto                       # auto / true / false
                                            # auto: enable for qwen3/qwq/deepseek-r1/phi4-reasoning
+OLLAMA_VISION_MODEL=                       # Vision model for PDF image descriptions (v0.5.9+)
+                                           # Leave empty to use OLLAMA_MODEL (e.g. qwen3.5:9b)
 
 # ===== Required for web search (both modes) =====
 SERPER_API_KEY=...

@@ -244,7 +244,7 @@ lecture-forge create
 |--------|------|----------|
 | **init** | 초기 설정 | `--path`, `--reconfigure/-r`, `--show/-s` |
 | **create** | 강의 생성 | `--interactive`, `--image-search`, `--quality-level`, `--existing-kb` |
-| **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level` |
+| **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level`, `--quality-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit** | 웹 기반 강의 편집기 (v0.5.0+) | `--port`, `--no-browser` |
 | **edit-images** | 이미지 편집 (CLI) | `--output` |

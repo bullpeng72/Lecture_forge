@@ -254,33 +254,42 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
 
     @app.route("/api/gallery")
     def api_gallery():
-        """Return all available images from the data/images directory."""
+        """Return available images from outputs/*_images/ (v0.5.9+) and legacy data/images/."""
         try:
-            images_base = Config.DATA_DIR / "images"
-            if not images_base.exists():
-                return jsonify({"images": []})
-
             page = int(request.args.get("page", 1))
             per_page = int(request.args.get("per_page", 24))
             query = request.args.get("q", "").lower()
 
             all_images = []
-            for session_dir in sorted(images_base.iterdir(), key=lambda d: d.stat().st_mtime, reverse=True):
-                if not session_dir.is_dir() or session_dir.name.startswith("."):
-                    continue
-                for img_file in sorted(session_dir.rglob("*")):
-                    if not img_file.is_file():
+            seen_paths: set = set()
+
+            def _collect_dir(base: Path):
+                if not base.exists():
+                    return
+                for session_dir in sorted(base.iterdir(), key=lambda d: d.stat().st_mtime, reverse=True):
+                    if not session_dir.is_dir() or session_dir.name.startswith("."):
                         continue
-                    if img_file.suffix.lower() not in _ALLOWED_EXTS:
-                        continue
-                    if query and query not in img_file.name.lower() and query not in session_dir.name.lower():
-                        continue
-                    all_images.append({
-                        "path": str(img_file),
-                        "name": img_file.name,
-                        "session": session_dir.name,
-                        "size": img_file.stat().st_size,
-                    })
+                    for img_file in sorted(session_dir.rglob("*")):
+                        if not img_file.is_file():
+                            continue
+                        if img_file.suffix.lower() not in _ALLOWED_EXTS:
+                            continue
+                        if img_file in seen_paths:
+                            continue
+                        if query and query not in img_file.name.lower() and query not in session_dir.name.lower():
+                            continue
+                        seen_paths.add(img_file)
+                        all_images.append({
+                            "path": str(img_file),
+                            "name": img_file.name,
+                            "session": session_dir.name,
+                            "size": img_file.stat().st_size,
+                        })
+
+            # Primary: outputs/*_images/ (v0.5.9+ single-copy layout)
+            _collect_dir(Config.OUTPUT_DIR)
+            # Legacy: data/images/*/
+            _collect_dir(Config.DATA_DIR / "images")
 
             total = len(all_images)
             start = (page - 1) * per_page
@@ -365,9 +374,14 @@ def create_app(html_path: str, output_path: Optional[str] = None) -> Flask:
 
         img_path = Path(path_str).resolve()
 
-        # Security: must be inside the html's parent directory (covers {stem}_images/)
+        # Security: path must reside under one of the known image roots.
+        # - html_path.parent covers outputs/ (where {stem}_images/ lives, v0.5.9+)
+        # - DATA_DIR/images covers legacy sessions
+        # - UPLOAD_DIR covers user uploads
         allowed_roots = [
             Path(html_path).parent.resolve(),
+            Config.DATA_DIR.resolve() / "images",
+            _UPLOAD_DIR.resolve(),
         ]
         if not any(str(img_path).startswith(str(r)) for r in allowed_roots):
             return "Forbidden", 403

@@ -390,7 +390,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
+A: `pytest tests/ -v` (1,881+ 테스트, ~81% 커버리지)
 
 ---
 
@@ -415,7 +415,7 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,877+, ~81% 커버리지 |
+| 테스트 | 1,881+, ~81% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -427,8 +427,11 @@ A: `pytest tests/ -v` (1,877+ 테스트, ~81% 커버리지)
 
 > 전체 변경 이력은 README.md 참조
 
-### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선
+### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선 + 🔭 Vision AI 이미지 설명
 
+- 🔭 **Vision AI 이미지 설명** (`tools/pdf_image_describer.py`): `PDFImageDescriber`가 Vision LLM으로 PDF 이미지를 직접 설명 — base64 인코딩 후 multimodal HumanMessage 전송. `_vision_available` 플래그로 낙관적 실행; 첫 실패 시 자동으로 텍스트 추론 폴백, 강의 생성 중단 없음
+- 🔭 **Vision 모델 라우팅** (`config.py`): `get_vision_model()` classmethod — OpenAI: `VISION_MODEL`(기본 `gpt-4o`), Ollama: `OLLAMA_VISION_MODEL`(미설정 시 `OLLAMA_MODEL` 사용, e.g. qwen3.5:9b)
+- 🔧 **`init` Vision 모델 설정**: Ollama 브랜치에 `OLLAMA_VISION_MODEL` 프롬프트, OpenAI 브랜치에 `VISION_MODEL` 입력 추가; `--show` 출력에도 반영
 - 📦 **이미지 단일 저장**: `ImageCollectorAgent`에 `output_dir` 파라미터 추가 — PDF/웹/검색 이미지를 `data/images/` 임시 경로 없이 `outputs/{stem}_images/`에 처음부터 직접 저장, 복사(bundle) 단계 완전 제거
 - 🗂️ **배포 용이성**: HTML 파일과 `{stem}_images/` 폴더가 항상 같은 `outputs/` 디렉토리에 위치 — 폴더 하나만 복사해도 이미지 깨짐 없이 배포 가능
 - 🔧 **`create` / `translate` / `create_async`**: `output_stem` 조기 결정 → Phase 1 전에 이미지 저장 경로 확정, `html_assembler.assemble()`에 동일 stem 전달

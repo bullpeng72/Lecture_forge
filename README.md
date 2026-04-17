@@ -8,11 +8,11 @@
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.9** | 이미지 단일 저장 & 배포 구조 개선
+> 🚀 **v0.5.9** | 이미지 단일 저장 & 배포 구조 개선 + Vision AI 이미지 설명
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,877+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,881+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,877+ 테스트 함수 (~81% 커버리지)
+- 🧪 **테스트 커버리지**: 1,881+ 테스트 함수 (~81% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -71,6 +71,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ## 🚀 최근 개선사항 (v0.5.9)
 
+- 🔭 **Vision AI 이미지 설명**: `PDFImageDescriber`가 Vision LLM(gpt-4o / qwen3.5:9b 등)으로 PDF 이미지를 직접 설명 — 페이지 텍스트 추론 대비 이미지 내용 정확도 대폭 향상, Vision 미지원 모델은 자동 폴백
 - 📦 **이미지 단일 저장**: PDF/웹 이미지를 `data/images/` 없이 `outputs/{stem}_images/`에 직접 저장 — 복사 단계 제거, 이미지 한 벌만 생성
 - 🗂️ **배포 용이성**: HTML + `{stem}_images/` 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나로 완전 배포
 - 🧹 **cleanup 개선**: 레거시 `data/images/` 잔존 데이터 감지 및 정리 추가
@@ -898,8 +899,11 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선
+### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선 + 🔭 Vision AI 이미지 설명
 
+- 🔭 **Vision AI 이미지 설명** (`tools/pdf_image_describer.py`): `PDFImageDescriber`가 Vision LLM으로 PDF 이미지를 직접 설명 — base64 multimodal 방식. `_vision_available` 플래그로 낙관적 실행, 첫 실패 시 텍스트 추론 자동 폴백
+- 🔭 **Vision 모델 라우팅** (`config.py`): `get_vision_model()` — OpenAI: `VISION_MODEL`(gpt-4o), Ollama: `OLLAMA_VISION_MODEL`(미설정 시 `OLLAMA_MODEL` 사용)
+- 🔧 **`init` Vision 설정**: Ollama 브랜치 `OLLAMA_VISION_MODEL`, OpenAI 브랜치 `VISION_MODEL` 입력 추가
 - 📦 **이미지 단일 저장**: `ImageCollectorAgent`에 `output_dir` 파라미터 추가 — `data/images/` 임시 경로 없이 `outputs/{stem}_images/`에 직접 저장, `_bundle_images()` 복사 단계 완전 제거
 - 🗂️ **배포 용이성**: HTML 파일과 이미지 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나만 복사해도 완전 배포 가능
 - 🔧 **create / translate / create_async**: `output_stem` Phase 1 전 조기 결정, 이미지·HTML 경로 일관성 확보

@@ -486,8 +486,11 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
-### v0.5.9: Single-Copy Image Storage & Distribution Structure
+### v0.5.9: Vision AI Image Description + Single-Copy Image Storage
 
+- **Vision AI image description** (`tools/pdf_image_describer.py`): `PDFImageDescriber` now sends PDF images directly to a vision-capable LLM (base64-encoded multimodal `HumanMessage`). Optimistic `_vision_available` flag — first exception disables vision and logs a tip; remaining pages fall back to text inference automatically. No lecture generation interruption.
+- **Vision model routing** (`config.py`): `Config.get_vision_model()` classmethod — OpenAI mode: `VISION_MODEL` env var (default `gpt-4o`); Ollama mode: `OLLAMA_VISION_MODEL` (falls back to `OLLAMA_MODEL`, e.g. `qwen3.5:9b`). New `OLLAMA_VISION_MODEL` class attribute added.
+- **`init` vision prompts** (`cli/commands/init_helpers.py`): Ollama branch prompts for `OLLAMA_VISION_MODEL`; OpenAI branch prompts for `VISION_MODEL`. `show_current_config()` displays the active vision model. `.env.example` updated with `OLLAMA_VISION_MODEL` entry.
 - **Single image copy** (`image_collector.py`, `html_assembler.py`): Added `output_dir` parameter to `ImageCollectorAgent` — PDF/web/search images are now written directly to `outputs/{stem}_images/` from the start. The `_bundle_images()` copy step in `HTMLAssemblerAgent` has been completely removed. Images exist only once; no duplication.
 - **Distribution-ready layout**: HTML file and `{stem}_images/` folder always reside in the same `outputs/` directory — copy the folder once for complete, self-contained distribution.
 - **Pipeline path alignment** (`create.py`, `translate.py`, `create_async.py`): `output_stem` is determined before Phase 1 (image collection), ensuring the image session directory name matches the HTML filename. Both initial and quality-revision `assemble()` calls use the same pre-computed stem.
@@ -611,5 +614,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-04-16
-**Version**: 0.5.8
+**Last Updated**: 2026-04-17
+**Version**: 0.5.9

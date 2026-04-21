@@ -11,10 +11,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from lecture_forge.agents.base import BaseAgent
-from lecture_forge.agents.content_writer.image_selector import ImageSelector
 from lecture_forge.exceptions import PDFStructureExtractionError, TranslationError
 from lecture_forge.models.curriculum import Curriculum, Section
-from lecture_forge.models.lecture import SectionContent
+from lecture_forge.models.lecture import ImageReference, SectionContent
 from lecture_forge.utils import logger
 
 
@@ -34,7 +33,6 @@ class PDFTranslatorAgent(BaseAgent):
     def __init__(self, pdf_path: str) -> None:
         super().__init__(thinking=False)
         self.pdf_path = str(Path(pdf_path).resolve())
-        self.image_selector = ImageSelector()
 
     # ── Public Interface ───────────────────────────────────────────────────────
 
@@ -179,6 +177,12 @@ class PDFTranslatorAgent(BaseAgent):
                 # Restore code blocks
                 translated_body = self._restore_code_blocks(translated_body, code_map)
 
+                # Fix 3: remove duplicate headings the LLM introduced in the translation
+                translated_body = self._dedup_headings_in_text(translated_body)
+
+                # Fix 4: strip any non-Korean CJK characters from translated body
+                translated_body = self._strip_non_korean_cjk(translated_body, context=chapter["title"])
+
                 # Translate section title
                 translated_title = self._translate_title(chapter["title"])
 
@@ -213,65 +217,113 @@ class PDFTranslatorAgent(BaseAgent):
         curriculum: Curriculum,
     ) -> List[SectionContent]:
         """
-        Assign PDF images to sections based on their page range.
+        Assign PDF images to sections, preserving each image's original page position.
 
-        Builds synthetic context_metadatas (matching _calculate_page_importance()
-        key format) for each section and delegates to the existing ImageSelector.
+        Images are grouped by their exact page number and stored in
+        section_content.page_images so the HTML assembler can place them
+        proportionally at the same location they occupied in the source PDF.
 
         Args:
             section_contents: Translated section contents (images=[] initially)
             chapter_page_map: Maps section_id → list of PDF page numbers
             available_images: Images collected by ImageCollectorAgent
-            curriculum: Curriculum with Section objects (for ImageSelector)
+            curriculum: Unused — kept for API compatibility
 
         Returns:
-            section_contents with .images populated
+            section_contents with .images, .page_images, .chapter_pages populated
         """
         if not available_images:
             logger.info("  ⚠️  No images available — skipping image assignment")
             return section_contents
 
-        # Track globally used image IDs to prevent cross-section duplication
+        # Pre-group all images by page, sorted top-to-bottom within each page
+        images_by_page: Dict[int, List[dict]] = {}
+        for img in available_images:
+            page = img.get("page")
+            if page is not None:
+                images_by_page.setdefault(page, []).append(img)
+        for page in images_by_page:
+            images_by_page[page].sort(key=lambda x: x.get("page_y0") or 0)
+
+        # Load per-page heights from PDF for precise intra-page y0 fraction
+        page_heights: Dict[int, float] = {}
+        try:
+            import fitz
+            _doc = fitz.open(self.pdf_path)
+            for _i, _p in enumerate(_doc, start=1):
+                page_heights[_i] = _p.rect.height
+            _doc.close()
+        except Exception:
+            pass  # page_fraction falls back to page-level approximation
+
         globally_used_ids: set = set()
+        total_sections = len(section_contents)
+        # Estimate total page count from the images' page numbers for relative positioning
+        all_image_pages = [img.get("page") for img in available_images if img.get("page")]
+        max_pdf_page = max(all_image_pages) if all_image_pages else 0
 
-        for section_content in section_contents:
+        for sec_idx, section_content in enumerate(section_contents):
             section_id = section_content.section_id
-            pages = chapter_page_map.get(section_id, [])
-
-            if not pages:
+            raw_pages = chapter_page_map.get(section_id, [])
+            if not raw_pages:
                 continue
 
-            # Look up the Section object (needed by ImageSelector.select_images)
-            section = next(
-                (s for s in curriculum.sections if s.id == section_id), None
-            )
-            if section is None:
-                continue
+            # Deduplicate pages while preserving order — duplicate page numbers in
+            # chapter_page_map cause the same image to be inserted twice in a section.
+            pages = list(dict.fromkeys(raw_pages))
 
-            # Exclude images already used in previous sections
-            remaining_images = [
-                img for img in available_images
-                if img.get("id") not in globally_used_ids
-            ]
-            if not remaining_images:
-                logger.debug(f"     🖼️  {section.title}: no remaining images after dedup")
-                continue
+            # Fix 4: validate that assigned page range matches expected section position.
+            # Warn when image pages cluster far from where this section should fall in the PDF.
+            if max_pdf_page > 0 and total_sections > 1:
+                expected_frac = sec_idx / (total_sections - 1)
+                actual_frac = (sum(pages) / len(pages)) / max_pdf_page
+                if abs(actual_frac - expected_frac) > 0.30:
+                    logger.warning(
+                        f"  ⚠️  Page range mismatch for '{section_id}': "
+                        f"section {sec_idx+1}/{total_sections} (expected ~{expected_frac:.0%} of PDF) "
+                        f"but assigned pages {pages[0]}–{pages[-1]} "
+                        f"(actual ~{actual_frac:.0%} of PDF). "
+                        f"Images may not match section content."
+                    )
+            n_pages = len(pages)
+            page_images: Dict[int, List[ImageReference]] = {}
+            flat_images: List[ImageReference] = []
 
-            # Build synthetic context_metadatas for _calculate_page_importance()
-            context_metadatas = self._build_synthetic_context_metadatas(pages)
+            for page_idx, page_num in enumerate(pages):
+                page_h = page_heights.get(page_num, 0)
+                for img_dict in images_by_page.get(page_num, []):
+                    img_id = img_dict.get("id", "")
+                    if img_id in globally_used_ids:
+                        continue
+                    # Compute [0, 1] position within this chapter
+                    if page_h > 0:
+                        y0_frac = min((img_dict.get("page_y0") or 0) / page_h, 1.0)
+                        page_fraction: Optional[float] = (page_idx + y0_frac) / n_pages
+                    else:
+                        page_fraction = None
+                    img_ref = ImageReference(
+                        image_id=img_id,
+                        path=img_dict.get("path", ""),
+                        description=img_dict.get(
+                            "description", img_dict.get("alt_text", "")
+                        ),
+                        # Translate pipeline: always Korean output, so override caption
+                        # with a Korean page reference instead of the English Vision AI text.
+                        caption=f"[{page_num}쪽 원본 이미지]",
+                        attribution=img_dict.get("attribution"),
+                        page_fraction=page_fraction,
+                    )
+                    page_images.setdefault(page_num, []).append(img_ref)
+                    flat_images.append(img_ref)
+                    globally_used_ids.add(img_id)
 
-            # Delegate to existing ImageSelector
-            selected = self.image_selector.select_images(
-                section, remaining_images, context_metadatas
-            )
-            section_content.images = selected
-
-            # Register selected image IDs globally
-            for img_ref in selected:
-                globally_used_ids.add(img_ref.image_id)
+            section_content.page_images = page_images
+            section_content.chapter_pages = pages
+            section_content.images = flat_images
 
             logger.debug(
-                f"     🖼️  {section.title}: {len(selected)} images assigned"
+                f"     🖼️  {section_id}: {len(flat_images)} images "
+                f"across {len(page_images)} pages"
             )
 
         return section_contents
@@ -527,12 +579,16 @@ class PDFTranslatorAgent(BaseAgent):
     # ── Translation (private) ─────────────────────────────────────────────────
 
     def _protect_code_blocks(self, text: str) -> Tuple[str, Dict[str, str]]:
-        """Replace code blocks and inline code with __CODE_BLOCK_N__ placeholders."""
+        """Replace code blocks and inline code with 「CODEBLK:N」 placeholders.
+
+        Uses Unicode corner brackets (「」) which LLMs reliably preserve verbatim,
+        unlike underscores which some models strip or reformat.
+        """
         code_map: Dict[str, str] = {}
         counter = [0]
 
         def replace_block(match: re.Match) -> str:
-            key = f"__CODE_BLOCK_{counter[0]}__"
+            key = f"「CODEBLK:{counter[0]}」"
             code_map[key] = match.group(0)
             counter[0] += 1
             return key
@@ -546,14 +602,80 @@ class PDFTranslatorAgent(BaseAgent):
         return text, code_map
 
     def _restore_code_blocks(self, text: str, code_map: Dict[str, str]) -> str:
-        """Restore __CODE_BLOCK_N__ placeholders to original code."""
+        """Restore 「CODEBLK:N」 placeholders, including LLM-mangled variants.
+
+        Exact restore first, then fuzzy regex for cases where the LLM stripped
+        brackets, changed the index to N, or wrapped the token in <strong>.
+        """
+        if not code_map:
+            return text
+
+        # 1. Exact restore
         for key, original in code_map.items():
             text = text.replace(key, original)
-        return text
+
+        # 2. Fuzzy restore: handle LLM-mangled placeholders
+        # Match variants like: CODE_BLOCK_0, CODE_BLOCK_N, CODEBLK:0, 「CODEBLK:N」,
+        # <strong>CODE_BLOCK_N</strong>, __CODE_BLOCK_0__ (legacy format), etc.
+        ordered_originals = [code_map[k] for k in sorted(code_map.keys())]
+        fuzzy_counter = [0]
+
+        def _fuzzy_replace(m: re.Match) -> str:
+            idx_str = m.group(1) if m.lastindex and m.group(1) and m.group(1).isdigit() else None
+            if idx_str is not None:
+                idx = int(idx_str)
+                if idx < len(ordered_originals):
+                    return ordered_originals[idx]
+            # "N" or unresolvable index: consume next in order
+            idx = fuzzy_counter[0]
+            fuzzy_counter[0] += 1
+            if idx < len(ordered_originals):
+                return ordered_originals[idx]
+            return m.group(0)
+
+        # Pattern covers both new 「CODEBLK:N」 and legacy __CODE_BLOCK_N__ variants,
+        # with optional HTML bold wrapping by the LLM.
+        _FUZZY_PAT = (
+            r"(?:<strong>)?"
+            r"(?:[「_]{0,2})?"
+            r"(?:CODE[_\s]?BLOCK|CODEBLK)[_\s:]*(\d+|N)"
+            r"(?:[」_]{0,2})?"
+            r"(?:</strong>)?"
+        )
+        new_text = re.sub(_FUZZY_PAT, _fuzzy_replace, text, flags=re.IGNORECASE)
+        if new_text != text:
+            logger.debug("     🔧 Fuzzy-restored LLM-mangled code block placeholders")
+        return new_text
 
     # AI/ML 표준 용어 사전 (번역 일관성 보장)
     _TERM_GLOSSARY = """
-AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  절대 준수 규칙 (위반 시 번역 전체 무효)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+아래 고유명사(도구명·프레임워크명·라이브러리명·모델명)는
+절대로 번역하지 말고 영어 원문 그대로 유지하라:
+
+LitServe, LangChain, LangGraph, LangSmith, LlamaIndex,
+ChromaDB, Pinecone, Weaviate, Qdrant, Milvus,
+vLLM, Ollama, Hugging Face, TGI (Text Generation Inference),
+OpenAI, Anthropic, Google, Meta, Mistral,
+GPT-4o, Claude, Gemini, Llama, Mixtral,
+BERT, RoBERTa, T5, BLOOM, Falcon,
+LoRA, QLoRA, DoRA, PEFT, FLAN,
+PyTorch, TensorFlow, JAX, Keras, scikit-learn,
+FastAPI, Flask, Gradio, Streamlit, Chainlit,
+Docker, Kubernetes, AWS, GCP, Azure,
+MCP (Model Context Protocol), A2A (Agent-to-Agent),
+HyDE, REFRAG, CAG, GRPO, ReAct, RLHF, DPO, PPO,
+Opik, Weights & Biases, MLflow, LangFuse, Arize,
+Reveal.js, Redis, PostgreSQL, SQLite, MongoDB,
+Jupyter, NumPy, Pandas, Matplotlib,
+MMLU, GSM8K, HumanEval, SWE-bench, HELM,
+Mermaid, Markdown, JSON, YAML, REST, GraphQL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AI/ML 표준 번역 용어 (반드시 아래 표를 따를 것):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Transformer → 트랜스포머 (변압기 X)
 - Agent / Agents → 에이전트 (대리인 X)
 - Agentic → 에이전틱 (주체적 X, 행동적 X)
@@ -576,9 +698,15 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
 - Pipeline → 파이프라인
 - Framework → 프레임워크
 - Dataset → 데이터셋
-고유명사 (번역하지 않고 원문 유지):
-- LitServe, LangChain, ChromaDB, OpenAI, Anthropic, Claude, GPT, BERT, LoRA, MCP,
-  HyDE, REFRAG, CAG, GRPO, ReAct, vLLM, Opik, Reveal.js, PyTorch, TensorFlow
+- KV Cache → KV 캐시
+- Throughput → 처리량(Throughput)
+- Latency → 지연 시간(Latency)
+- Deployment → 배포
+- Observability → 관찰 가능성(Observability)
+- Evaluation → 평가
+- Retrieval → 검색(Retrieval)
+- Chunking → 청킹(Chunking)
+- Reranking → 재랭킹(Reranking)
 """
 
     # LLM이 제목 대신 반환하는 대화형 응답 패턴 (원본 제목으로 폴백)
@@ -619,6 +747,9 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
             if any(p in translated for p in self._TITLE_FILLER_PATTERNS):
                 logger.debug(f"  ⚠️  Title filler response detected for '{title}' — keeping original")
                 return title
+            # Fix 4: detect non-Korean CJK characters (Chinese/Japanese) in the title.
+            # If found, strip them and warn — they should never appear in Korean output.
+            translated = self._strip_non_korean_cjk(translated, context=title)
             return translated if translated else title
         except Exception as e:
             logger.debug(f"  ⚠️  Title translation failed for '{title}': {e}")
@@ -694,15 +825,17 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
 번역 규칙:
 1. 위 용어 사전의 표준 번역어를 반드시 사용할 것 (임의 의역 금지)
 2. 용어 사전에 없는 기술 용어는 한국어 + 영문 병기: 예) 신경망(Neural Network)
-3. __CODE_BLOCK_N__ 형식의 플레이스홀더는 절대 번역하지 말고 그대로 보존
-4. 마크다운 헤딩(##, ###)은 한국어로 번역 (용어 사전 준수)
+3. 「CODEBLK:숫자」 형식의 플레이스홀더(예: 「CODEBLK:0」, 「CODEBLK:1」)는 단 한 글자도 변경하지 않고 완전히 동일하게 보존할 것 (꺾쇠괄호·숫자·콜론 포함)
+4. 마크다운 헤딩(##, ###, ####)은 모두 빠짐없이 한국어로 번역할 것 — "X vs Y" 비교형 제목도 한국어로 번역 (예: "Traditional RAG vs HyDE" → "전통적 RAG vs HyDE")
 5. 수식($...$, $$...$$), URL, 변수명, 파일명은 번역하지 않음
 6. 원문의 마크다운 구조(헤딩, 목록, 강조 등)를 그대로 유지
+7. 출력 언어는 오직 한국어만 사용할 것 — 중국어(漢字: 从零开始 등), 일본어, 아랍어 등 다른 언어 문자를 절대 포함하지 말 것
 
 ⛔ 절대 금지:
 - 원문에 없는 내용을 새로 생성하거나 추가하지 말 것
 - "Welcome to...", "This lecture covers..." 같은 소개 문장을 생성하지 말 것
 - 원문이 짧더라도 확장하거나 보충하지 말 것 — 있는 내용만 충실히 번역할 것
+- 중국어·일본어·아랍어 등 비한국어 문자를 출력에 포함하지 말 것
 
 원문:
 {text}
@@ -750,6 +883,52 @@ AI/ML 표준 용어 사전 (반드시 아래 표를 따를 것):
         ]
 
     # ── Utilities ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _dedup_headings_in_text(text: str) -> str:
+        """Remove duplicate consecutive headings from translated body text.
+
+        The LLM occasionally repeats a heading (same text, same level) within
+        a few lines — this strips the second occurrence and everything between
+        them if that gap is only blank lines.
+        """
+        heading_re = re.compile(r"^(#{1,4})\s+(.+)", re.MULTILINE)
+        lines = text.splitlines(keepends=True)
+        seen: set = set()
+        result = []
+        for line in lines:
+            m = heading_re.match(line)
+            if m:
+                key = (len(m.group(1)), m.group(2).strip().lower())
+                if key in seen:
+                    logger.debug(f"     🧹 Removed duplicate heading: {line.rstrip()}")
+                    continue
+                seen.add(key)
+            result.append(line)
+        return "".join(result)
+
+    @staticmethod
+    def _strip_non_korean_cjk(text: str, context: str = "") -> str:
+        """Remove Chinese/Japanese characters that sneak into Korean-only output.
+
+        Korean Hangul:       U+AC00–U+D7A3, U+1100–U+11FF, U+A960–U+A97F, U+D7B0–U+D7FF
+        CJK Unified (Chinese/Japanese): U+4E00–U+9FFF, U+3400–U+4DBF, U+20000–U+2A6DF
+        Hiragana/Katakana:  U+3040–U+30FF
+
+        Strips the non-Korean CJK codepoints while preserving all other characters.
+        """
+        # Unicode ranges for non-Korean CJK (Chinese ideographs + Japanese kana)
+        _NON_KO_CJK = re.compile(
+            r"[一-鿿㐀-䶿぀-ヿ豈-﫿]"
+        )
+        cleaned = _NON_KO_CJK.sub("", text)
+        if cleaned != text:
+            removed = set(_NON_KO_CJK.findall(text))
+            logger.warning(
+                f"  ⚠️  Stripped non-Korean CJK chars {removed} "
+                f"from translated output (context: '{context[:40]}')"
+            )
+        return cleaned
 
     @staticmethod
     def _slugify(text: str) -> str:

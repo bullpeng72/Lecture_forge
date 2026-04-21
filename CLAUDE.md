@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.5.9 | **최종 수정**: 2026-04-17
+> **버전**: 0.6.0 | **최종 수정**: 2026-04-21
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -328,7 +328,7 @@ lecture-forge --help
 **OpenAI 사용 (기본)**:
 ```bash
 OPENAI_API_KEY=sk-proj-...
-DEFAULT_MODEL=gpt-4o-mini
+DEFAULT_MODEL=gpt-5-nano
 EMBEDDING_MODEL=text-embedding-3-small
 SERPER_API_KEY=...
 PEXELS_API_KEY=...           # 선택
@@ -390,7 +390,7 @@ A: `~/Documents/LectureForge/outputs/`. `lecture-forge home outputs`로 바로 �
 A: `/exit` 또는 `/quit`, 또는 `Ctrl+C`.
 
 **Q: 테스트 실행 방법은?**
-A: `pytest tests/ -v` (1,881+ 테스트, ~81% 커버리지)
+A: `pytest tests/ -v` (1,891+ 테스트, ~81% 커버리지)
 
 ---
 
@@ -415,7 +415,7 @@ A: `pytest tests/ -v` (1,881+ 테스트, ~81% 커버리지)
 | 에이전트 | 12개 (+ async 변형 1개) |
 | 도구 | 9개 (+ async 변형 2개) |
 | CLI 명령어 | 9개 |
-| 테스트 | 1,881+, ~81% 커버리지 |
+| 테스트 | 1,891+, ~81% 커버리지 |
 | Type Hints | ~70% (340/489 함수) |
 | Python 지원 | 3.11 / 3.12 / 3.13 |
 | 비용 | ~$0.035 / 60분 강의 |
@@ -426,6 +426,28 @@ A: `pytest tests/ -v` (1,881+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
+
+- 🎨 **create 서브섹션 이미지 위치 개선** (`html_assembler.py`): `_find_best_paragraph()` score=0 폴백을 `paragraphs[0]`(첫 문단)에서 `paragraphs[mid]`(중간 문단)으로 변경 — 서브섹션 도입부가 아닌 내용 전개 후 자연스러운 위치에 이미지 배치
+- 🎯 **translate 이미지 위치 정밀화** (`pdf_translator.py`, `html_assembler.py`): `page_y0` / 페이지 높이 기반 `page_fraction [0,1]` 계산 도입 — 페이지 단위 근사치에서 페이지 내 y0까지 반영한 정밀 위치로 개선, 같은 페이지의 상단·하단 이미지 위치 구분 가능
+- 📐 **`ImageReference.page_fraction`** (`models/lecture.py`): translate 모드 전용 챕터 내 위치 필드 추가 (`Optional[float]`) — `None` 시 기존 페이지 레벨 비례 공식으로 폴백, 하위 호환 유지
+- 🐛 **edit 갤러리 라이트박스 확대보기 오류 수정**: 갤러리 이미지 클릭 시 라이트박스 확대보기 오류 수정
+- 🧪 **Vision Describer 통합 테스트 추가**: 1,891+ 테스트, ~81% 커버리지
+- 🎯 **`create` 이미지 위치 정밀화** (`content_writer/agent.py`, `image_selector.py`): `section_position [0,1]` 기반 Phase 2 이미지 필터링 (±30% 범위) — 섹션 내용과 PDF 위치가 맞는 이미지만 선택, 최소 이미지 폴백(2장) 추가
+- 🔄 **`create` 학습목표 재정렬** (`curriculum_designer.py`): 섹션 확정 후 `_align_objectives_to_sections()` LLM 호출 — 실제 섹션 제목 반영한 구체적 학습목표 생성
+- 🧹 **`create` ContentExpander 헤딩 dedup** (`content_expander.py`): `_deduplicate_headings()` — expansion 결과에서 original과 중복된 헤딩 블록 자동 제거
+- 🔒 **`translate` CODE_BLOCK 플레이스홀더 강화** (`pdf_translator.py`): `__CODE_BLOCK_N__` → `「CODEBLK:N」` (Unicode 꺾쇠, LLM이 변경 안 함) + fuzzy restore로 `<strong>CODE_BLOCK_N</strong>` 등 변형도 자동 복구
+- 🌐 **`translate` h4 번역 강화**: 번역 프롬프트에 `####` 명시 + "X vs Y" 비교형 제목도 번역
+- 🧹 **`translate` 중복 헤딩 제거** (`pdf_translator.py`): `_dedup_headings_in_text()` — 번역 후 LLM이 같은 헤딩을 반복 출력하는 문제 자동 제거
+- 🚫 **`translate` 한자 혼입 방지** (`pdf_translator.py`): `_strip_non_korean_cjk()` — 번역 출력에 섞인 中文(从零开始 등) 자동 제거, 경고 로그
+- 🔢 **`translate` 페이지 범위 검증** (`pdf_translator.py`): 섹션별 할당 이미지 페이지가 예상 위치(±30%)에서 벗어나면 `⚠️ Page range mismatch` 경고 — 챕터 경계 오매핑 조기 감지
+- ♿ **Alt 텍스트 125자 제한** (`html_assembler.py`): Vision AI 설명(평균 300+자)을 alt 속성에 그대로 사용하던 문제 수정 — `[:125].rstrip()` 잘라내기, 전체 설명은 figcaption 유지
+- 🐛 **heading 이중 다운그레이드 버그 수정** (`html_assembler.py`): `_cleanup_content`에서 h2→h3 후 h3→h4 순서로 처리하던 버그 — LLM의 `##`이 `<h4>`로 이중 강등되던 문제. 수정: h3→h4 먼저, h2→h3 순서로 변경
+- 📝 **프롬프트 heading 형식 수정** (`templates/prompts/content_generation.txt`): 주 서브섹션 지시를 `###`→`##`으로 변경 — 다운그레이드 후 올바르게 `<h3>` 생성, `####` 금지
+- 🚫 **섹션 간 이미지 누수 차단** (`content_writer/image_selector.py`): Phase 3 품질만 기반 폴백 제거 — 결론·요약 섹션이 무관한 앞 챕터의 고품질 이미지를 수집하던 문제 해결
+- 🔢 **섹션 이미지 상한 강제 적용** (`content_writer/agent.py`): `max_section_images` 캡을 서브섹션 루프에서 조기 `break` + 최종 슬라이스로 강제 — 결론 섹션 9+장 이미지 과다 배치 방지
+- 💰 **gpt-5-nano 기본 모델 적용** (`config.py`, `token_tracker.py`, `init_helpers.py`): `DEFAULT_MODEL` · `VISION_MODEL` 모두 `gpt-5-nano` (멀티모달, $0.05/1M 입력 — gpt-4o-mini 대비 2.5× 비용 절감)
 
 ### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선 + 🔭 Vision AI 이미지 설명
 

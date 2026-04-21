@@ -208,6 +208,7 @@ class ContentExpander(BaseAgent):
 
             response = self.invoke_llm(prompt, phase="content_expansion")
             expanded = self._strip_meta_commentary(response.content.strip())
+            expanded = self._deduplicate_headings(expanded, previous_content)
 
             # Validate expansion actually happened
             if len(expanded) <= len(previous_content):
@@ -257,6 +258,52 @@ class ContentExpander(BaseAgent):
         if stripped != content:
             logger.debug("     🧹 Stripped meta-commentary from expanded content")
         return stripped
+
+    def _deduplicate_headings(self, expanded: str, previous_content: str) -> str:
+        """Remove heading blocks from expanded that already appear in previous_content.
+
+        A heading block is the heading line plus all lines up to the next heading
+        at the same or higher level. Only exact-match heading texts are removed,
+        so similar-but-different headings are preserved.
+        """
+        import re
+
+        heading_re = re.compile(r"^(#{1,4})\s+(.+)", re.MULTILINE)
+
+        # Collect normalised headings already in previous_content
+        existing = {
+            m.group(2).strip().lower()
+            for m in heading_re.finditer(previous_content)
+        }
+        if not existing:
+            return expanded
+
+        lines = expanded.splitlines(keepends=True)
+        result = []
+        skip_until_level: int = None  # skip lines until we see a heading ≤ this level
+
+        for line in lines:
+            m = heading_re.match(line)
+            if m:
+                level = len(m.group(1))
+                text = m.group(2).strip().lower()
+
+                # If we were skipping a block, stop when we hit a heading at same/higher level
+                if skip_until_level is not None and level <= skip_until_level:
+                    skip_until_level = None
+
+                if skip_until_level is None and text in existing:
+                    skip_until_level = level  # start skipping this block
+                    continue
+
+            if skip_until_level is not None:
+                continue
+            result.append(line)
+
+        deduped = "".join(result).strip()
+        if deduped != expanded.strip():
+            logger.debug("     🧹 Removed duplicate heading blocks from expanded content")
+        return deduped
 
     def _count_images(self, markdown: str) -> int:
         """Count the number of images in markdown content."""

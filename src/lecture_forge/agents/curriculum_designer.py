@@ -66,6 +66,11 @@ class CurriculumDesignerAgent(BaseAgent):
         # 4. Validate sections against the knowledge base and fill coverage gaps
         sections = self._validate_and_enrich_sections(sections, duration, audience_level, topic, source_files=source_files)
 
+        # 5. Re-align learning objectives to the final section structure
+        learning_objectives = self._align_objectives_to_sections(
+            topic, audience_level, learning_objectives, sections
+        )
+
         # Calculate total estimated time
         total_time = sum(section.estimated_time for section in sections)
 
@@ -126,6 +131,56 @@ Return ONLY a JSON array of learning objective strings in Korean. Example: ["...
                 f"Understand the fundamentals of {topic}",
                 f"Apply {topic} concepts to real-world problems",
             ]
+
+    def _align_objectives_to_sections(
+        self,
+        topic: str,
+        audience_level: str,
+        current_objectives: List[str],
+        sections: list,
+    ) -> List[str]:
+        """Re-align learning objectives to match the finalized section structure.
+
+        Called after sections are created so objectives directly reference the
+        concrete topics covered, rather than just the high-level analysis key_topics.
+        Falls back to current_objectives on error.
+        """
+        section_titles = [s.title for s in sections]
+        if not section_titles:
+            return current_objectives
+
+        sections_str = "\n".join(f"  {i+1}. {t}" for i, t in enumerate(section_titles))
+        current_str = "\n".join(f"  - {o}" for o in current_objectives)
+
+        prompt = f"""Update the learning objectives for a {audience_level}-level lecture on "{topic}" \
+to align with the actual sections that will be taught.
+
+## Actual Sections
+{sections_str}
+
+## Current Objectives (may be too generic)
+{current_str}
+
+Requirements:
+- Keep 3-5 objectives
+- Each objective should reference at least one concrete section topic
+- Use action verbs (이해하다, 설명하다, 적용하다, 구현하다, 분석하다, 비교하다 etc.)
+- Be appropriate for {audience_level} level
+- IMPORTANT: Write ALL objectives in KOREAN language
+
+Return ONLY a JSON array of objective strings. Example: ["...을 이해한다", "...을 설명할 수 있다"]"""
+
+        try:
+            response = self.invoke_llm(prompt, phase="curriculum_design")
+            content = strip_json_fence(response.content.strip())
+            objectives = json.loads(content)
+            if isinstance(objectives, list) and objectives:
+                logger.info(f"   🎯 Aligned {len(objectives)} learning objectives to section structure")
+                return objectives[:5]
+        except Exception as e:
+            logger.debug(f"Objective alignment failed (non-critical): {e}")
+
+        return current_objectives
 
     def _select_topics(
         self,

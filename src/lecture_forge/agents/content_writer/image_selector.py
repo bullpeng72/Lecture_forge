@@ -53,6 +53,7 @@ class ImageSelector:
         available_images: List[dict],
         context_metadatas: List[dict] = None,
         max_images: int = 1,
+        section_position: float = None,
     ) -> List[ImageReference]:
         """
         v0.5.0: Select images for a single subsection based on its text content.
@@ -67,6 +68,9 @@ class ImageSelector:
             available_images: Images not yet used in prior subsections
             context_metadatas: RAG chunk metadatas for location-based matching
             max_images: Maximum images to return (default 1)
+            section_position: Section's position in the lecture as a fraction [0.0, 1.0].
+                Used to filter Phase 2 PDF images to the expected page range (±30% of PDF),
+                preventing early-chapter images from appearing in late sections and vice versa.
 
         Returns:
             List of selected ImageReference objects
@@ -104,12 +108,29 @@ class ImageSelector:
 
         # Phase 2: keyword matching against PDF image descriptions (fallback)
         if len(selected) < max_images and pdf_images:
+            # Compute expected PDF page range when section_position is known.
+            # Accept images within ±30% of the section's position fraction to avoid
+            # cross-chapter image leakage (e.g., page-200 images in intro section).
+            pos_lo: float = None
+            pos_hi: float = None
+            if section_position is not None:
+                pos_lo = max(0.0, section_position - 0.30)
+                pos_hi = min(1.0, section_position + 0.30)
+
             for img in pdf_images:
                 if len(selected) >= max_images:
                     break
                 img_id = img.get("id", "")
                 if img_id in selected_ids:
                     continue
+
+                # Page-range filter: skip images too far from this section's expected position
+                if pos_lo is not None:
+                    img_page_frac = img.get("page_fraction")
+                    if img_page_frac is not None:
+                        if not (pos_lo <= img_page_frac <= pos_hi):
+                            continue
+
                 img_desc = img.get("description", "").lower()
                 img_alt = img.get("alt_text", "").lower()
                 img_text = f"{img_desc} {img_alt}"
@@ -125,27 +146,9 @@ class ImageSelector:
                     ))
                     selected_ids.add(img_id)
 
-        # Phase 3: quality-based fallback — include best available PDF image if still empty
-        if len(selected) < max_images and pdf_images:
-            scored = []
-            for img in pdf_images:
-                img_id = img.get("id", "")
-                if img_id in selected_ids:
-                    continue
-                quality = self._evaluate_image_quality_simple(img)
-                if quality >= Config.IMAGE_SELECTION_QUALITY_THRESHOLD:
-                    scored.append((quality, img))
-            scored.sort(key=lambda x: x[0], reverse=True)
-            for quality, img in scored[:max_images - len(selected)]:
-                img_id = img.get("id", "")
-                selected.append(ImageReference(
-                    image_id=img_id,
-                    path=img.get("path", ""),
-                    description=img.get("description", "") or f"Page {img.get('page', '?')}",
-                    caption=img.get("alt_text", ""),
-                    attribution=f"Source: {Path(img.get('source', '')).name}, page {img.get('page', '?')}",
-                ))
-                selected_ids.add(img_id)
+        # Phase 3: quality-only fallback intentionally omitted at subsection level.
+        # Returning only content-matched images prevents cross-chapter image leakage
+        # (e.g., Conclusion receiving high-quality images from unrelated earlier chapters).
 
         return selected[:max_images]
 

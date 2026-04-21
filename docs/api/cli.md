@@ -426,13 +426,17 @@ def translate_lecture(
 #### Translation Features
 
 - **Technical terms**: Korean + English parenthetical (e.g., `신경망(Neural Network)`)
-- **Code blocks**: Preserved unchanged using `__CODE_BLOCK_N__` placeholder method
-- **AI/ML terminology**: 25 standard terms in `_TERM_GLOSSARY` (consistent translation)
+- **Code blocks**: Preserved using `「CODEBLK:N」` placeholder (v0.6.0+, Unicode corner brackets — LLM-safe). `_restore_code_blocks()` includes fuzzy regex pass recovering mangled variants (`CODE_BLOCK_N`, `<strong>CODE_BLOCK_N</strong>`, legacy `__CODE_BLOCK_0__`).
+- **AI/ML terminology**: 50+ proper nouns + standard terms in `_TERM_GLOSSARY` (v0.6.0+, expanded from 25)
+- **All heading levels translated**: `##`, `###`, `####` all translated, including "X vs Y" comparison headings (v0.6.0+)
+- **Korean-only output**: `_strip_non_korean_cjk()` removes any Chinese/Japanese characters from output (v0.6.0+)
+- **Duplicate heading removal**: `_dedup_headings_in_text()` post-processes translated text (v0.6.0+)
 - **Hallucination guard**: `⛔ 절대 금지` rules in translation prompts
 - **PDF artifact removal**: Page numbers, domain watermarks, short fragment lines
 - **TOC detection**: Table of contents pages automatically excluded (>40% dot-leader pattern)
 - **Empty section filtering**: Sections with <30 words automatically excluded
 - **Cross-section image deduplication**: `globally_used_ids` set prevents duplicate images
+- **Page-range mismatch warning**: Logs `⚠️ Page range mismatch` when assigned image pages differ > 30% from expected section position (v0.6.0+)
 
 ---
 
@@ -772,7 +776,7 @@ CLI commands respect these environment variables (loaded from .env):
 ```bash
 # ===== OpenAI mode (default) =====
 OPENAI_API_KEY=sk-proj-...
-DEFAULT_MODEL=gpt-4o-mini
+DEFAULT_MODEL=gpt-5-nano
 EMBEDDING_MODEL=text-embedding-3-small
 
 # ===== Ollama mode (v0.5.5+, no OpenAI key required) =====
@@ -847,5 +851,5 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 
 ---
 
-**Last Updated**: 2026-04-17
-**Version**: 0.5.9
+**Last Updated**: 2026-04-21
+**Version**: 0.6.0

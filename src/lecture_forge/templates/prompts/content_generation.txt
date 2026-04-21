@@ -54,8 +54,9 @@
 **🚨 CRITICAL FORMATTING RULES:**
 - **NEVER use h1 (#) headings** - The section already has a title
 - **START with content directly** - NO title at the beginning
-- **Use h3 (###) for main subsections** - NOT h2 (##)
-- **Use h4 (####) for sub-subsections** - NOT h3
+- **Use h2 (##) for main subsections** - 3~5 per section
+- **Use h3 (###) for sub-subsections under each h2** - 1~3 per h2 only when needed
+- **NEVER use h4 (####)** - Maximum depth is h3
 - **Keep paragraphs short** - Max 4-5 sentences each
 - **Add blank lines** - Between sections for readability
 

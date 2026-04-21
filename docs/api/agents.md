@@ -295,7 +295,7 @@ result = agent.collect(
   - `pdfs` (List[str]): PDF files for image extraction
   - `urls` (List[str]): URLs for image extraction
   - `image_keywords` (List[str]): Keywords for image search
-- `auto_describe_images` (bool): Auto-generate descriptions with GPT-4o
+- `auto_describe_images` (bool): Auto-generate descriptions with Vision LLM (`VISION_MODEL` / `OLLAMA_VISION_MODEL`)
 
 **Returns:**
 Dictionary with:
@@ -741,6 +741,52 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
+## PDFTranslatorAgent
+
+**Location**: `lecture_forge/agents/pdf_translator.py`
+
+Translates English PDF documents into Korean lecture materials, preserving the original chapter order.
+
+### Constructor
+
+```python
+PDFTranslatorAgent(pdf_path: str)
+```
+
+### Pipeline Methods
+
+| Method | Description |
+|--------|-------------|
+| `extract_structure()` | Extract chapter structure (TOC → font size → page groups) |
+| `build_curriculum(chapters, topic, audience_level)` | Build curriculum preserving PDF chapter order |
+| `translate_chapters(chapters, curriculum, skip_translation)` | LLM-translate each chapter to Korean |
+| `assign_images_to_sections(section_contents, chapter_page_map, available_images, curriculum)` | Assign PDF images by page range, with `page_fraction` precision |
+
+### Private Utilities (v0.6.0+)
+
+| Method | Description |
+|--------|-------------|
+| `_protect_code_blocks(text)` | Replace code with `「CODEBLK:N」` placeholders (Unicode corner brackets — LLM-safe) |
+| `_restore_code_blocks(text, code_map)` | Exact + fuzzy restore (handles `<strong>CODE_BLOCK_N</strong>` etc.) |
+| `_dedup_headings_in_text(text)` | Remove exact-match duplicate headings from translated body |
+| `_strip_non_korean_cjk(text, context)` | Strip Chinese/Japanese characters leaked into Korean output |
+| `_translate_title(title)` | Translate a single chapter title (with filler-response guard) |
+| `_translate_chunk(text, chapter_title, ...)` | Translate one text chunk with full glossary + rules |
+
+### Usage
+
+```python
+from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+
+agent = PDFTranslatorAgent("paper.pdf")
+chapters = agent.extract_structure()
+curriculum, chapter_page_map = agent.build_curriculum(chapters, "AI Engineering", 60, "intermediate")
+section_contents = agent.translate_chapters(chapters, curriculum)
+section_contents = agent.assign_images_to_sections(section_contents, chapter_page_map, images, curriculum)
+```
+
+---
+
 ## Best Practices
 
 1. **Vector Store Sharing**: Share vector store between ContentCollector and ImageCollector for better integration
@@ -751,5 +797,5 @@ html_path = assembler.assemble(lecture, output_path)
 
 ---
 
-**Last Updated**: 2026-04-17
-**Version**: 0.5.9
+**Last Updated**: 2026-04-21
+**Version**: 0.6.0

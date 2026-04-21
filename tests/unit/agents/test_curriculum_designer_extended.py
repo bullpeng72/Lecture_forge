@@ -625,11 +625,16 @@ class TestDesignIntegration:
             "no_changes": True,
         }))
 
+    def _align_ok_response(self):
+        """Mock response for _align_objectives_to_sections (new LLM call after sections)."""
+        return _mock_llm_response('["목표1 (섹션 반영)", "목표2 (섹션 반영)"]')
+
     def test_source_files_from_analysis_metadata(self, designer, sample_analysis, mock_llm):
         """Lines 49-52: source_files extracted from analysis.metadata when not provided."""
-        # First call: learning objectives; subsequent calls: RMC review
+        # Call order: 1) learning objectives, 2) align objectives to sections, 3) RMC review
         mock_llm.invoke.side_effect = [
             _mock_llm_response('["목표1", "목표2"]'),
+            self._align_ok_response(),
             self._rmc_ok_response(),
         ]
         curriculum = designer.design(
@@ -645,6 +650,7 @@ class TestDesignIntegration:
         """Explicitly passed source_files should take priority."""
         mock_llm.invoke.side_effect = [
             _mock_llm_response('["목표1"]'),
+            self._align_ok_response(),
             self._rmc_ok_response(),
         ]
         curriculum = designer.design(
@@ -660,6 +666,7 @@ class TestDesignIntegration:
         """design() should run RMC and return valid Curriculum."""
         mock_llm.invoke.side_effect = [
             _mock_llm_response('["목표1", "목표2"]'),
+            self._align_ok_response(),
             self._rmc_ok_response(),
         ]
         curriculum = designer.design(

@@ -23,6 +23,8 @@ class ImageReference(BaseModel):
     description: str
     caption: Optional[str] = None
     attribution: Optional[str] = None
+    # translate mode: [0, 1] position within the chapter (page_idx + y0/page_height) / n_pages
+    page_fraction: Optional[float] = None
 
 
 class MermaidDiagram(BaseModel):
@@ -50,6 +52,9 @@ class SectionContent(BaseModel):
     subsection_images: Dict[str, List[ImageReference]] = Field(default_factory=dict)
     # v0.5.0: top RAG chunks preserved for DiagramGenerator context
     rag_key_chunks: List[str] = Field(default_factory=list)
+    # v0.6.0: translate mode — page-number keyed image placement
+    page_images: Dict[int, List[ImageReference]] = Field(default_factory=dict)
+    chapter_pages: List[int] = Field(default_factory=list)
 
 
 class Lecture(BaseModel):

@@ -242,7 +242,7 @@ class TestCodeBlockProtection:
         text = "Before\n```python\ncode\n```\nAfter"
         protected, code_map = agent._protect_code_blocks(text)
         assert "```python" not in protected
-        assert "__CODE_BLOCK_0__" in protected
+        assert "「CODEBLK:0」" in protected
         assert len(code_map) == 1
 
     def test_inline_code_replaced(self, agent):
@@ -262,6 +262,90 @@ class TestCodeBlockProtection:
         protected, code_map = agent._protect_code_blocks(text)
         assert protected == text
         assert code_map == {}
+
+
+class TestRestoreCodeBlocksFuzzy:
+    """Unit tests for fuzzy restore — no agent fixture needed (calls static logic)."""
+
+    @staticmethod
+    def _restore(text, code_map):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        return PDFTranslatorAgent._restore_code_blocks(None, text, code_map)  # type: ignore[arg-type]
+
+    def test_fuzzy_restore_mangled_bold_n(self):
+        """LLM wraps in <strong> and changes index to N — fuzzy restore recovers original."""
+        code_map = {"「CODEBLK:0」": "```python\nx = 1\n```"}
+        mangled = "Before <strong>CODE_BLOCK_N</strong> After"
+        restored = self._restore(mangled, code_map)
+        assert "```python" in restored
+        assert "CODE_BLOCK" not in restored
+
+    def test_fuzzy_restore_legacy_underscore(self):
+        """Legacy __CODE_BLOCK_0__ format (old placeholder) is also recovered."""
+        code_map = {"「CODEBLK:0」": "```bash\necho hi\n```"}
+        mangled = "Text __CODE_BLOCK_0__ end"
+        restored = self._restore(mangled, code_map)
+        assert "```bash" in restored
+
+    def test_exact_restore_still_works(self):
+        """Exact key present — restored without touching fuzzy path."""
+        code_map = {"「CODEBLK:0」": "```js\nconsole.log(1)\n```"}
+        text = "Start 「CODEBLK:0」 End"
+        restored = self._restore(text, code_map)
+        assert "console.log" in restored
+
+    def test_empty_code_map_returns_unchanged(self):
+        text = "No placeholders here"
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        result = PDFTranslatorAgent._restore_code_blocks(None, text, {})  # type: ignore[arg-type]
+        assert result == text
+
+
+class TestDeduplicateHeadings:
+    """Unit tests for _dedup_headings_in_text (static method)."""
+
+    def test_removes_exact_duplicate_heading(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "## RAG vs REFRAG\nsome text\n## RAG vs REFRAG\nmore text"
+        result = PDFTranslatorAgent._dedup_headings_in_text(text)
+        assert result.count("RAG vs REFRAG") == 1
+
+    def test_preserves_different_headings(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "## Intro\ntext\n## Methods\nother"
+        result = PDFTranslatorAgent._dedup_headings_in_text(text)
+        assert "## Intro" in result
+        assert "## Methods" in result
+
+    def test_different_levels_not_deduplicated(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "## RAG 개요\n### RAG 개요\n본문"
+        result = PDFTranslatorAgent._dedup_headings_in_text(text)
+        assert result.count("RAG 개요") == 2
+
+
+class TestStripNonKoreanCJK:
+    """Unit tests for _strip_non_korean_cjk (static method)."""
+
+    def test_strips_chinese_characters(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "로라从零开始 구현하기"
+        result = PDFTranslatorAgent._strip_non_korean_cjk(text)
+        assert "从零开始" not in result
+        assert "로라" in result
+        assert "구현하기" in result
+
+    def test_preserves_korean_only_text(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "한국어 텍스트만 있음"
+        result = PDFTranslatorAgent._strip_non_korean_cjk(text)
+        assert result == text
+
+    def test_preserves_english_and_korean(self):
+        from lecture_forge.agents.pdf_translator import PDFTranslatorAgent
+        text = "LoRA 파인튜닝 (Fine-tuning) 방법"
+        result = PDFTranslatorAgent._strip_non_korean_cjk(text)
+        assert result == text
 
 
 # ──────────────────────────────────────────────────────────────────────────────

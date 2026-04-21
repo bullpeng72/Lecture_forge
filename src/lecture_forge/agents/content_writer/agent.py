@@ -7,6 +7,7 @@ This is the refactored version with extracted components:
 - ContentExpander: Handles content expansion
 """
 
+from pathlib import Path
 from typing import List
 
 from lecture_forge.agents.base import BaseAgent
@@ -20,7 +21,7 @@ from lecture_forge.agents.content_writer.image_selector import ImageSelector
 from lecture_forge.config import Config
 from lecture_forge.knowledge.vector_store import VectorStore
 from lecture_forge.models.curriculum import Curriculum, Section
-from lecture_forge.models.lecture import SectionContent
+from lecture_forge.models.lecture import ImageReference, SectionContent
 from lecture_forge.utils import logger
 from lecture_forge.utils.content_metrics import (
     calculate_target_metrics,
@@ -291,10 +292,14 @@ class ContentWriterAgent(BaseAgent):
                 f"   📷 Available images: {len(available_for_section)} " f"(filtered from {len(available_images or [])})"
             )
 
+            total_sections = len(curriculum.sections)
+            section_position = i / max(1, total_sections - 1) if total_sections > 1 else 0.5
+
             content = self.write_section(
                 section=section,
                 curriculum=curriculum,
                 available_images=available_for_section,
+                section_position=section_position,
             )
 
             # Track used images
@@ -348,6 +353,7 @@ class ContentWriterAgent(BaseAgent):
         section: Section,
         curriculum: Curriculum,
         available_images: List[dict] = None,
+        section_position: float = None,
     ) -> SectionContent:
         """
         Write content for a single section using RAG.
@@ -389,6 +395,9 @@ class ContentWriterAgent(BaseAgent):
         remaining_images = list(available_images or [])
 
         for sub in subsections:
+            # Enforce section-level cap: stop once max_section_images is reached
+            if len(all_images) >= max_section_images:
+                break
             sub_imgs = self.image_selector.select_images_for_subsection(
                 subsection_heading=sub["heading_text"],
                 subsection_content=sub["content"],
@@ -396,6 +405,7 @@ class ContentWriterAgent(BaseAgent):
                 available_images=remaining_images,
                 context_metadatas=context_metadatas,
                 max_images=Config.IMAGE_MAX_PER_SUBSECTION,
+                section_position=section_position,
             )
             if sub_imgs:
                 subsection_images[sub["heading"]] = sub_imgs
@@ -403,9 +413,32 @@ class ContentWriterAgent(BaseAgent):
                 used_sub_ids = {img.image_id for img in sub_imgs}
                 remaining_images = [img for img in remaining_images if img.get("id") not in used_sub_ids]
 
+        # Final cap in case multiple subsections in one loop iteration would exceed the limit
+        all_images = all_images[:max_section_images]
+
+        # Minimum-image guarantee: long sections (≥2 subsections) that received 0 images
+        # get up to 2 quality-matched fallback images from remaining_images.
+        if len(all_images) == 0 and len(subsections) >= 2 and remaining_images:
+            fallback = sorted(
+                remaining_images,
+                key=lambda img: img.get("quality_score", 0.0),
+                reverse=True,
+            )
+            for fb_img in fallback[:2]:
+                fb_id = fb_img.get("id", "")
+                all_images.append(ImageReference(
+                    image_id=fb_id,
+                    path=fb_img.get("path", ""),
+                    description=fb_img.get("description", ""),
+                    caption=fb_img.get("alt_text", ""),
+                    attribution=f"Source: {Path(fb_img.get('source', '')).name}",
+                ))
+            if all_images:
+                logger.info(f"   🖼️  Minimum-image fallback: added {len(all_images)} quality images for zero-image section")
+
         logger.info(
             f"   🖼️  Subsection-level selection: {len(all_images)} images "
-            f"across {len(subsections)} subsections"
+            f"across {len(subsections)} subsections (cap: {max_section_images})"
         )
 
         content = SectionContent(

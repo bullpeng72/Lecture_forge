@@ -300,7 +300,7 @@ Logged to conversation_log.txt (v0.3.6+)
 |----------|-----------|---------|
 | **Language** | Python 3.11-3.13 | Main language |
 | **Framework** | LangChain | LLM orchestration |
-| **LLM** | OpenAI GPT-4o-mini (기본), GPT-4o (Vision) | Content generation |
+| **LLM** | OpenAI GPT-5-nano (기본·Vision, v0.6.0+) | Content generation |
 | **LLM (local)** | Ollama (`LLM_PROVIDER=ollama`, v0.5.5+) | Local LLM — qwen3.5, llama3.2, etc. |
 | **Vector DB** | ChromaDB | Embeddings storage |
 | **Embeddings** | text-embedding-3-small | Semantic search |
@@ -486,6 +486,27 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.6.0: Image Placement Precision + HTML Quality + gpt-5-nano Default
+
+- **`create` subsection image placement fix** (`html_assembler.py`): `_find_best_paragraph()` score=0 fallback changed from `paragraphs[0]` (first paragraph) to `paragraphs[mid]` (middle paragraph) — images now appear after the topic has been introduced, not at the top of the subsection.
+- **`translate` image position precision** (`pdf_translator.py`, `html_assembler.py`): Introduced `page_fraction` — a `[0, 1]` float computed as `(page_idx + y0/page_height) / n_pages` using the actual `page_y0` coordinate and per-page height from PyMuPDF. `_insert_page_images_into_html()` now maps each image individually via `int(page_fraction * n_blocks)` instead of the page-level approximation. Images on the same page at different vertical positions are now placed at different block positions.
+- **`ImageReference.page_fraction`** (`models/lecture.py`): New optional field for translate-mode position. Falls back to the legacy page-proportional formula when `None`, preserving backward compatibility.
+- **Alt text truncation** (`html_assembler.py`): Vision AI descriptions (avg 300+ chars) were used verbatim as `alt` attributes; truncated to 125 chars (`[:125].rstrip()`) per screen-reader best practices. Full description retained in `<figcaption>`.
+- **Heading downgrade order fix** (`html_assembler.py`): `_cleanup_content` previously processed h2→h3 then h3→h4, causing LLM-written `##` to double-downgrade to `<h4>`. Fix: process h3→h4 first, then h2→h3 — `##` now correctly becomes `<h3>`.
+- **Prompt heading format corrected** (`templates/prompts/content_generation.txt`): Instructions updated from `###` for main subsections to `##` — after the single downgrade, these now land at `<h3>` as intended. Max depth is `<h3>` (no more `####`).
+- **Cross-chapter image leakage prevented** (`content_writer/image_selector.py`): Removed Phase 3 quality-only fallback from `select_images_for_subsection`. Conclusion/summary sections no longer receive high-quality images from unrelated earlier chapters.
+- **Per-section image cap enforced** (`content_writer/agent.py`): `max_section_images` cap (`max(3, duration_min // 8)`) now checked in the subsection loop with early `break` + final slice — prevents Conclusion sections from accumulating 9+ images from Phase 3.
+- **gpt-5-nano as default model** (`config.py`, `token_tracker.py`, `init_helpers.py`): `DEFAULT_MODEL` and `VISION_MODEL` both default to `gpt-5-nano` (multimodal, $0.05/1M input — 2.5× cheaper than gpt-4o-mini). `PRICING` dict updated; `_normalize_model_name()` recognizes gpt-5-nano.
+- **`create` section-position image filtering** (`content_writer/image_selector.py`, `agent.py`): `section_position` float [0,1] passed to `select_images_for_subsection()`; Phase 2 PDF image matching now filtered to ±30% of expected PDF location. Prevents late-chapter images (e.g. LoRA pages) from appearing in early sections. Minimum-image fallback (2 images) when cap leaves a section empty.
+- **`create` learning objective re-alignment** (`curriculum_designer.py`): `_align_objectives_to_sections()` — after sections are finalised, a second LLM call regenerates 3–5 objectives referencing the actual section titles. Old objectives were generated from raw topics before section design.
+- **`create` ContentExpander heading dedup** (`content_writer/content_expander.py`): `_deduplicate_headings()` strips heading blocks that already exist in `previous_content` from the expanded output — prevents repeated section headers when LLM re-generates existing headings.
+- **`translate` CODE_BLOCK placeholder hardening** (`pdf_translator.py`): Placeholder format changed from `__CODE_BLOCK_N__` to `「CODEBLK:N」` (Unicode corner brackets that LLMs reliably preserve verbatim). `_restore_code_blocks()` adds fuzzy regex restore pass that recovers mangled variants (`<strong>CODE_BLOCK_N</strong>`, `__CODE_BLOCK_0__`, etc.) by index order.
+- **`translate` h4 heading translation** (`pdf_translator.py`): Translation prompt rule 4 now explicitly lists `####` and requires "X vs Y" comparison headings to also be translated.
+- **`translate` duplicate heading removal** (`pdf_translator.py`): `_dedup_headings_in_text()` applied post-translation — removes exact-match duplicate headings the LLM occasionally outputs twice.
+- **`translate` non-Korean CJK stripping** (`pdf_translator.py`): `_strip_non_korean_cjk()` removes Chinese/Japanese characters that leak into Korean output (e.g. qwen3.5 mixing `从零开始`). Applied to both body and title translations. Logs a warning with the removed characters.
+- **`translate` page-range mismatch warning** (`pdf_translator.py`): After resolving a section's pages, compares the mean page position against the expected section fraction. Logs `⚠️ Page range mismatch` when they differ by > 30% — aids diagnosis of TOC mis-mapping.
+- **10 new unit tests**: `TestRestoreCodeBlocksFuzzy` (4), `TestDeduplicateHeadings` (3), `TestStripNonKoreanCJK` (3) — total 1,891+.
+
 ### v0.5.9: Vision AI Image Description + Single-Copy Image Storage
 
 - **Vision AI image description** (`tools/pdf_image_describer.py`): `PDFImageDescriber` now sends PDF images directly to a vision-capable LLM (base64-encoded multimodal `HumanMessage`). Optimistic `_vision_available` flag — first exception disables vision and logs a tip; remaining pages fall back to text inference automatically. No lecture generation interruption.
@@ -614,5 +635,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-04-17
-**Version**: 0.5.9
+**Last Updated**: 2026-04-21
+**Version**: 0.6.0

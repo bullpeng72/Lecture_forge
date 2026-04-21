@@ -3,16 +3,16 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.9-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.5.9** | 이미지 단일 저장 & 배포 구조 개선 + Vision AI 이미지 설명
+> 🚀 **v0.6.0** | 이미지 배치 정밀화 — create 서브섹션 중간 배치·translate 원문 y0 위치 보존
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
-**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,881+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
+**핵심 통계**: 12개 에이전트 | 9개 도구 | 9개 CLI 명령 | 1,891+ 테스트 (~81% 커버리지) | ~$0.035/60분 강의 | **Python 3.11 권장**
 
 **데이터 위치**: `~/Documents/LectureForge/` (일반 폴더, Finder/탐색기에서 바로 접근)
 
@@ -69,12 +69,11 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.5.9)
+## 🚀 최근 개선사항 (v0.6.0)
 
-- 🔭 **Vision AI 이미지 설명**: `PDFImageDescriber`가 Vision LLM(gpt-4o / qwen3.5:9b 등)으로 PDF 이미지를 직접 설명 — 페이지 텍스트 추론 대비 이미지 내용 정확도 대폭 향상, Vision 미지원 모델은 자동 폴백
-- 📦 **이미지 단일 저장**: PDF/웹 이미지를 `data/images/` 없이 `outputs/{stem}_images/`에 직접 저장 — 복사 단계 제거, 이미지 한 벌만 생성
-- 🗂️ **배포 용이성**: HTML + `{stem}_images/` 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나로 완전 배포
-- 🧹 **cleanup 개선**: 레거시 `data/images/` 잔존 데이터 감지 및 정리 추가
+- 🎨 **create 서브섹션 이미지 위치 개선**: 이미지 키워드 매칭 score=0 시 첫 문단 대신 **중간 문단** 뒤에 배치 — 서브섹션 도입부가 아닌 내용 전개 후 자연스러운 위치
+- 🎯 **translate 이미지 위치 정밀화**: `page_y0` 기반 `page_fraction` 계산 도입 — 페이지 단위 근사에서 페이지 내 y0까지 반영한 정밀 위치 보존, 같은 페이지의 상단·하단 이미지 구분
+- 📐 **`ImageReference.page_fraction`**: translate 모드 전용 챕터 내 `[0, 1]` 위치 필드 추가, `None` 시 기존 공식 폴백으로 하위 호환 유지
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -898,6 +897,25 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
+
+- 🎨 **create 서브섹션 이미지 위치 개선** (`html_assembler.py`): `_find_best_paragraph()` score=0 폴백을 `paragraphs[0]`(첫 문단)에서 `paragraphs[mid]`(중간 문단)으로 변경 — 서브섹션 도입부가 아닌 내용 전개 후 자연스러운 위치에 이미지 배치
+- 🎯 **translate 이미지 위치 정밀화** (`pdf_translator.py`, `html_assembler.py`): `page_y0` / 페이지 높이 기반 `page_fraction [0,1]` 계산 도입 — 페이지 단위 근사치에서 페이지 내 y0까지 반영한 정밀 위치로 개선, 같은 페이지의 상단·하단 이미지 위치 구분 가능
+- 📐 **`ImageReference.page_fraction`** (`models/lecture.py`): translate 모드 전용 챕터 내 위치 필드 추가 (`Optional[float]`) — `None` 시 기존 페이지 레벨 비례 공식으로 폴백, 하위 호환 유지
+- 🐛 **edit 갤러리 라이트박스 확대보기 오류 수정**: 갤러리 이미지 클릭 시 라이트박스 확대보기 동작 수정
+- 🧪 **테스트 강화**: Vision Describer 통합 + translate/create 개선 테스트 (1,891+ 테스트, ~81% 커버리지)
+- 🎯 **`create` 이미지 위치 정밀화** (`image_selector.py`): `section_position` 기반 Phase 2 이미지 필터링 (±30%), 최소 이미지 폴백
+- 🔄 **`create` 학습목표 재정렬** (`curriculum_designer.py`): 섹션 확정 후 실제 제목 반영 재생성
+- 🔒 **`translate` CODE_BLOCK 복원 강화** (`pdf_translator.py`): `「CODEBLK:N」` 형식 + fuzzy restore
+- 🌐 **`translate` h4 번역 + 한자 제거**: `####` 제목 번역 + `_strip_non_korean_cjk()` 자동 제거
+- 🧹 **`translate` 중복 헤딩 제거** + **페이지 범위 검증** 경고 로그
+- ♿ **Alt 텍스트 125자 제한** (`html_assembler.py`): Vision AI 설명을 alt 속성에 그대로 사용하던 접근성 문제 수정 — `[:125]` 제한, 전체 설명은 figcaption에 유지
+- 🐛 **heading 이중 다운그레이드 버그 수정** (`html_assembler.py`): `_cleanup_content` h2→h3·h3→h4 처리 순서 오류로 LLM `##`이 `<h4>`로 이중 강등되던 버그 수정 (h3→h4 먼저, h2→h3 순서로 변경)
+- 📝 **프롬프트 heading 형식 수정** (`templates/prompts/content_generation.txt`): 주 서브섹션 `###`→`##`, `####` 금지 — 다운그레이드 후 올바른 `<h3>` 계층 생성
+- 🚫 **섹션 간 이미지 누수 차단** (`content_writer/image_selector.py`): Phase 3 품질 폴백 제거 — 결론 섹션이 무관한 앞 챕터 이미지를 가져가던 문제 해결
+- 🔢 **섹션 이미지 상한 강제** (`content_writer/agent.py`): `max_section_images` 캡을 서브섹션 루프에서 조기 `break`로 강제 — 결론 섹션 9+장 과다 배치 방지
+- 💰 **gpt-5-nano 기본 모델** (`config.py`, `token_tracker.py`, `init_helpers.py`): `DEFAULT_MODEL` · `VISION_MODEL` 모두 `gpt-5-nano` — 멀티모달 지원, gpt-4o-mini 대비 2.5× 비용 절감 ($0.05/1M 입력)
 
 ### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선 + 🔭 Vision AI 이미지 설명
 

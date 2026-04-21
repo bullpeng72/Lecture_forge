@@ -197,12 +197,12 @@ class TestCleanupContent:
         assert "<h1>" not in result
         assert "Title" not in result  # h1 is decomposed
 
-    def test_downgrades_h2_to_h4(self, html_assembler):
-        """h2 is first converted to h3, then h3 to h4 → ends up as h4."""
+    def test_downgrades_h2_to_h3(self, html_assembler):
+        """h2 → h3 only (h3→h4 processed first, so h2 lands at h3)."""
         html = "<h2>Section</h2><p>content</p>"
         result = html_assembler._cleanup_content(html)
         assert "<h2>" not in result
-        assert "<h4>" in result  # h2→h3→h4 in sequence
+        assert "<h3>Section</h3>" in result
         assert "Section" in result
 
     def test_downgrades_h3_to_h4(self, html_assembler):

@@ -30,7 +30,7 @@ _THRESHOLD_TO_LEVEL = {v: k for k, v in _QUALITY_LEVELS.items()}
 # ──────────────────────────────────────────────────────────
 # Preset OpenAI model choices (user may still type custom)
 # ──────────────────────────────────────────────────────────
-_OPENAI_MODEL_PRESETS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "o1-mini"]
+_OPENAI_MODEL_PRESETS = ["gpt-5-nano", "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "o1-mini"]
 
 
 def collect_openai_key(console: Console, prompt_fn) -> str:
@@ -579,7 +579,7 @@ def collect_llm_settings(
         if vision.strip():
             settings["OLLAMA_VISION_MODEL"] = vision.strip()
     else:
-        cur_model = cur.get("DEFAULT_MODEL", "gpt-4o-mini")
+        cur_model = cur.get("DEFAULT_MODEL", "gpt-5-nano")
         preset_hint = "/".join(_OPENAI_MODEL_PRESETS)
         model = Prompt.ask(
             f"   기본 모델 [dim]({preset_hint})[/dim]",
@@ -588,9 +588,9 @@ def collect_llm_settings(
         )
         settings["DEFAULT_MODEL"] = model.strip() or cur_model
 
-        cur_vision = cur.get("VISION_MODEL", "gpt-4o")
+        cur_vision = cur.get("VISION_MODEL", "gpt-5-nano")
         vision = Prompt.ask(
-            "   Vision 모델 [dim](PDF 이미지 설명용. 추천: gpt-4o)[/dim]",
+            "   Vision 모델 [dim](PDF 이미지 설명용. 추천: gpt-5-nano)[/dim]",
             default=cur_vision,
             console=console,
         )
@@ -737,8 +737,8 @@ def show_current_config(console: Console, env_path: Path) -> None:
         ollama_vision = env.get("OLLAMA_VISION_MODEL", "")
         llm_table.add_row("Vision 모델", ollama_vision if ollama_vision else "[dim](기본 모델 사용)[/dim]")
     else:
-        llm_table.add_row("기본 모델", env.get("DEFAULT_MODEL", "gpt-4o-mini"))
-        llm_table.add_row("Vision 모델", env.get("VISION_MODEL", "gpt-4o"))
+        llm_table.add_row("기본 모델", env.get("DEFAULT_MODEL", "gpt-5-nano"))
+        llm_table.add_row("Vision 모델", env.get("VISION_MODEL", "gpt-5-nano"))
     llm_table.add_row("Temperature", env.get("TEMPERATURE", "0.7"))
     llm_table.add_row("Max Tokens", env.get("MAX_LLM_TOKENS", "4096"))
     console.print(llm_table)

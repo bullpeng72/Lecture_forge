@@ -34,9 +34,13 @@ class CostEstimate:
 class TokenTracker:
     """Track token usage and calculate costs across lecture generation."""
 
-    # OpenAI Pricing (as of 2026-02-07)
+    # OpenAI Pricing (as of 2026-04-21)
     # https://openai.com/api/pricing/
     PRICING = {
+        "gpt-5-nano": {
+            "input": 0.050 / 1_000_000,  # $0.050 per 1M tokens
+            "output": 0.400 / 1_000_000,  # $0.400 per 1M tokens
+        },
         "gpt-4o-mini": {
             "input": 0.150 / 1_000_000,  # $0.150 per 1M tokens
             "output": 0.600 / 1_000_000,  # $0.600 per 1M tokens
@@ -191,7 +195,9 @@ class TokenTracker:
         """Normalize model name for pricing lookup."""
         model_lower = model.lower()
 
-        if "gpt-4o-mini" in model_lower:
+        if "gpt-5-nano" in model_lower:
+            return "gpt-5-nano"
+        elif "gpt-4o-mini" in model_lower:
             return "gpt-4o-mini"
         elif "gpt-4o" in model_lower:
             return "gpt-4o"

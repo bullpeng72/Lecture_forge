@@ -159,8 +159,8 @@ Select LLM provider:
 Select (1-2) [1]:
 > 1
 
-Default model [gpt-4o-mini]: (Enter)
-✓ LLM provider: OpenAI, model: gpt-4o-mini
+Default model [gpt-5-nano]: (Enter)
+✓ LLM provider: OpenAI, model: gpt-5-nano
 
 📝 Phase 2: API Keys
 
@@ -231,7 +231,7 @@ PEXELS_API_KEY=...
 UNSPLASH_ACCESS_KEY=...
 
 # Model Settings (optional, has defaults)
-DEFAULT_MODEL=gpt-4o-mini
+DEFAULT_MODEL=gpt-5-nano
 EMBEDDING_MODEL=text-embedding-3-small
 
 # Quality Settings (optional)
@@ -254,7 +254,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.5.9 - Lecture Material Generator
+📚 LectureForge Pro v0.6.0 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -684,8 +684,8 @@ lecture-forge home outputs
 
 ---
 
-**Last Updated**: 2026-04-17
-**Version**: 0.5.9
+**Last Updated**: 2026-04-21
+**Version**: 0.6.0
 
 **Ready to create amazing lectures? Start with:**
 ```bash

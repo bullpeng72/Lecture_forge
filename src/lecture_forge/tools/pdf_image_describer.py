@@ -149,10 +149,10 @@ class PDFImageDescriber:
                 logger.info(f"   ✅ Page {page_num}: Generated {len(descriptions)} descriptions")
 
                 # Estimate cost (very rough, OpenAI only)
-                # gpt-4o-mini: ~$0.15/1M input, ~$0.6/1M output
+                # gpt-5-nano: ~$0.05/1M input, ~$0.4/1M output
                 # Assume ~500 tokens input, ~100 tokens output per page
                 if Config.LLM_PROVIDER == "openai":
-                    page_cost = (500 * 0.15 + 100 * 0.6) / 1_000_000
+                    page_cost = (500 * 0.05 + 100 * 0.4) / 1_000_000
                     total_cost += page_cost
 
             except Exception as e:

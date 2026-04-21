@@ -68,7 +68,8 @@ def display_token_usage(usage_summary: Dict[str, Any]) -> None:
         ollama_model = Config.OLLAMA_MODEL or "ollama"
         console.print(f"\n   [dim]ℹ️  로컬 LLM ({ollama_model}) — API 비용 없음[/dim]")
     else:
-        console.print(f"\n   [dim]ℹ️  Pricing (as of 2026-02-07):[/dim]")
+        console.print(f"\n   [dim]ℹ️  Pricing (as of 2026-04-21):[/dim]")
+        console.print(f"   [dim]   • gpt-5-nano: $0.050/1M input, $0.400/1M output[/dim]")
         console.print(f"   [dim]   • gpt-4o-mini: $0.150/1M input, $0.600/1M output[/dim]")
         console.print(f"   [dim]   • gpt-4o: $2.50/1M input, $10.00/1M output[/dim]")
 

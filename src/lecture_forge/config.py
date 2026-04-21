@@ -251,8 +251,8 @@ class Config:
 
     # ===== OpenAI API =====
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
-    VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")
+    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-5-nano")
+    VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-5-nano")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     TEMPERATURE: float = _env_float("TEMPERATURE", 0.7)
 
@@ -273,7 +273,7 @@ class Config:
     def get_vision_model(cls) -> str:
         """Return the model name to use for vision (image description) tasks.
 
-        OpenAI: VISION_MODEL (default gpt-4o-mini — supports vision).
+        OpenAI: VISION_MODEL (default gpt-5-nano — supports vision).
         Ollama: OLLAMA_VISION_MODEL if set, otherwise OLLAMA_MODEL.
         """
         if cls.LLM_PROVIDER == "ollama":

@@ -486,86 +486,23 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
-### v0.6.0: Image Placement Precision + HTML Quality + gpt-5-nano Default
+### v0.6.0 (2026-04-21) — 이미지 배치 정밀화 + HTML 품질 + gpt-5-nano
 
-- **`create` subsection image placement fix** (`html_assembler.py`): `_find_best_paragraph()` score=0 fallback changed from `paragraphs[0]` (first paragraph) to `paragraphs[mid]` (middle paragraph) — images now appear after the topic has been introduced, not at the top of the subsection.
-- **`translate` image position precision** (`pdf_translator.py`, `html_assembler.py`): Introduced `page_fraction` — a `[0, 1]` float computed as `(page_idx + y0/page_height) / n_pages` using the actual `page_y0` coordinate and per-page height from PyMuPDF. `_insert_page_images_into_html()` now maps each image individually via `int(page_fraction * n_blocks)` instead of the page-level approximation. Images on the same page at different vertical positions are now placed at different block positions.
-- **`ImageReference.page_fraction`** (`models/lecture.py`): New optional field for translate-mode position. Falls back to the legacy page-proportional formula when `None`, preserving backward compatibility.
-- **Alt text truncation** (`html_assembler.py`): Vision AI descriptions (avg 300+ chars) were used verbatim as `alt` attributes; truncated to 125 chars (`[:125].rstrip()`) per screen-reader best practices. Full description retained in `<figcaption>`.
-- **Heading downgrade order fix** (`html_assembler.py`): `_cleanup_content` previously processed h2→h3 then h3→h4, causing LLM-written `##` to double-downgrade to `<h4>`. Fix: process h3→h4 first, then h2→h3 — `##` now correctly becomes `<h3>`.
-- **Prompt heading format corrected** (`templates/prompts/content_generation.txt`): Instructions updated from `###` for main subsections to `##` — after the single downgrade, these now land at `<h3>` as intended. Max depth is `<h3>` (no more `####`).
-- **Cross-chapter image leakage prevented** (`content_writer/image_selector.py`): Removed Phase 3 quality-only fallback from `select_images_for_subsection`. Conclusion/summary sections no longer receive high-quality images from unrelated earlier chapters.
-- **Per-section image cap enforced** (`content_writer/agent.py`): `max_section_images` cap (`max(3, duration_min // 8)`) now checked in the subsection loop with early `break` + final slice — prevents Conclusion sections from accumulating 9+ images from Phase 3.
-- **gpt-5-nano as default model** (`config.py`, `token_tracker.py`, `init_helpers.py`): `DEFAULT_MODEL` and `VISION_MODEL` both default to `gpt-5-nano` (multimodal, $0.05/1M input — 2.5× cheaper than gpt-4o-mini). `PRICING` dict updated; `_normalize_model_name()` recognizes gpt-5-nano.
-- **`create` section-position image filtering** (`content_writer/image_selector.py`, `agent.py`): `section_position` float [0,1] passed to `select_images_for_subsection()`; Phase 2 PDF image matching now filtered to ±30% of expected PDF location. Prevents late-chapter images (e.g. LoRA pages) from appearing in early sections. Minimum-image fallback (2 images) when cap leaves a section empty.
-- **`create` learning objective re-alignment** (`curriculum_designer.py`): `_align_objectives_to_sections()` — after sections are finalised, a second LLM call regenerates 3–5 objectives referencing the actual section titles. Old objectives were generated from raw topics before section design.
-- **`create` ContentExpander heading dedup** (`content_writer/content_expander.py`): `_deduplicate_headings()` strips heading blocks that already exist in `previous_content` from the expanded output — prevents repeated section headers when LLM re-generates existing headings.
-- **`translate` CODE_BLOCK placeholder hardening** (`pdf_translator.py`): Placeholder format changed from `__CODE_BLOCK_N__` to `「CODEBLK:N」` (Unicode corner brackets that LLMs reliably preserve verbatim). `_restore_code_blocks()` adds fuzzy regex restore pass that recovers mangled variants (`<strong>CODE_BLOCK_N</strong>`, `__CODE_BLOCK_0__`, etc.) by index order.
-- **`translate` h4 heading translation** (`pdf_translator.py`): Translation prompt rule 4 now explicitly lists `####` and requires "X vs Y" comparison headings to also be translated.
-- **`translate` duplicate heading removal** (`pdf_translator.py`): `_dedup_headings_in_text()` applied post-translation — removes exact-match duplicate headings the LLM occasionally outputs twice.
-- **`translate` non-Korean CJK stripping** (`pdf_translator.py`): `_strip_non_korean_cjk()` removes Chinese/Japanese characters that leak into Korean output (e.g. qwen3.5 mixing `从零开始`). Applied to both body and title translations. Logs a warning with the removed characters.
-- **`translate` page-range mismatch warning** (`pdf_translator.py`): After resolving a section's pages, compares the mean page position against the expected section fraction. Logs `⚠️ Page range mismatch` when they differ by > 30% — aids diagnosis of TOC mis-mapping.
-- **10 new unit tests**: `TestRestoreCodeBlocksFuzzy` (4), `TestDeduplicateHeadings` (3), `TestStripNonKoreanCJK` (3) — total 1,891+.
+- **gpt-5-nano 기본 모델**: `DEFAULT_MODEL` · `VISION_MODEL` → `gpt-5-nano` (멀티모달, 2.5× 비용 절감)
+- **이미지 위치 정밀화**: create — `_find_best_paragraph()` 중간 문단 폴백; translate — `page_y0` 기반 `page_fraction [0,1]` 도입 (`ImageReference.page_fraction`)
+- **`create` 이미지 품질**: `section_position` 기반 ±30% 필터, 섹션 간 누수 차단, `max_section_images` 상한 강제
+- **`create` 학습목표 재정렬**: `_align_objectives_to_sections()` — 섹션 확정 후 실제 제목 반영 재생성
+- **`translate` 번역 품질**: `「CODEBLK:N」` + fuzzy restore, `####` 번역, `_strip_non_korean_cjk()`, 중복 헤딩 제거, 페이지 범위 경고
+- **HTML 품질**: heading 이중 다운그레이드 수정 (h3→h4 먼저), alt 텍스트 125자 제한
+- **ContentExpander 헤딩 dedup**: `_deduplicate_headings()` — expansion 중복 헤딩 자동 제거
 
-### v0.5.9: Vision AI Image Description + Single-Copy Image Storage
+### v0.5.x (2026-02-26 ~ 2026-04-17) — 웹 편집기 · Ollama · Vision AI · 테스트
 
-- **Vision AI image description** (`tools/pdf_image_describer.py`): `PDFImageDescriber` now sends PDF images directly to a vision-capable LLM (base64-encoded multimodal `HumanMessage`). Optimistic `_vision_available` flag — first exception disables vision and logs a tip; remaining pages fall back to text inference automatically. No lecture generation interruption.
-- **Vision model routing** (`config.py`): `Config.get_vision_model()` classmethod — OpenAI mode: `VISION_MODEL` env var (default `gpt-4o`); Ollama mode: `OLLAMA_VISION_MODEL` (falls back to `OLLAMA_MODEL`, e.g. `qwen3.5:9b`). New `OLLAMA_VISION_MODEL` class attribute added.
-- **`init` vision prompts** (`cli/commands/init_helpers.py`): Ollama branch prompts for `OLLAMA_VISION_MODEL`; OpenAI branch prompts for `VISION_MODEL`. `show_current_config()` displays the active vision model. `.env.example` updated with `OLLAMA_VISION_MODEL` entry.
-- **Single image copy** (`image_collector.py`, `html_assembler.py`): Added `output_dir` parameter to `ImageCollectorAgent` — PDF/web/search images are now written directly to `outputs/{stem}_images/` from the start. The `_bundle_images()` copy step in `HTMLAssemblerAgent` has been completely removed. Images exist only once; no duplication.
-- **Distribution-ready layout**: HTML file and `{stem}_images/` folder always reside in the same `outputs/` directory — copy the folder once for complete, self-contained distribution.
-- **Pipeline path alignment** (`create.py`, `translate.py`, `create_async.py`): `output_stem` is determined before Phase 1 (image collection), ensuring the image session directory name matches the HTML filename. Both initial and quality-revision `assemble()` calls use the same pre-computed stem.
-- **`_render_image_html` improvement**: `OUTPUT_DIR`-based absolute paths now take priority over `DATA_DIR` paths when computing relative `src` attributes. Legacy `DATA_DIR/images/` fallback retained for backward compatibility.
-- **`image_selector` map search extended**: `_load_image_page_map()` now searches both `data/images/*/image_page_map.json` (legacy) and `outputs/*_images/image_page_map.json` (new) — location-based image matching continues to work correctly.
-- **`editor/server.py` security simplification**: `allowed_roots` now only includes `html_path.parent` — sufficient since images are always in a sibling `_images/` folder.
-- **`cleanup` legacy cleanup**: Detects and removes stale `data/images/` session directories from previous versions.
-
-### v0.5.8: Image Bundling & Coverage Balance
-
-- **Image bundling** (`html_assembler.py`): Added `_bundle_images()` — on HTML generation, copies all referenced local images into a `{stem}_images/` folder alongside the HTML file. Prevents images from disappearing after `lecture-forge cleanup` deletes `data/images/`. The HTML `src` attributes are rewritten to the bundled paths using regex scan of the final HTML string (robust to path conversion in `_render_image_html`).
-- **Topic extraction balance** (`content_analyzer.py`): `_extract_key_topics` prompt now explicitly requires topics to span early, middle, and late sections of the document, and mandates representation of all major subject areas. Prevents agent-topic over-indexing on long technical books.
-- **Probe query expansion**: 10 → 14 probe queries — added `optimization/evaluation`, `deployment/production`, `fine-tuning/training`, `safety/alignment` to improve sampling of mid/late PDF sections.
-
-### v0.5.7: Code Quality — Unused Import Cleanup
-
-- **20-file unused import removal** (techdebt safe fix): Removed confirmed-unused imports across `slides/notes.py`, `slides/section_rewriter.py`, `slides/utils.py`, `tools/async_web_scraper.py`, `tools/image_extractor.py`, `utils/language_utils.py`, `utils/prompt_manager.py`, `agents/content_writer/agent.py`, `agents/content_writer/image_selector.py`, `agents/content_writer/content_expander.py`, `agents/curriculum_designer.py`, `agents/qa_agent.py`, `models/curriculum.py`, and all `cli/commands/*.py`. Removed unneeded `typing` aliases (Dict, Optional, List), Rich components (Panel, Prompt, Table), `pathlib.Path`, and internal utility imports that were no longer referenced. No functional changes — 540 tests pass (4 pre-existing failures in `slides/test_utils.py` unrelated).
-
-### v0.5.6: Ollama Compatibility Fix & Docs Accuracy
-
-- **`PDFImageDescriber` Ollama compatibility** (bug fix): `tools/pdf_image_describer.py` hardcoded `from openai import OpenAI` — when `LLM_PROVIDER=ollama`, calling `translate` caused HTTP 401 on every image description call. Fixed by replacing direct OpenAI client with `create_llm(temperature=0.3, max_tokens=300, thinking=False)`. This tool is text-only (page text → image description inference, no Vision), so all providers work. Cost estimation now gated on `Config.LLM_PROVIDER == "openai"`.
-- **`TokenTracker` Ollama model name display** (bug fix): `_normalize_model_name()` fell back to `"gpt-4o-mini"` for any unrecognized model — Ollama models (`qwen3.5:9b`, `llama3.2`, `deepseek-r1:7b`, etc.) were all misreported as `gpt-4o-mini` with incorrect cost estimates. Fixed: unknown models now return original name as-is; `calculate_cost()` uses zero-cost pricing for models not in `PRICING` dict. `display_token_usage()` in `formatters.py` now shows `로컬 LLM ({model}) — API 비용 없음` footer when `LLM_PROVIDER=ollama`.
-- **Test update**: `test_raises_without_api_key` → `test_creates_without_openai_key` — verifies Ollama mode no longer requires `OPENAI_API_KEY`. `test_calculate_cost_unknown_model_fallback` → `test_calculate_cost_unknown_model_zero_cost`.
-- **Documentation accuracy**: README FAQ sections corrected — "Required APIs" now distinguishes OpenAI mode vs Ollama mode; cost FAQ adds Ollama free-tier note; offline FAQ reflects Ollama generation being offline-capable (web search excluded).
-
-### v0.5.5: Ollama Support & Pipeline Stability
-
-- **Ollama LLM provider**: `LLM_PROVIDER=ollama` env var routes all `create_llm()` calls to `ChatOllama`. Provider abstraction covers `BaseAgent`, `EmbeddingManager`, `SlideConverter`, `language_utils.translate_text`.
-- **Thinking mode control**: `OLLAMA_THINKING=auto/true/false` — auto-detect for qwen3/qwq/deepseek-r1/r1-distill/phi4-reasoning via `Config.is_thinking_model()`. `ChatOllama` `reasoning=` parameter (not `think=`) controls thinking.
-- **`thinking=False` for non-reasoning agents**: `ContentAnalyzerAgent`, `DiagramGeneratorAgent`, `HTMLAssemblerAgent`, `RevisionAgent`, `PDFTranslatorAgent` — deep reasoning adds no value here; disabling it removes 5+ min overhead per call.
-- **slides 모듈 `thinking=False`** (bug fix): `slides/section_rewriter.py`, `slides/notes.py`, `slides/utils.py` — qwen3.5 `reasoning=True` + `num_predict=800~1000` causes thinking to consume all tokens → `response.content` empty → `⚠️ Rewriter returned empty result` → all 12 sections fell back to original text. Fixed by `thinking=False` on all three `create_llm()` calls.
-- **`language_utils.translate_text` `thinking=False`** (bug fix): `max_tokens=2000` + `reasoning=True` → thinking phase consumed all tokens → empty translation string returned. Fixed.
-- **4개 에이전트 `thinking=False` 방어적 고정**: `ContentCollectorAgent`, `ImageCollectorAgent`, `AsyncBaseAgent`, `ContentExpander` — `invoke_llm` 미사용이지만 일관성 확보.
-- **`improve --to-slides` default notes**: Presenter notes now ON by default; `--without-notes` flag opts out. `--with-notes` removed.
-- **`init` LLM-first setup flow**: Phase 1=LLM settings (provider selected first), Phase 2=API keys (Ollama mode skips OpenAI key), Phase 3=quality. Ensures provider is known before API key collection.
-
-### v0.5.4: Test Coverage & Code Quality
-
-- **Test coverage**: 1,436 → 1,837 test functions (+401), ~48% → ~81% — editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI fully covered.
-- **`utils/json_utils.py`**: `strip_json_fence()` / `parse_json_response()` — 4-agent duplicated pattern consolidated into shared utility.
-
-### v0.5.3: Packaging Stability
-
-- **`edit` TemplateNotFound prevention**: `editor/server.py` now reads `index.html` via `Path(__file__).parent.parent / "templates/editor/index.html"` — bypasses Flask's template discovery, immune to incomplete PyPI wheel packaging.
-- **Slide title improvement**: Generation date displayed, centered alignment.
-- **PyPI deployment verification**: `DEPLOYMENT_GUIDE.md` now mandates `unzip -l dist/*.whl | grep templates/editor` before every upload.
-
-### v0.5.2: Stability & Cost Control
-
-- **`BaseAgent.max_tokens`**: All agents accept `max_tokens` (default `Config.MAX_LLM_TOKENS` = 4096, env `MAX_LLM_TOKENS`). Prevents unbounded per-call cost.
-- **RMC loop cap**: `Config.MAX_RMC_ROUNDS` (env `MAX_RMC_ROUNDS`, default 1) — hard upper limit on self-review iterations. Early exit on `no_changes=True`.
-- **Parallel diagram generation**: `DiagramGeneratorAgent` uses `ThreadPoolExecutor` when `num_diagrams > 1`, reducing multi-diagram wait time.
-- **Section ID deduplication at generation time**: `HTMLAssemblerAgent._build_section_id_registry()` — prevents duplicate HTML `id` attributes before assembly (suffix `_2`, `_3`, …).
-- **Editor UX improvements**: `editor.js` major rewrite, CSS additions, server stability fixes.
+- **웹 기반 강의 편집기** (v0.5.0): Flask REST API + SPA 에디터 (포트 5757) — 아키텍처 상세는 아래 [Editor Module](#8-editor-module-v050) 참조
+- **안정성** (v0.5.2): `BaseAgent` `max_tokens` 전역화, RMC 루프 상한 (`MAX_RMC_ROUNDS`), 다이어그램 병렬 생성
+- **Ollama LLM 지원** (v0.5.5): `create_llm()` 팩토리 — OpenAI/Ollama provider 추상화, `thinking=False` 전체 적용
+- **Vision AI 이미지 설명** (v0.5.9): `PDFImageDescriber` Vision LLM, 이미지 단일 저장 (`outputs/{stem}_images/`)
+- **테스트 강화** (v0.5.4): 1,436 → 1,837개 (+401개, ~48% → ~81%)
 
 ---
 

@@ -900,88 +900,26 @@ lecture-forge create
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 
-- 🎨 **create 서브섹션 이미지 위치 개선** (`html_assembler.py`): `_find_best_paragraph()` score=0 폴백을 `paragraphs[0]`(첫 문단)에서 `paragraphs[mid]`(중간 문단)으로 변경 — 서브섹션 도입부가 아닌 내용 전개 후 자연스러운 위치에 이미지 배치
-- 🎯 **translate 이미지 위치 정밀화** (`pdf_translator.py`, `html_assembler.py`): `page_y0` / 페이지 높이 기반 `page_fraction [0,1]` 계산 도입 — 페이지 단위 근사치에서 페이지 내 y0까지 반영한 정밀 위치로 개선, 같은 페이지의 상단·하단 이미지 위치 구분 가능
-- 📐 **`ImageReference.page_fraction`** (`models/lecture.py`): translate 모드 전용 챕터 내 위치 필드 추가 (`Optional[float]`) — `None` 시 기존 페이지 레벨 비례 공식으로 폴백, 하위 호환 유지
-- 🐛 **edit 갤러리 라이트박스 확대보기 오류 수정**: 갤러리 이미지 클릭 시 라이트박스 확대보기 동작 수정
-- 🧪 **테스트 강화**: Vision Describer 통합 + translate/create 개선 테스트 (1,891+ 테스트, ~81% 커버리지)
-- 🎯 **`create` 이미지 위치 정밀화** (`image_selector.py`): `section_position` 기반 Phase 2 이미지 필터링 (±30%), 최소 이미지 폴백
-- 🔄 **`create` 학습목표 재정렬** (`curriculum_designer.py`): 섹션 확정 후 실제 제목 반영 재생성
-- 🔒 **`translate` CODE_BLOCK 복원 강화** (`pdf_translator.py`): `「CODEBLK:N」` 형식 + fuzzy restore
-- 🌐 **`translate` h4 번역 + 한자 제거**: `####` 제목 번역 + `_strip_non_korean_cjk()` 자동 제거
-- 🧹 **`translate` 중복 헤딩 제거** + **페이지 범위 검증** 경고 로그
-- ♿ **Alt 텍스트 125자 제한** (`html_assembler.py`): Vision AI 설명을 alt 속성에 그대로 사용하던 접근성 문제 수정 — `[:125]` 제한, 전체 설명은 figcaption에 유지
-- 🐛 **heading 이중 다운그레이드 버그 수정** (`html_assembler.py`): `_cleanup_content` h2→h3·h3→h4 처리 순서 오류로 LLM `##`이 `<h4>`로 이중 강등되던 버그 수정 (h3→h4 먼저, h2→h3 순서로 변경)
-- 📝 **프롬프트 heading 형식 수정** (`templates/prompts/content_generation.txt`): 주 서브섹션 `###`→`##`, `####` 금지 — 다운그레이드 후 올바른 `<h3>` 계층 생성
-- 🚫 **섹션 간 이미지 누수 차단** (`content_writer/image_selector.py`): Phase 3 품질 폴백 제거 — 결론 섹션이 무관한 앞 챕터 이미지를 가져가던 문제 해결
-- 🔢 **섹션 이미지 상한 강제** (`content_writer/agent.py`): `max_section_images` 캡을 서브섹션 루프에서 조기 `break`로 강제 — 결론 섹션 9+장 과다 배치 방지
-- 💰 **gpt-5-nano 기본 모델** (`config.py`, `token_tracker.py`, `init_helpers.py`): `DEFAULT_MODEL` · `VISION_MODEL` 모두 `gpt-5-nano` — 멀티모달 지원, gpt-4o-mini 대비 2.5× 비용 절감 ($0.05/1M 입력)
+- 💰 **gpt-5-nano 기본 모델**: `DEFAULT_MODEL` · `VISION_MODEL` 모두 `gpt-5-nano` — 멀티모달 지원, gpt-4o-mini 대비 2.5× 비용 절감 ($0.05/1M 입력)
+- 🖼️ **이미지 위치 정밀화**: create — `_find_best_paragraph()` 폴백을 중간 문단으로 개선; translate — `page_y0` 기반 `page_fraction [0,1]` 도입 (`ImageReference.page_fraction`)
+- 🎯 **`create` 이미지 품질**: `section_position [0,1]` 기반 ±30% 필터링, 섹션 간 이미지 누수 차단, `max_section_images` 캡 강제
+- 🔄 **`create` 학습목표 재정렬**: 섹션 확정 후 `_align_objectives_to_sections()` — 실제 섹션 제목 반영한 구체적 목표 재생성
+- 🔒 **`translate` 번역 품질 강화**: `「CODEBLK:N」` 플레이스홀더 + fuzzy restore, `####` 번역 추가, 한자 자동 제거 (`_strip_non_korean_cjk()`), 중복 헤딩 제거, 페이지 범위 검증 경고
+- 🐛 **HTML 품질 수정**: heading 이중 다운그레이드 버그 수정 (h3→h4 먼저, h2→h3 순서), alt 텍스트 125자 제한 (전체 설명은 figcaption 유지)
+- 🧹 **ContentExpander 헤딩 dedup**: `_deduplicate_headings()` — expansion 결과에서 원본과 중복된 헤딩 블록 자동 제거
+- 🧪 **테스트**: 1,891+, ~81% 커버리지
 
-### v0.5.9 (2026-04-17) - 📦 이미지 단일 저장 & 배포 구조 개선 + 🔭 Vision AI 이미지 설명
+### v0.5.x (2026-02-26 ~ 2026-04-17) — 🌐 웹 편집기 · Ollama 지원 · Vision AI · 테스트 강화
 
-- 🔭 **Vision AI 이미지 설명** (`tools/pdf_image_describer.py`): `PDFImageDescriber`가 Vision LLM으로 PDF 이미지를 직접 설명 — base64 multimodal 방식. `_vision_available` 플래그로 낙관적 실행, 첫 실패 시 텍스트 추론 자동 폴백
-- 🔭 **Vision 모델 라우팅** (`config.py`): `get_vision_model()` — OpenAI: `VISION_MODEL`(gpt-4o), Ollama: `OLLAMA_VISION_MODEL`(미설정 시 `OLLAMA_MODEL` 사용)
-- 🔧 **`init` Vision 설정**: Ollama 브랜치 `OLLAMA_VISION_MODEL`, OpenAI 브랜치 `VISION_MODEL` 입력 추가
-- 📦 **이미지 단일 저장**: `ImageCollectorAgent`에 `output_dir` 파라미터 추가 — `data/images/` 임시 경로 없이 `outputs/{stem}_images/`에 직접 저장, `_bundle_images()` 복사 단계 완전 제거
-- 🗂️ **배포 용이성**: HTML 파일과 이미지 폴더가 항상 같은 `outputs/` 위치 — 폴더 하나만 복사해도 완전 배포 가능
-- 🔧 **create / translate / create_async**: `output_stem` Phase 1 전 조기 결정, 이미지·HTML 경로 일관성 확보
-- 🎨 **`_render_image_html` 개선**: `OUTPUT_DIR` 내 이미지 우선 처리, 레거시 `DATA_DIR` 경로 fallback 유지
-- 🔍 **`image_selector` 맵 탐색 확장**: `outputs/*_images/image_page_map.json`도 검색
-- 🧹 **cleanup 개선**: 레거시 `data/images/` 잔존 세션 감지·삭제 추가
-
-### v0.5.8 (2026-04-16) - 🖼 이미지 번들링 & 커버리지 개선
-
-- 📦 **이미지 번들링** (`html_assembler.py`): `_bundle_images()` 메서드 추가 — HTML 생성 시 참조 이미지를 `{강의명}_images/` 폴더로 복사, `cleanup` 후에도 이미지 보존
-- 🔍 **토픽 추출 균형 배분** (`content_analyzer.py`): `_extract_key_topics` 프롬프트에 문서 전체 균형 배분 규칙 명시 — 초반·중반·후반 섹션 모두 포함 요구
-- 🔍 **probe query 확장**: 10개 → 14개 — `optimization/evaluation`, `deployment/production`, `fine-tuning/training`, `safety/alignment` 쿼리 추가로 PDF 후반부 샘플링 강화
-
-### v0.5.7 (2026-04-15) - 🧹 코드 품질 개선
-
-- 🧹 **미사용 import 20개 파일 정리**: slides/notes·section_rewriter·utils, tools/async_web_scraper·image_extractor, utils/language_utils·prompt_manager, agents/content_writer·curriculum_designer·qa_agent, models/curriculum, cli/commands 전체 — 불필요한 typing/rich/pathlib import 제거 (기능 변경 없음)
-
-### v0.5.6 (2026-04-15) - 🐛 Ollama 호환 버그수정 & 문서 정확도
-
-- 🐛 **PDFImageDescriber Ollama 호환**: `translate` 실행 시 `LLM_PROVIDER=ollama`이면 `pdf_image_describer.py`가 OpenAI API를 직접 호출해 401 에러 발생하던 버그 수정 — `create_llm()` 팩토리로 교체 (텍스트 전용, 모든 프로바이더 호환)
-- 🐛 **토큰 사용량 Ollama 모델명 오표시 수정**: Ollama 모델(`qwen3.5:9b`, `llama3.2` 등)이 `gpt-4o-mini`로 잘못 표시되던 버그 수정 — 원본 모델명 유지, 비용 $0.00, `로컬 LLM — API 비용 없음` 표시
-- 📝 **README FAQ 수정**: "API 키 필수" 항목을 OpenAI/Ollama 모드로 구분, 비용 FAQ에 Ollama 무료 안내, 오프라인 FAQ에 Ollama 생성 오프라인 가능 반영
-- 📝 **docs/ 현행화**: api/cli.md ToC 재구성, `select_pdf_files` 문서 추가, `generate_lecture()` 반환값 문서화, init 3모드 반영
-
-### v0.5.5 (2026-04-13) - 🔧 CLI 안정성 & 도움말 현행화 & Ollama 지원
-
-- 🦙 **Ollama LLM 지원**: `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — `create_llm()` 팩토리 추상화, `BaseAgent`/`EmbeddingManager`/slides/language_utils 전체 적용, OpenAI API 키 없이 강의 생성 가능
-- 🦙 **Ollama Thinking 모드**: `OLLAMA_THINKING=auto` (qwen3/qwq/deepseek-r1 자동 감지), `reasoning=` 파라미터 수정, qwen3.5:9b 기본값
-- 🐛 **Ollama reasoning 파라미터 수정**: `ChatOllama`에서 `think=` 대신 `reasoning=` 사용 — thinking이 꺼지지 않아 빈 응답 생성되던 버그 수정
-- 🐛 **gpt-4o-mini 404 수정**: `language_utils.translate_text(model=None)` — Ollama 모드에서 OpenAI 모델명으로 ChatOllama 호출하던 버그 수정
-- ⚡ **5개 에이전트 thinking=False**: ContentAnalyzer·DiagramGenerator·HTMLAssembler·RevisionAgent·PDFTranslator — deep reasoning 불필요한 에이전트 응답 속도 개선
-- 🔧 **`init` LLM-first 설정 순서**: Phase 1=LLM, Phase 2=API 키 (Ollama 모드는 OpenAI 키 스킵), Phase 3=품질
-- 🔧 **`init` 명령어 3모드**: `--reconfigure/-r` (기존 값 유지하며 항목별 수정), `--show/-s` (설정 출력)
-- ✏️ **`improve --to-slides` 노트 기본 포함**: `--with-notes` 제거, 발표자 노트 기본 ON — `--without-notes`로 opt-out
-- 🐛 **AuthenticationError 즉시 실패**: tenacity retry에서 인증·권한·404 오류는 재시도 없이 즉시 실패 (`reraise=True`)
-- 🖥️ **`create` Progress 개선**: Phase 4a 섹션별 진행률 표시, RichHandler Console 공유로 이중 렌더링 제거
-- 📝 **도움말 현행화**: `--help` 통계 수정 (12 Agents, 1,870+ Tests), init `--reconfigure`/`--show` 반영
-- 🧪 **테스트 추가**: retry 정책 8개, init_helpers 43개 (총 1,877개)
-- 🐛 **slides 모듈 `thinking=False`**: `section_rewriter`·`notes`·`utils` — `num_predict=800~1000`에서 qwen3.5 thinking이 전체 토큰 소비 → empty result 후 원문 사용 버그 수정
-- 🐛 **`language_utils.translate_text` `thinking=False`**: `max_tokens=2000`에서 thinking phase가 토큰 전부 소비 → 번역 결과 빈 문자열 버그 수정
-- 🔧 **4개 에이전트 `thinking=False` 방어적 고정**: ContentCollector·ImageCollector·AsyncBase·ContentExpander — invoke_llm 미사용이지만 일관성 확보
-
-### v0.5.4 (2026-04-03) - 🧪 테스트 커버리지 강화
-
-- 🧪 **테스트 401개 추가**: editor·slides·utils·server·enhancer·curriculum·pdf_translator·CLI 전체 커버 → 1,837개 (~81%)
-- 🔧 **`utils/json_utils.py`**: `strip_json_fence()` / `parse_json_response()` — 4개 에이전트 중복 패턴 통합
-- 🌐 **에디터 UX**: '섹션 저장' 버튼 항상 표시, 편집 영역 배경색, 미리보기 마크다운 렌더링 CSS
-
-### v0.5.x (2026-02-26 ~ 2026-03-05) - 🌐 웹 편집기 · 안정성 & 비용 개선
-
-- 🐛 **`edit` TemplateNotFound 재발 방지** (v0.5.3): `server.py`에서 `Path(__file__)` 절대경로로 `index.html` 직접 읽기
-- 🎨 **슬라이드 타이틀 개선** (v0.5.3): 생성일 표시 + 가운데 정렬
-- 🔒 **PyPI 배포 검증 강화** (v0.5.3): wheel 내용 필수 확인 절차 추가 (`unzip -l dist/*.whl | grep templates/editor`)
-- 🌐 **웹 기반 강의 편집기** (`edit` 명령어, v0.5.0): 3-패널 SPA 에디터 (포트 5757) — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색
-- 📦 **의존성 추가**: `flask>=3.0.0`, `markdownify>=0.12.1` · CLI 명령어 8개 → 9개
-- 🐛 **버그수정** (v0.5.1): `edit` TemplateNotFound, `improve --to-slides` IndexError
-- 🔧 **`BaseAgent` `max_tokens` 전역화** (v0.5.2): `MAX_LLM_TOKENS` (기본 4096) 환경변수 제어
-- 🔒 **RMC 루프 상한** (v0.5.2): `MAX_RMC_ROUNDS` (기본 1) — 무한 반복 방지
-- ⚡ **다이어그램 병렬 생성** (v0.5.2): `ThreadPoolExecutor`로 섹션당 다중 다이어그램 병렬 처리
-- 🆔 **HTML 섹션 ID 중복 방지** (v0.5.2): 생성 시점 중복 제거 (`_2`, `_3` suffix)
+- 🌐 **웹 기반 강의 편집기** (v0.5.0): `edit` 명령어 — 3-패널 SPA 에디터 (포트 5757), 섹션 CRUD, EasyMDE, 이미지 갤러리·대안 검색. CLI 명령어 8개 → 9개
+- 🔧 **안정성** (v0.5.2): `BaseAgent` `max_tokens` 전역화, RMC 루프 상한 (`MAX_RMC_ROUNDS`), 다이어그램 병렬 생성 (`ThreadPoolExecutor`), HTML 섹션 ID 중복 방지
+- 🔒 **패키징 안정화** (v0.5.3): `server.py` 절대경로 `index.html` 직접 읽기 — PyPI wheel 누락 대응
+- 🧪 **테스트 대폭 강화** (v0.5.4): 1,436개 → 1,837개 (+401개, ~48% → ~81%), `utils/json_utils.py` JSON fence 유틸 통합
+- 🦙 **Ollama LLM 지원** (v0.5.5): `LLM_PROVIDER=ollama`, `create_llm()` 팩토리 — OpenAI API 없이 강의 생성; `thinking=False` 전체 적용으로 Ollama 빈 응답 버그 수정; `init` LLM-first 설정, `--reconfigure`/`--show` 3모드
+- 🐛 **Ollama 호환 버그수정** (v0.5.6): PDFImageDescriber 401 수정, TokenTracker 모델명 오표시 수정, `로컬 LLM — API 비용 없음` 표시
+- 🧹 **코드 품질** (v0.5.7): 미사용 import 20개 파일 정리 (기능 변경 없음)
+- 🔍 **RAG 커버리지** (v0.5.8): 토픽 추출 균형 배분, probe query 10개 → 14개 (PDF 후반부 샘플링 강화)
+- 🔭 **Vision AI 이미지 설명** (v0.5.9): `PDFImageDescriber` Vision LLM — base64 multimodal, 텍스트 추론 자동 폴백; 이미지 단일 저장 (`outputs/{stem}_images/`), 번들링 단계 제거
 
 ### v0.4.x (2026-02-22 ~ 2026-02-25) - 🔍 보강·번역·아키텍처 정리
 

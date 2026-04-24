@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.6.0** | 이미지 배치 정밀화 — create 서브섹션 중간 배치·translate 원문 y0 위치 보존
+> 🚀 **v0.6.1** | agent-evaluator 계측 통합 (opt-in) + openai SDK v2 지원
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -897,6 +897,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
+
+- 🔬 **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter` 등 어댑터 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
+- 📦 **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py`
+- 🔧 **openai SDK 버전 범위 확장**: `<2.0.0` → `<3.0.0` — openai v2.x SDK 지원
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 

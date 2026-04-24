@@ -797,5 +797,5 @@ section_contents = agent.assign_images_to_sections(section_contents, chapter_pag
 
 ---
 
-**Last Updated**: 2026-04-21
-**Version**: 0.6.0
+**Last Updated**: 2026-04-24
+**Version**: 0.6.1

@@ -33,16 +33,39 @@ from lecture_forge.utils import logger, reconfigure_logging_console
 from lecture_forge.utils.token_tracker import get_tracker
 
 
-def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
+def generate_lecture(
+    inputs: Dict[str, Any],
+    eval_output_dir: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Generate lecture using the multi-agent pipeline.
 
     Args:
-        inputs: Dictionary with lecture parameters
+        inputs:          Dictionary with lecture parameters
+        eval_output_dir: agent-evaluator 결과 저장 경로.
+                         None(기본값)이면 평가 계측을 건너뛴다.
 
     Returns:
         Dictionary with generation results
     """
+    # agent-evaluator 평가 모니터 초기화 (opt-in)
+    _eval_monitor = None
+    if eval_output_dir:
+        try:
+            from lecture_forge.eval import (
+                build_lecture_monitor,
+                ContentWriterAdapter,
+                CurriculumDesignerAdapter,
+                ContentAnalyzerAdapter,
+                QualityEvaluatorAdapter,
+            )
+            _eval_monitor = build_lecture_monitor(eval_output_dir)
+        except ImportError:
+            console.print(
+                "[yellow]⚠️  agent-evaluator 미설치 — eval 계측을 건너뜁니다.[/yellow]\n"
+                "[dim]설치: pip install agent-evaluator[/dim]"
+            )
+
     # Share console between RichHandler and Progress to prevent double-rendering
     reconfigure_logging_console(console)
 
@@ -200,6 +223,8 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Phase 3a: Content Analysis
         task3a = progress.add_task("[cyan]🔍 Phase 3a: Analyzing content...", total=1)
         analyzer = ContentAnalyzerAgent(vector_store=content_agent.vector_store)
+        if _eval_monitor:
+            analyzer = ContentAnalyzerAdapter(analyzer, _eval_monitor)
         analysis_result = analyzer.analyze(
             collection_result=content_result,
             image_result=image_result,
@@ -213,6 +238,8 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         # Phase 3b: Curriculum Design
         task3b = progress.add_task("[cyan]📋 Phase 3b: Designing curriculum...", total=1)
         designer = CurriculumDesignerAgent(vector_store=content_agent.vector_store)
+        if _eval_monitor:
+            designer = CurriculumDesignerAdapter(designer, _eval_monitor)
         curriculum = designer.design(
             analysis_result=analysis_result,
             topic=inputs["topic"],
@@ -233,6 +260,11 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         writer = ContentWriterAgent(
             vector_store=content_agent.vector_store,
         )
+        if _eval_monitor:
+            writer = ContentWriterAdapter(
+                writer, _eval_monitor,
+                learning_objectives=curriculum.learning_objectives,
+            )
 
         # Write sections one by one to update progress incrementally
         section_contents = []
@@ -324,6 +356,8 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         from lecture_forge.agents.revision_agent import RevisionAgent
 
         evaluator = QualityEvaluator()
+        if _eval_monitor:
+            evaluator = QualityEvaluatorAdapter(evaluator, _eval_monitor)
         revision_agent = RevisionAgent()
 
         task5 = progress.add_task(f"[cyan]✅ Phase 5: Quality assurance (threshold: {quality_threshold})...", total=1)
@@ -412,6 +446,17 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
         if final_evaluation:
             console.print(f"   📊 Final quality score: {final_evaluation.overall_score:.1f}/100\n")
 
+    # agent-evaluator 결과 최종 저장
+    if _eval_monitor:
+        import re as _re
+        _topic_slug = _re.sub(r"[^a-zA-Z0-9가-힣_-]", "_", inputs.get("topic", "lecture"))[:40]
+        _eval_filename = f"lecture_eval_{_topic_slug}"
+        _eval_monitor.save_to_file(_eval_filename)
+        console.print(
+            f"\n[bold cyan]📊 agent-evaluator 결과 저장됨:[/bold cyan] "
+            f"{eval_output_dir}/{_eval_filename}.json"
+        )
+
     # Get token usage summary
     token_usage = tracker.get_summary()
 
@@ -446,6 +491,13 @@ def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
     show_default=True,
 )
 @click.option("--output", "-o", type=str, help="Output file name without extension (auto-generated if not provided)")
+@click.option(
+    "--eval",
+    "eval_output_dir",
+    type=str,
+    default=None,
+    help="agent-evaluator 평가 결과 저장 디렉터리 (예: eval_results/). 지정 시 Gate A–G 계측 활성화",
+)
 @click.option(
     "--include-pdf-images/--no-include-pdf-images",
     default=True,
@@ -482,6 +534,7 @@ def create(
     image_search: bool,
     quality_level: str,
     output: Optional[str],
+    eval_output_dir: Optional[str],
     include_pdf_images: bool,
     auto_describe_images: bool,
     async_mode: bool,
@@ -649,7 +702,7 @@ def create(
 
     # Generate lecture
     try:
-        result = generate_lecture(inputs)
+        result = generate_lecture(inputs, eval_output_dir=eval_output_dir)
 
         console.print("\n[bold green]✅ Lecture generated successfully![/bold green]\n")
         console.print(f"📄 [bold]HTML File:[/bold] {result['html_path']}")

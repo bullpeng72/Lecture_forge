@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.6.0 | **최종 수정**: 2026-04-21
+> **버전**: 0.6.1 | **최종 수정**: 2026-04-24
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -426,6 +426,12 @@ A: `pytest tests/ -v` (1,891+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
+
+- 🔬 **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter`, `CurriculumDesignerAdapter`, `ContentAnalyzerAdapter`, `QualityEvaluatorAdapter` 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
+- 📦 **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py` — agent-evaluator 연동용 어댑터 집합
+- 🔧 **openai SDK 버전 범위 확장**: `openai>=1.12.0,<2.0.0` → `<3.0.0` — openai v2.x SDK 지원
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 

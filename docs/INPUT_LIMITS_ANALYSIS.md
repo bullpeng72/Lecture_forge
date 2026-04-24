@@ -1,8 +1,8 @@
 # 📊 LectureForge 입력 소스 제한 및 활용 분석
 
-> **최종 수정**: 2026-04-21 (v0.6.0)
+> **최종 수정**: 2026-04-24 (v0.6.1)
 > **목적**: 각 입력 소스의 제한사항과 실제 활용량 정리
-> **최신 변경**: v0.6.0 이미지 배치 정밀화 (create 서브섹션 중간 배치·translate page_y0 위치 보존), v0.5.9 이미지 단일 저장·배포 구조 개선, v0.5.8 이미지 번들링·커버리지 균형 개선, v0.5.7 미사용 import 정리, v0.5.6 PDFImageDescriber·TokenTracker Ollama 호환, v0.5.5 CLI 안정성·Ollama 지원
+> **최신 변경**: v0.6.1 agent-evaluator 계측 통합 (opt-in) + openai SDK v2 지원, v0.6.0 이미지 배치 정밀화 (create 서브섹션 중간 배치·translate page_y0 위치 보존), v0.5.9 이미지 단일 저장·배포 구조 개선
 
 ---
 

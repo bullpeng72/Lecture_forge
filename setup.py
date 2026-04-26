@@ -40,6 +40,9 @@ setup(
     ],
     python_requires=">=3.11",
     install_requires=requirements,
+    extras_require={
+        "eval": ["agent-evaluator>=0.1.0"],
+    },
     entry_points={
         "console_scripts": [
             "lecture-forge=lecture_forge.cli:cli",

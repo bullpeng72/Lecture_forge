@@ -63,7 +63,7 @@ def generate_lecture(
         except ImportError:
             console.print(
                 "[yellow]⚠️  agent-evaluator 미설치 — eval 계측을 건너뜁니다.[/yellow]\n"
-                "[dim]설치: pip install agent-evaluator[/dim]"
+                '[dim]설치: pip install "lecture-forge[eval]"[/dim]'
             )
 
     # Share console between RichHandler and Progress to prevent double-rendering
@@ -599,7 +599,7 @@ def create(
       Opt-in pipeline quality measurement using the agent-evaluator framework.
       Records Gate A–G metrics (content coverage, curriculum coherence, RAG
       faithfulness, etc.) as JSON files in the specified directory.
-      Requires: pip install agent-evaluator
+      Requires: pip install "lecture-forge[eval]"  (or: pip install agent-evaluator)
       • Gate A: Content collection coverage
       • Gate B: Curriculum coherence
       • Gate C: RAG faithfulness (writer)

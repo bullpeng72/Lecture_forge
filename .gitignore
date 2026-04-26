@@ -52,6 +52,9 @@ outputs/
 *.pdf
 *.log
 
+# agent-evaluator output
+eval_results/
+
 # Test
 .pytest_cache/
 .coverage

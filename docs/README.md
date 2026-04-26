@@ -56,5 +56,5 @@ Technical API documentation:
 
 ---
 
-**Last Updated**: 2026-04-21 (v0.6.0)
+**Last Updated**: 2026-04-27 (v0.6.1)
 **Maintained by**: Sungwoo Kim

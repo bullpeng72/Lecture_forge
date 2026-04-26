@@ -590,6 +590,21 @@ def create(
       # Extend an existing knowledge base with new sources
       $ lecture-forge create --existing-kb data/vector_db/MyLecture_20260219 --kb-mode extend
 
+      # Enable agent-evaluator pipeline measurement (Gate A–G, v0.6.1+)
+      $ lecture-forge create --eval eval_results/
+      $ lecture-forge create -c config.yaml --eval eval_results/ --quality-level strict
+
+    \b
+    Agent-Evaluator (--eval, v0.6.1+):
+      Opt-in pipeline quality measurement using the agent-evaluator framework.
+      Records Gate A–G metrics (content coverage, curriculum coherence, RAG
+      faithfulness, etc.) as JSON files in the specified directory.
+      Requires: pip install agent-evaluator
+      • Gate A: Content collection coverage
+      • Gate B: Curriculum coherence
+      • Gate C: RAG faithfulness (writer)
+      • Gate D: Quality evaluation accuracy
+
     \b
     Config File Format (YAML):
       topic: "Introduction to Machine Learning"

@@ -60,7 +60,7 @@ def cli(ctx, version: bool) -> None:
     Multi-agent pipeline system with RAG-based knowledge management and multilingual support.
 
     \b
-    📊 Stats: 12 Agents | 9 Tools | 1,881+ Tests | ~$0.035 per 60min lecture
+    📊 Stats: 12 Agents | 9 Tools | 1,891+ Tests | ~$0.035 per 60min lecture
     📂 Data: ~/Documents/LectureForge/ (easily accessible folder)
     🌐 Multilingual: Auto language detection, Cross-lingual search (v0.3.2+)
     ⚡ Async I/O: 70% faster content collection with --async-mode (v0.3.4+)
@@ -69,6 +69,7 @@ def cli(ctx, version: bool) -> None:
     🔄 Re-Evaluate: KB-based quality re-evaluation + content supplement (v0.4.0+)
     🌐 PDF Translate: English PDF → Korean lecture, TOC detection, term glossary (v0.4.1+)
     ✏️  Web Editor: 3-panel GUI editor — section CRUD, Markdown, image gallery (v0.5.0+)
+    🔬 Agent-Evaluator: Pipeline quality measurement, Gate A–G (create --eval DIR, v0.6.1+)
 
     \b
     🎉 FIRST TIME HERE?

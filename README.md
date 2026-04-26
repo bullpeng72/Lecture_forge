@@ -46,7 +46,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
   - **QAAgent**: 각 주장을 소스 컨텍스트와 대조 → 할루시네이션 항목 제거 또는 경고 표시
-- 🧪 **테스트 커버리지**: 1,881+ 테스트 함수 (~81% 커버리지)
+- 🧪 **테스트 커버리지**: 1,891+ 테스트 함수 (~81% 커버리지)
 
 ### 지식 관리
 - 🗄️ **RAG 기반 지식창고**: ChromaDB 벡터 DB로 대화형 Q&A 지원
@@ -69,11 +69,12 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.6.0)
+## 🚀 최근 개선사항 (v0.6.1)
 
-- 🎨 **create 서브섹션 이미지 위치 개선**: 이미지 키워드 매칭 score=0 시 첫 문단 대신 **중간 문단** 뒤에 배치 — 서브섹션 도입부가 아닌 내용 전개 후 자연스러운 위치
-- 🎯 **translate 이미지 위치 정밀화**: `page_y0` 기반 `page_fraction` 계산 도입 — 페이지 단위 근사에서 페이지 내 y0까지 반영한 정밀 위치 보존, 같은 페이지의 상단·하단 이미지 구분
-- 📐 **`ImageReference.page_fraction`**: translate 모드 전용 챕터 내 `[0, 1]` 위치 필드 추가, `None` 시 기존 공식 폴백으로 하위 호환 유지
+- 🔬 **agent-evaluator 계측 통합** (opt-in): `lecture-forge create --eval eval_results/` — Gate A–G 파이프라인 품질 계측 활성화; 미설치 시 경고 후 스킵
+- 📦 **`eval/` 모듈 추가**: `build_lecture_monitor()`, `ContentWriterAdapter` 등 어댑터로 에이전트별 계측 연동
+- 🔧 **openai SDK v2 지원**: 의존성 상한 `<3.0.0`으로 확장
+- 📦 **`pip install "lecture-forge[eval]"`**: agent-evaluator 선택적 의존성 그룹 추가
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -348,6 +349,7 @@ lecture-forge create
 | `--image-search` / `--no-image-search` | 웹 이미지 검색 활성화 (Pexels 등, 기본: 활성화) | `--no-image-search` |
 | `--quality-level LEVEL` | 품질 기준 설정 | `--quality-level strict` |
 | `-o, --output FILE` | 출력 파일명 지정 (확장자 제외) | `--output my_lecture` |
+| `--eval DIR` | agent-evaluator 계측 결과 저장 디렉터리 (opt-in, v0.6.1+) | `--eval eval_results/` |
 | `--async-mode` | Async I/O 사용 (70% 빠름, 실험적) | `--async-mode` |
 | `--include-pdf-images` | PDF 이미지 추출 및 location-based 자동 배치 (기본 활성화) | `--no-include-pdf-images` |
 | `--auto-describe-images` | PDF 이미지 GPT-4o-mini 설명 자동 생성 (기본 활성화) | `--no-auto-describe-images` |
@@ -372,6 +374,10 @@ lecture-forge create --async-mode
 
 # YAML 설정 사용
 lecture-forge create --config my_config.yaml
+
+# agent-evaluator 계측 활성화 (v0.6.1+, pip install "lecture-forge[eval]" 필요)
+lecture-forge create --eval eval_results/
+lecture-forge create --config my_config.yaml --eval eval_results/ --quality-level strict
 ```
 
 ---

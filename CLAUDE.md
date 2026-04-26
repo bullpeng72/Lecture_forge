@@ -30,6 +30,7 @@
 18. **RMC 자기검토**: 에이전트 내부 2단계 자기반성 (커리큘럼 논리, 콘텐츠 품질, Q&A 할루시네이션 검출)
 19. **웹 기반 강의 편집기**: 3-패널 SPA 에디터 — 섹션 CRUD, Markdown 편집 (EasyMDE), 이미지 갤러리·대안 검색 (`edit` 명령어, v0.5.0)
 20. **Ollama LLM 지원** (v0.5.5+): 로컬 LLM(`LLM_PROVIDER=ollama`)으로 OpenAI 없이 강의 생성 — `create_llm()` 팩토리로 provider 추상화, `OLLAMA_MODEL`/`OLLAMA_BASE_URL` 환경변수 설정
+21. **Agent-Evaluator 계측** (v0.6.1+, opt-in): `create --eval <DIR>` — Gate A–G 파이프라인 품질 계측; `pip install "lecture-forge[eval]"` 또는 `pip install agent-evaluator`
 
 ### 기술 스택
 - **Framework**: LangChain
@@ -129,6 +130,7 @@ lecture-forge/  (Git 저장소)
     ├── 💻 cli/                     ✅ CLI 모듈 (9개 명령어)
     ├── 🎬 slides/                  ✅ Reveal.js 슬라이드 변환
     ├── 🌐 editor/                  ✅ 웹 에디터 서버 (Flask, html_editor, server)
+    ├── 🔬 eval/                    ✅ agent-evaluator 계측 모듈 (monitor, adapters, v0.6.1+)
     ├── ⚙️ config.py                ✅ 설정 관리 (자동 마이그레이션)
     └── 🎯 exceptions.py            ✅ 예외 처리 시스템 (9개 카테고리)
 ```
@@ -267,6 +269,7 @@ lecture-forge create --output my_lecture          # 출력 파일명 (-o)
 lecture-forge create --async-mode                 # Async I/O (70% 빠름, 실험적)
 lecture-forge create --existing-kb <path>         # 기존 지식베이스 재사용
 lecture-forge create --existing-kb <path> --kb-mode extend  # 기존 KB 확장
+lecture-forge create --eval eval_results/         # agent-evaluator 계측 (opt-in, v0.6.1+)
 
 # ===== CHAT: Q&A 모드 =====
 lecture-forge chat                                # 자동 선택

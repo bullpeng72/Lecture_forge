@@ -490,6 +490,12 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.6.3 (2026-04-27) — 🐛 `--config` 버그 수정 + CLI 문서 전면 보완
+
+- **`--config` 디렉토리 거부 수정**: `click.Path(dir_okay=False)` 추가 — 디렉토리 경로 전달 시 "Is a directory" 에러 대신 Click이 즉시 명확한 에러 출력
+- **`create` 명령어 문서 전면 보완**: YAML 형식 블록 추가; `--config` 파일 필수(자동 생성 없음) 안내; `--eval`이 `--config` 없이 독립 사용 가능·인수 필수·디렉토리 미존재 허용 명시
+- **docs/ 현행화**: `cli.md` — `--config`·`--eval` 옵션 설명 전면 갱신; `getting-started.md` — `--eval` 예제 추가·Config File Mode 주의사항 추가
+
 ### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비
 
 - **pipx `resolution-too-deep` 수정**: `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 optional extras(`[otel]`/`[serve]`/`[pdf]`)로 분리 — `pipx install "lecture-forge[eval]"` 정상 동작
@@ -590,4 +596,4 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 ---
 
 **Last Updated**: 2026-04-27
-**Version**: 0.6.2
+**Version**: 0.6.3

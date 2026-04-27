@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.6.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.6.3-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.6.2** | docs/ 오류 수정 · 저장소 정리(setup.py·MANIFEST.in·mypy.ini 제거) · agent-evaluator 0.9.0 의존성 정비
+> 🚀 **v0.6.3** | `--config` 디렉토리 거부 버그 수정 · README/docs `--config`·`--eval` 동작 설명 전면 보완
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -253,7 +253,7 @@ lecture-forge create
 | 명령어 | 설명 | 주요 옵션 |
 |--------|------|----------|
 | **init** | 초기 설정 | `--path`, `--reconfigure/-r`, `--show/-s` |
-| **create** | 강의 생성 | `--interactive`, `--image-search`, `--quality-level`, `--existing-kb` |
+| **create** | 강의 생성 | `--config`, `--interactive`, `--image-search`, `--quality-level`, `--eval`, `--existing-kb` |
 | **translate** | 영문 PDF → 한국어 강의자료 (v0.4.1+) | `--no-translate`, `--with-diagrams`, `--audience-level`, `--quality-level` |
 | **chat** | Q&A 모드 | `--knowledge-base` |
 | **edit** | 웹 기반 강의 편집기 (v0.5.0+) | `--port`, `--no-browser` |
@@ -273,6 +273,9 @@ lecture-forge create
 
 # 🎓 고품질 강의 (이미지 검색 포함)
 lecture-forge create --image-search --quality-level strict
+
+# 🔬 파이프라인 계측 포함 강의 생성 (v0.6.1+, pip install "lecture-forge[eval]" 필요)
+lecture-forge create --eval eval_results/
 
 # 💬 Q&A 모드 (자동으로 최신 지식베이스 선택)
 lecture-forge chat
@@ -382,13 +385,31 @@ lecture-forge create --image-search --quality-level strict
 # Async 모드 (70% 빠름, 실험적)
 lecture-forge create --async-mode
 
-# YAML 설정 사용
+# YAML 설정 사용 (파일을 먼저 생성한 뒤 경로를 지정)
 lecture-forge create --config my_config.yaml
 
 # agent-evaluator 계측 활성화 (v0.6.1+, pip install "lecture-forge[eval]" 필요)
 lecture-forge create --eval eval_results/
 lecture-forge create --config my_config.yaml --eval eval_results/ --quality-level strict
 ```
+
+**YAML 설정 파일 형식 (`my_config.yaml`):**
+```yaml
+topic: "Introduction to Machine Learning"
+duration: 90                    # 강의 시간 (분)
+audience_level: "intermediate"  # beginner / intermediate / advanced
+pdfs:
+  - "ml_paper.pdf"
+urls:
+  - "https://example.com/ml-guide"
+keywords:
+  - "machine learning basics"
+  - "supervised learning"
+image_keywords:
+  - "machine learning diagram"
+```
+
+> ℹ️ `--config` 옵션은 **실제 존재하는 파일** 경로를 지정해야 합니다. 대화형 입력(`lecture-forge create`) 대신 YAML 파일로 반복 재현 가능한 설정을 관리할 때 유용합니다.
 
 ---
 
@@ -913,6 +934,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.6.3 (2026-04-27) — 🐛 `--config` 버그 수정 + CLI 문서 전면 보완
+
+- 🐛 **`--config` 디렉토리 거부 수정**: `click.Path(dir_okay=False)` 추가 — 디렉토리 경로 전달 시 "Is a directory" 에러 대신 Click이 즉시 명확한 에러 출력
+- 📝 **`create` 명령어 문서 전면 보완**: YAML 형식 블록 추가; `--config` 파일 필수(자동 생성 없음) 안내; `--eval`이 `--config` 없이 독립 사용 가능·인수 필수·디렉토리 미존재 허용 명시
+- 📝 **docs/ 현행화**: `cli.md` — `--config`·`--eval` 옵션 설명 YAML 형식 포함 전면 갱신; `getting-started.md` — `--eval` Quick Commands 추가·Config File Mode에 주의사항 및 조합 예제 추가
 
 ### v0.6.2 (2026-04-27) — 📦 의존성 정비 + docs/ 오류 수정 + 저장소 정리
 

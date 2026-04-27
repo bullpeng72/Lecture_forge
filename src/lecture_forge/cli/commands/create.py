@@ -478,7 +478,7 @@ def generate_lecture(
 
 
 @click.command()
-@click.option("--config", "-c", type=click.Path(exists=True), help="Configuration YAML file with lecture parameters")
+@click.option("--config", "-c", type=click.Path(exists=True, dir_okay=False), help="Configuration YAML file with lecture parameters")
 @click.option("--interactive", "-i", is_flag=True, help="Enable interactive Q&A mode during generation")
 @click.option(
     "--image-search/--no-image-search", default=True, help="Enable image search from web sources (Pexels, default: enabled)"

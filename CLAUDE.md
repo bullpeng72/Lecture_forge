@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.6.2 | **최종 수정**: 2026-04-27
+> **버전**: 0.6.3 | **최종 수정**: 2026-04-27
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -442,6 +442,12 @@ A: `pytest tests/ -v` (1,891+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.6.3 (2026-04-27) — 🐛 `--config` 버그 수정 + CLI 문서 전면 보완
+
+- 🐛 **`--config` 디렉토리 거부 수정**: `click.Path(dir_okay=False)` 추가
+- 📝 **`create` 명령어 문서**: YAML 형식 블록, `--config` 파일 필수 안내, `--eval` 독립 동작 명시
+- 📝 **docs/ 현행화**: `cli.md` `--config`·`--eval` 전면 갱신; `getting-started.md` `--eval` 예제 추가
 
 ### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비 + 배포 전략 문서화
 

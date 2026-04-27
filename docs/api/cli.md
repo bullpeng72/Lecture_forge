@@ -276,7 +276,7 @@ lecture-forge create [OPTIONS]
 ```
 
 **Options:**
-- `-c, --config PATH`: Configuration YAML file
+- `-c, --config PATH`: Configuration YAML file — **반드시 실제 존재하는 파일**을 지정해야 합니다 (디렉토리 경로는 거부됨). 파일이 없으면 Click이 즉시 에러를 냅니다. 생략 시 대화형 입력으로 대체됩니다. YAML 형식은 아래 참조.
 - `-i, --interactive`: Enable interactive mode
 - `--image-search/--no-image-search`: Enable image search from web sources — Pexels (default: enabled)
 - `--quality-level [lenient|balanced|strict]`: Quality threshold — lenient(70), balanced(80), strict(90) (default: balanced)
@@ -286,7 +286,25 @@ lecture-forge create [OPTIONS]
 - `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
 - `--existing-kb PATH`: Reuse or extend an existing knowledge base directory instead of building a new one
 - `--kb-mode [reuse_only|extend]`: How to use `--existing-kb` — `reuse_only` (read-only, default) or `extend` (add new sources to the KB)
-- `--eval PATH`: **[v0.6.1+]** Directory path to store agent-evaluator Gate A–G metrics (e.g. `eval_results/`). Activates pipeline instrumentation; skipped silently if `agent-evaluator` is not installed.
+- `--eval TEXT`: **[v0.6.1+]** Directory path to store agent-evaluator Gate A–G metrics (e.g. `eval_results/`). **`--config`와 독립적** — `--config` 없이 단독으로 사용 가능 (대화형 입력과 함께 동작). 인수(디렉토리 경로) 필수 — `--eval` 단독 사용 시 에러. 지정 디렉토리는 미리 존재하지 않아도 됨. `agent-evaluator` 미설치 시 경고 후 스킵.
+
+**YAML Config File Format** (`-c, --config` 사용 시):
+
+```yaml
+topic: "Introduction to Machine Learning"   # 필수
+duration: 90                                # 필수 (강의 시간, 분)
+audience_level: "intermediate"              # 필수: beginner / intermediate / advanced
+pdfs:                                       # 선택
+  - "ml_paper.pdf"
+urls:                                       # 선택
+  - "https://example.com/ml-guide"
+keywords:                                   # 선택
+  - "machine learning basics"
+image_keywords:                             # 선택
+  - "machine learning diagram"
+```
+
+> `topic`, `duration`, `audience_level` 세 항목이 누락되면 에러가 납니다. 나머지는 생략 시 빈 목록으로 처리됩니다.
 
 #### Python API
 
@@ -690,20 +708,24 @@ from lecture_forge.cli.commands.chat import chat
 from lecture_forge.cli.utils import display_token_usage
 
 # 1. Generate lecture
-result = generate_lecture({
-    "topic": "Python Programming",
-    "duration": 90,
-    "audience_level": "beginner",
-    "pdfs": ["python_book.pdf"],
-    "urls": [],
-    "keywords": ["python basics", "programming"],
-    "image_search": True,
-    "quality_level": "balanced",
-    "include_pdf_images": True,
-    "auto_describe_images": True,
-    # "existing_kb_path": "/path/to/vector_db/existing_kb",
-    # "kb_mode": "reuse_only",
-})
+result = generate_lecture(
+    inputs={
+        "topic": "Python Programming",
+        "duration": 90,
+        "audience_level": "beginner",
+        "pdfs": ["python_book.pdf"],
+        "urls": [],
+        "keywords": ["python basics", "programming"],
+        "image_search": True,
+        "quality_level": "balanced",
+        "include_pdf_images": True,
+        "auto_describe_images": True,
+        # "existing_kb_path": "/path/to/vector_db/existing_kb",
+        # "kb_mode": "reuse_only",
+    },
+    # Optional: agent-evaluator instrumentation (v0.6.1+)
+    # eval_output_dir="eval_results/",  # requires: pip install "lecture-forge[eval]"
+)
 
 # 2. Display results
 print(f"✅ Lecture generated: {result['html_path']}")
@@ -862,4 +884,4 @@ See `tests/integration/test_cli_commands.py` for comprehensive CLI testing examp
 ---
 
 **Last Updated**: 2026-04-27
-**Version**: 0.6.2
+**Version**: 0.6.3

@@ -254,7 +254,7 @@ lecture-forge create
 **Example interactive session:**
 
 ```
-📚 LectureForge Pro v0.6.2 - Lecture Material Generator
+📚 LectureForge Pro v0.6.3 - Lecture Material Generator
 
 Starting lecture generation...
 
@@ -362,19 +362,19 @@ Create a config file for repeatable generation:
 
 **lecture_config.yaml:**
 ```yaml
-topic: "Introduction to Machine Learning"
-duration: 60
-audience_level: "beginner"
-pdfs:
+topic: "Introduction to Machine Learning"   # required
+duration: 60                                # required (minutes)
+audience_level: "beginner"                  # required: beginner / intermediate / advanced
+pdfs:                                       # optional
   - "ml_textbook.pdf"
   - "ml_handbook.pdf"
-urls:
+urls:                                       # optional
   - "https://scikit-learn.org/stable/tutorial/index.html"
-keywords:
+keywords:                                   # optional
   - "machine learning basics"
   - "supervised learning"
   - "neural networks"
-image_keywords:
+image_keywords:                             # optional
   - "machine learning diagram"
   - "neural network visualization"
 ```
@@ -382,6 +382,17 @@ image_keywords:
 **Generate from config:**
 ```bash
 lecture-forge create --config lecture_config.yaml
+```
+
+> **주의**: `--config`는 **실제 존재하는 파일** 경로를 지정해야 합니다. 파일이 없거나 디렉토리를 지정하면 즉시 에러가 납니다. 자동 생성 기능은 없습니다.
+
+**`--config` + 다른 옵션 조합:**
+```bash
+# YAML 설정 + 고품질 + 계측
+lecture-forge create --config lecture_config.yaml --quality-level strict --eval eval_results/
+
+# --eval은 --config 없이도 독립적으로 사용 가능
+lecture-forge create --eval eval_results/
 ```
 
 ### Quick Commands
@@ -404,6 +415,13 @@ lecture-forge create --no-include-pdf-images
 
 # Async mode (70% faster content collection, v0.3.4+)
 lecture-forge create --async-mode
+
+# Pipeline quality measurement (v0.6.1+) — works without --config
+# Requires: pip install "lecture-forge[eval]"
+lecture-forge create --eval eval_results/
+
+# Pipeline measurement + strict quality (combined)
+lecture-forge create --eval eval_results/ --quality-level strict
 
 # Reuse an existing knowledge base (read-only)
 lecture-forge create --existing-kb data/vector_db/MyTopic_...
@@ -685,7 +703,7 @@ lecture-forge home outputs
 ---
 
 **Last Updated**: 2026-04-27
-**Version**: 0.6.2
+**Version**: 0.6.3
 
 **Ready to create amazing lectures? Start with:**
 ```bash

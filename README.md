@@ -87,6 +87,9 @@ pipx install lecture-forge
 pipx inject lecture-forge playwright
 playwright install chromium
 
+# [선택] agent-evaluator 계측 기능 (create --eval 사용 시)
+pipx inject lecture-forge agent-evaluator
+
 # 사용
 lecture-forge create
 ```
@@ -107,6 +110,9 @@ conda activate lecture-forge
 # PyPI에서 설치
 pip install lecture-forge
 
+# [선택] agent-evaluator 계측 기능 (create --eval 사용 시)
+pip install "lecture-forge[eval]"
+
 # 웹 스크래핑용 브라우저 설치
 playwright install chromium
 ```
@@ -125,9 +131,21 @@ conda activate lecture-forge
 # 로컬 소스에서 설치
 pip install -e .
 
+# [선택] agent-evaluator 계측 기능 포함 설치
+pip install -e ".[eval]"
+
 # 웹 스크래핑용 브라우저 설치
 playwright install chromium
 ```
+
+#### 선택적 설치 옵션 (Optional Extras)
+
+| Extra | 설치 명령 | 추가 기능 |
+|-------|----------|----------|
+| `[eval]` | `pip install "lecture-forge[eval]"` | `create --eval` — 파이프라인 품질 계측 (Gate A–G) |
+
+> **`[eval]` 설치 내용**: `agent-evaluator` 코어 패키지 (`numpy`, `pandas`, `openai`, `anthropic` 5개)만 추가됩니다.
+> Phoenix/OTEL 추적이 필요하면 추가로 `pip install "agent-evaluator[otel]"`, 대시보드는 `pip install "agent-evaluator[serve]"`.
 
 > **Python 버전 호환성**:
 > - ✅ **Python 3.11**: **강력 권장** - 모든 의존성 완벽 지원

@@ -26,7 +26,7 @@ dynamic = ["dependencies"]
 
 [project.optional-dependencies]
 eval = [
-    "agent-evaluator>=0.1.0",
+    "agent-evaluator>=0.9.0,<1.0.0",
 ]
 dev = [
     "pytest>=7.4.0",

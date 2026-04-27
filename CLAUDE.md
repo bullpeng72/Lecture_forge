@@ -1,7 +1,7 @@
 # LectureForge Pro - AI-Powered Lecture Material Generator
 
 > **프로젝트 상태**: 🌟 **Production Ready+** (RMC Self-Review)
-> **버전**: 0.6.1 | **최종 수정**: 2026-04-24
+> **버전**: 0.6.2 | **최종 수정**: 2026-04-27
 > **PyPI**: https://pypi.org/project/lecture-forge/
 
 ## 📚 프로젝트 개요
@@ -442,6 +442,12 @@ A: `pytest tests/ -v` (1,891+ 테스트, ~81% 커버리지)
 ## 📝 변경 이력 (최근)
 
 > 전체 변경 이력은 README.md 참조
+
+### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비 + 배포 전략 문서화
+
+- 🐛 **pipx `resolution-too-deep` 수정** (agent-evaluator 0.9.0): `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 optional extras로 분리
+- 📝 **의존성 배포 전략 절 신설** (CLAUDE.md): extras 계층 표 + 핵심 원칙 문서화
+- 📝 **README.md 배포 전략 설명 추가**
 
 ### v0.6.1 (2026-04-24 ~ 2026-04-27) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원 + 의존성 배포 전략 정비
 

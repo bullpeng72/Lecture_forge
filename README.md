@@ -3,12 +3,12 @@
 **AI-Powered Lecture Material Generator using Multi-Agent Pipeline System**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
+[![Version](https://img.shields.io/badge/version-0.6.2-blue.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.6.1** | agent-evaluator 계측 통합 (opt-in) + openai SDK v2 지원
+> 🚀 **v0.6.2** | agent-evaluator 0.9.0 의존성 정비 (pipx 설치 수정) + 의존성 배포 전략 문서화
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -904,6 +904,12 @@ lecture-forge create
 ---
 
 ## 📝 변경 이력
+
+### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비 + 배포 전략 문서화
+
+- 🐛 **pipx `resolution-too-deep` 수정** (agent-evaluator 0.9.0): `arize-phoenix`, `opentelemetry-*`, `fastapi`, `uvicorn`, `pdfplumber`를 하드 deps에서 optional extras(`[otel]`/`[serve]`/`[pdf]`)로 분리 — `pipx install "lecture-forge[eval]"` 정상 동작
+- 📝 **CLAUDE.md 의존성 배포 전략 절 신설**: extras 계층 표 + 핵심 원칙 (`무거운 패키지는 optional extras + lazy import`)
+- 📝 **README.md 배포 전략 설명 추가**: v0.6.1 섹션 및 변경이력에 수정 내용 기술
 
 ### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
 

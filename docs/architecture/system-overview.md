@@ -486,6 +486,19 @@ Logged to conversation_log.txt (v0.3.6+)
 
 ---
 
+### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비
+
+- **pipx `resolution-too-deep` 수정**: `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 optional extras(`[otel]`/`[serve]`/`[pdf]`)로 분리 — `pipx install "lecture-forge[eval]"` 정상 동작
+- **CLAUDE.md 의존성 배포 전략 절 신설**: extras 계층 표 + 핵심 원칙 문서화
+- **docs 현행화**: system-overview v0.6.1·v0.6.2 changelog 추가, INPUT_LIMITS_ANALYSIS 푸터 갱신, getting-started 예시 버전 갱신
+
+### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
+
+- **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter`, `CurriculumDesignerAdapter`, `ContentAnalyzerAdapter`, `QualityEvaluatorAdapter` 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
+- **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py` — agent-evaluator 연동 어댑터
+- **openai SDK v2 지원**: 의존성 상한 `openai<2.0.0` → `<3.0.0`
+- **`extras_require[eval]`**: `pip install "lecture-forge[eval]"`로 agent-evaluator 선택적 설치
+
 ### v0.6.0 (2026-04-21) — 이미지 배치 정밀화 + HTML 품질 + gpt-5-nano
 
 - **gpt-5-nano 기본 모델**: `DEFAULT_MODEL` · `VISION_MODEL` → `gpt-5-nano` (멀티모달, 2.5× 비용 절감)
@@ -572,5 +585,5 @@ Unsplash/Pexels shared `_download_and_save_image()` and `_error_response()` via 
 
 ---
 
-**Last Updated**: 2026-04-24
-**Version**: 0.6.1
+**Last Updated**: 2026-04-27
+**Version**: 0.6.2

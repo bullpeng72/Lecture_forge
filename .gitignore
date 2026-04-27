@@ -70,3 +70,7 @@ test_run*.log
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Misc local artifacts
+catboost_info/
+dist/

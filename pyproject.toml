@@ -122,3 +122,26 @@ warn_redundant_casts = true
 warn_unused_ignores = false
 disallow_untyped_defs = false
 check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "chromadb.*",
+    "fitz.*",
+    "imagehash.*",
+    "playwright.*",
+    "PIL.*",
+    "bs4.*",
+    "markdown.*",
+    "pygments.*",
+    "tenacity.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "lecture_forge.models.*",
+    "lecture_forge.utils.*",
+    "lecture_forge.knowledge.*",
+]
+disallow_untyped_defs = true
+warn_unused_ignores = true

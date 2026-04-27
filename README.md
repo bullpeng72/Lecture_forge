@@ -8,7 +8,7 @@
 [![Status](https://img.shields.io/badge/status-production-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 [![Test Coverage](https://img.shields.io/badge/coverage-~81%25-brightgreen.svg)](https://github.com/bullpeng72/Lecture_forge)
 
-> 🚀 **v0.6.2** | agent-evaluator 0.9.0 의존성 정비 (pipx 설치 수정) + 의존성 배포 전략 문서화
+> 🚀 **v0.6.2** | docs/ 오류 수정 · 저장소 정리(setup.py·MANIFEST.in·mypy.ini 제거) · agent-evaluator 0.9.0 의존성 정비
 
 PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강의자료를 자동 생성하는 AI 시스템입니다.
 
@@ -23,7 +23,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - [주요 기능](#-주요-기능)
 - [빠른 시작](#-빠른-시작)
 - [사용법](#-사용법)
-- [명령어 가이드](#-명령어-가이드)
+- [명령어 가이드](#명령어-상세-가이드)
 - [FAQ](#-faq)
 - [변경 이력](#-변경-이력)
 - [기여하기](#-기여하기)
@@ -38,10 +38,12 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 🖼️ **대화형 이미지 편집**: 생성된 강의의 이미지 삭제/교체 (Vector DB 기반 대안 검색)
 - 🎨 **구조화된 HTML 출력**: Mermaid 다이어그램, 검색 인덱스, 코드 하이라이팅
 - 🎬 **프레젠테이션 슬라이드**: Reveal.js 기반 자동 변환 (`--to-slides`) — 섹션별 LLM 재작성 (≤35자, 말줄임표 없음), 발표자 노트 기본 포함 (`--without-notes`로 제외)
+- 🌐 **웹 기반 강의 편집기** (v0.5.0+): `edit` 명령어 — 3-패널 SPA (섹션 CRUD, EasyMDE 마크다운, 이미지 갤러리·대안 검색), 로컬 Flask 서버(포트 5757), 브라우저 자동 오픈
 
 ### 품질 보증
 - ✅ **6차원 품질 평가**: 완성도, 흐름, 시간, 난이도, 시각자료, 정확성
 - 🔄 **자동 개선**: 품질 기준 미달 시 최대 3회 자동 수정
+- 🔧 **KB 기반 재평가·보충** (`--re-evaluate`): 기존 강의를 지식창고와 대조·품질 재평가하고 미반영 청크를 보충 추가 (`*_enhanced.html`)
 - 🧠 **RMC 자기검토** (v0.3.8+): 에이전트 내부 2단계 자기반성 (Layer 1 검토 + Layer 2 검토의 검토)
   - **CurriculumDesigner**: 섹션 순서 논리성, 학습목표 커버리지, 선수 내용 순서 자동 검증 및 수정
   - **ContentWriter**: 개념 비약, 설명 모호성, 흐름 단절 등 의미론적 품질 검토 후 수정
@@ -66,6 +68,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 🎯 **예외 처리**: 구조화된 예외 시스템 (9개 카테고리)
 - 📝 **프롬프트 관리**: 템플릿 기반 프롬프트 시스템
 - 🦙 **Ollama 지원** (v0.5.5+): `LLM_PROVIDER=ollama`로 로컬 LLM 사용 — OpenAI API 키 없이 강의 생성 가능
+- 🔬 **파이프라인 계측** (v0.6.1+, opt-in): `create --eval <DIR>` — Gate A–G 품질 계측 (목표 정렬·SLA·보안·설명 가능성); `pip install "lecture-forge[eval]"` 필요
 
 ---
 
@@ -911,18 +914,18 @@ lecture-forge create
 
 ## 📝 변경 이력
 
-### v0.6.2 (2026-04-27) — 📦 agent-evaluator 0.9.0 의존성 정비 + 배포 전략 문서화
+### v0.6.2 (2026-04-27) — 📦 의존성 정비 + docs/ 오류 수정 + 저장소 정리
 
 - 🐛 **pipx `resolution-too-deep` 수정** (agent-evaluator 0.9.0): `arize-phoenix`, `opentelemetry-*`, `fastapi`, `uvicorn`, `pdfplumber`를 하드 deps에서 optional extras(`[otel]`/`[serve]`/`[pdf]`)로 분리 — `pipx install "lecture-forge[eval]"` 정상 동작
-- 📝 **CLAUDE.md 의존성 배포 전략 절 신설**: extras 계층 표 + 핵심 원칙 (`무거운 패키지는 optional extras + lazy import`)
-- 📝 **README.md 배포 전략 설명 추가**: v0.6.1 섹션 및 변경이력에 수정 내용 기술
+- 📝 **docs/ 오류 수정**: `cli.md` `--eval` 옵션 누락 추가 + `generate_lecture()` 시그니처 갱신; `agents.md` ContentEnhancer 섹션 신설; `system-overview.md` PyPDF2→PyMuPDF 오표기 수정·도구 목록 실제 코드 기준 정정
+- 🧹 **저장소 정리**: 레거시 `setup.py`·`MANIFEST.in`·`mypy.ini`·`DEPLOYMENT_GUIDE.md`·`config.yaml` 제거; `mypy.ini` per-module 설정 `pyproject.toml [[tool.mypy.overrides]]`로 통합
+- 📝 **의존성 배포 전략 문서화**: CLAUDE.md extras 계층 표 + 핵심 원칙 (`무거운 패키지는 optional extras + lazy import`)
 
 ### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
 
 - 🔬 **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter` 등 어댑터 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
 - 📦 **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py`
 - 🔧 **openai SDK 버전 범위 확장**: `<2.0.0` → `<3.0.0` — openai v2.x SDK 지원
-- 🐛 **pipx 의존성 해소 수정** (agent-evaluator 0.9.0, 2026-04-27): `arize-phoenix`가 유발하는 `resolution-too-deep` 오류 근본 수정 — agent-evaluator의 하드 deps에서 무거운 패키지를 optional extras로 분리; `lecture-forge[eval]`은 코어 패키지만 의존하고 Phoenix/OTEL은 `agent-evaluator[otel]`로 별도 설치
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 

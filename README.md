@@ -75,6 +75,7 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 - 📦 **`eval/` 모듈 추가**: `build_lecture_monitor()`, `ContentWriterAdapter` 등 어댑터로 에이전트별 계측 연동
 - 🔧 **openai SDK v2 지원**: 의존성 상한 `<3.0.0`으로 확장
 - 📦 **`pip install "lecture-forge[eval]"`**: agent-evaluator 선택적 의존성 그룹 추가
+- 🐛 **pipx 의존성 해소 수정** (agent-evaluator 0.9.0, 2026-04-27): `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 각 optional extra(`[otel]`/`[serve]`/`[pdf]`)로 이동 — `pipx install "lecture-forge[eval]"` 시 발생하던 `resolution-too-deep` 오류 해결
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 
@@ -909,6 +910,7 @@ lecture-forge create
 - 🔬 **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter` 등 어댑터 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
 - 📦 **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py`
 - 🔧 **openai SDK 버전 범위 확장**: `<2.0.0` → `<3.0.0` — openai v2.x SDK 지원
+- 🐛 **pipx 의존성 해소 수정** (agent-evaluator 0.9.0, 2026-04-27): `arize-phoenix`가 유발하는 `resolution-too-deep` 오류 근본 수정 — agent-evaluator의 하드 deps에서 무거운 패키지를 optional extras로 분리; `lecture-forge[eval]`은 코어 패키지만 의존하고 Phoenix/OTEL은 `agent-evaluator[otel]`로 별도 설치
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 

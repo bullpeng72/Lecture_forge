@@ -44,6 +44,19 @@
 - **배포**: pip installable package
 - **Python**: 3.11-3.13 (전체 지원)
 
+### 의존성 배포 전략
+
+`lecture-forge[eval]`은 `agent-evaluator>=0.9.0`을 설치한다. 버전 정책:
+
+| 계층 | 설치 | 포함 패키지 |
+|------|------|-----------|
+| 기본 (`pip install lecture-forge`) | 코어만 | numpy, pandas, openai, anthropic 등 |
+| `[eval]` (`pip install "lecture-forge[eval]"`) | + agent-evaluator 코어 | 평가 메트릭, LLMJudge |
+| Phoenix/OTEL 추적 필요 시 | + `agent-evaluator[otel]` | arize-phoenix, opentelemetry-* |
+| 대시보드 필요 시 | + `agent-evaluator[serve]` | fastapi, uvicorn, jinja2 |
+
+**핵심 원칙**: 무거운 패키지(`arize-phoenix` 등)는 절대 하드 `dependencies`에 넣지 말 것. pip의 백트래킹 해소기가 `resolution-too-deep` 오류를 낸다. Optional extras로만 선언하고, 실제 기능 진입점에서 lazy import + 미설치 경고 패턴을 사용한다.
+
 ---
 
 ## 🏗️ 시스템 아키텍처
@@ -430,11 +443,16 @@ A: `pytest tests/ -v` (1,891+ 테스트, ~81% 커버리지)
 
 > 전체 변경 이력은 README.md 참조
 
-### v0.6.1 (2026-04-24) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원
+### v0.6.1 (2026-04-24 ~ 2026-04-27) — 🔬 agent-evaluator 계측 통합 + openai SDK v2 지원 + 의존성 배포 전략 정비
 
 - 🔬 **agent-evaluator 계측 통합** (opt-in): `generate_lecture(eval_output_dir=...)` — `ContentWriterAdapter`, `CurriculumDesignerAdapter`, `ContentAnalyzerAdapter`, `QualityEvaluatorAdapter` 래퍼로 파이프라인 계측; 미설치 시 경고 후 스킵
 - 📦 **`eval/` 모듈 추가**: `monitor.py` (`build_lecture_monitor()`), `adapters.py` — agent-evaluator 연동용 어댑터 집합
 - 🔧 **openai SDK 버전 범위 확장**: `openai>=1.12.0,<2.0.0` → `<3.0.0` — openai v2.x SDK 지원
+- 🐛 **agent-evaluator 0.9.0 — 의존성 배포 전략 정비** (2026-04-27):
+  - **원인**: `arize-phoenix>=7.0.0`이 하드 `dependencies`에 있어 pip 백트래킹 해소기가 `resolution-too-deep` 오류 발생 (`pipx install "lecture-forge[eval]"` 실패)
+  - **해결**: `arize-phoenix`, `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http`, `fastapi`, `uvicorn`, `pdfplumber`를 하드 deps에서 제거 — 이미 각 optional extra(`[otel]`/`[serve]`/`[pdf]`)에 선언되어 있었으므로 중복 제거
+  - **코어 deps (0.9.0)**: `numpy`, `pandas`, `python-dotenv`, `openai`, `anthropic` 5개만 유지
+  - **extras 활용**: Phoenix/OTEL → `agent-evaluator[otel]`, 대시보드 → `agent-evaluator[serve]`, PDF → `agent-evaluator[pdf]`
 
 ### v0.6.0 (2026-04-21) — 🖼 이미지 배치 정밀화 + HTML 품질 개선 + gpt-5-nano 기본 모델
 

@@ -17,6 +17,7 @@ Complete reference for all agents in the LectureForge multi-agent system (12 tas
    - [CurriculumDesignerAgent](#curriculumdesigneragent)
 5. [Content Generation](#content-generation)
    - [ContentWriterAgent](#contentwriteragent)
+   - [ContentEnhancer](#contentenhancer) (v0.5.2+)
    - [DiagramGeneratorAgent](#diagramgeneratoragent)
    - [HTMLAssemblerAgent](#htmlassembleragent)
 6. [Quality Assurance](#quality-assurance)
@@ -79,8 +80,8 @@ class MyCustomAgent(BaseAgent):
 ```
 
 **Attributes:**
-- `llm`: OpenAI LLM client (ChatOpenAI instance)
-- `embedding_model`: Embedding model name (default: "text-embedding-3-small")
+- `llm`: LLM client instance — OpenAI (`ChatOpenAI`) or Ollama (`ChatOllama`), created via `create_llm()` factory; controlled by `LLM_PROVIDER` env var (v0.5.5+)
+- `embedding_model`: Embedding model name (default: "text-embedding-3-small" for OpenAI, `OLLAMA_EMBEDDING_MODEL` for Ollama)
 
 **Methods:**
 - `__init__(self, model=None, temperature=None, max_tokens=None) -> None`: Initialize base agent with LLM client. `max_tokens` defaults to `Config.MAX_LLM_TOKENS` (env: `MAX_LLM_TOKENS`, default 4096) — added in v0.5.2.
@@ -519,6 +520,62 @@ content = agent._review_content_with_rmc(content, section, curriculum, targets)
 **Validation**: `revised_word_count >= original_word_count × 0.8` — else original is used (guards against LLM returning meta-evaluation instead of content).
 
 **Failure mode**: try/except — returns original content string unmodified.
+
+---
+
+### ContentEnhancer
+
+**Location**: `lecture_forge/agents/content_enhancer.py`
+**Added**: v0.5.2
+
+Re-evaluates an existing lecture HTML against its knowledge base and supplements each section with previously unused content chunks. Invoked via `lecture-forge improve --re-evaluate`.
+
+#### Initialization
+
+```python
+from lecture_forge.agents.content_enhancer import ContentEnhancer
+
+enhancer = ContentEnhancer()
+```
+
+#### Main Method
+
+```python
+result_path = enhancer.enhance(
+    html_path: Path,
+    quality_level: str = "balanced",
+    kb_path: Optional[str] = None,
+) -> Optional[str]
+```
+
+**Parameters:**
+- `html_path` (Path): Existing lecture HTML file
+- `quality_level` (str): Quality threshold — `lenient`(70) / `balanced`(80) / `strict`(90)
+- `kb_path` (str, optional): Explicit KB directory path — used when the HTML file has no embedded `lf:vector_db_path` metadata
+
+**Returns:** Path to the generated `*_enhanced.html` file, or `None` on failure.
+
+**Pipeline:**
+1. Extract `lf:vector_db_path` metadata from HTML (or use `kb_path` fallback)
+2. Load existing `VectorStore` (read-only)
+3. Re-run `QualityEvaluator` on the parsed lecture
+4. For each section that falls below threshold: query KB for unused chunks, call `ContentWriterAgent` to generate supplement text
+5. Inject supplements at the end of each section and update HTML statistics
+6. Write output to `*_enhanced.html`
+
+**Example:**
+
+```python
+from pathlib import Path
+from lecture_forge.agents.content_enhancer import ContentEnhancer
+
+enhancer = ContentEnhancer()
+out = enhancer.enhance(
+    Path("outputs/ML_Basics_20260427.html"),
+    quality_level="strict",
+)
+print(f"Enhanced: {out}")  # outputs/ML_Basics_20260427_enhanced.html
+```
 
 ---
 

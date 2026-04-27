@@ -286,6 +286,7 @@ lecture-forge create [OPTIONS]
 - `--async-mode`: **[v0.3.4+]** Use async I/O for 70% faster content collection (experimental)
 - `--existing-kb PATH`: Reuse or extend an existing knowledge base directory instead of building a new one
 - `--kb-mode [reuse_only|extend]`: How to use `--existing-kb` — `reuse_only` (read-only, default) or `extend` (add new sources to the KB)
+- `--eval PATH`: **[v0.6.1+]** Directory path to store agent-evaluator Gate A–G metrics (e.g. `eval_results/`). Activates pipeline instrumentation; skipped silently if `agent-evaluator` is not installed.
 
 #### Python API
 
@@ -307,6 +308,8 @@ result = generate_lecture({
     # Optional: reuse an existing knowledge base
     # "existing_kb_path": "/path/to/vector_db/my_kb",
     # "kb_mode": "reuse_only",  # or "extend"
+    # Optional: agent-evaluator instrumentation (v0.6.1+)
+    # "eval_output_dir": "eval_results/",
 })
 
 print(f"HTML: {result['html_path']}")
@@ -315,8 +318,15 @@ print(f"KB: {result['vector_db_path']}")
 
 **Function Signature:**
 ```python
-def generate_lecture(inputs: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate lecture using multi-agent pipeline."""
+def generate_lecture(
+    inputs: Dict[str, Any],
+    eval_output_dir: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Generate lecture using multi-agent pipeline.
+
+    eval_output_dir: if provided and agent-evaluator is installed,
+        writes Gate A–G metrics to that directory.
+    """
 ```
 
 **Returns:**

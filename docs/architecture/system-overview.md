@@ -177,16 +177,20 @@ flowchart TD
 ### 4. Tools Layer
 **Purpose**: External integrations
 
-**9 Tools:**
-1. **PDFProcessor** - Extract text/images from PDFs
-2. **WebScraper** - Scrape web content
-3. **SearchTool** - Web search (Serper API)
-4. **ImageSearchTool** - Image APIs (Pexels, Unsplash)
-5. **ImageDescriber** - GPT-4o Vision descriptions
-6. **ImageEditor** - Interactive image editing
-7. **SlideConverter** - Convert to Reveal.js slides
-8. **LanguageDetector** - Detect text language (v0.3.2)
-9. **Translator** - Cross-lingual translation (v0.3.2)
+**9 Tools** (in `tools/`, + 2 async variants):
+1. **PDFParserTool** (`pdf_parser.py`) - Extract text from PDFs (PyMuPDF)
+2. **PDFImageExtractorTool / WebImageScraperTool** (`image_extractor.py`) - Extract images from PDFs and web pages
+3. **WebScraperTool** (`web_scraper.py`) - Scrape static HTML content
+4. **PlaywrightCrawler** (`playwright_crawler.py`) - JavaScript-capable web scraping
+5. **DeepWebCrawler** (`deep_web_crawler.py`) - Multi-depth crawling (e.g. Hada.io)
+6. **SerperSearchTool** (`search_tool.py`) - Web search via Serper API
+7. **UnsplashSearchTool / PexelsSearchTool** (`image_search.py`) - Image APIs
+8. **PDFImageDescriber** (`pdf_image_describer.py`) - Vision LLM image descriptions (GPT-4o / Ollama Vision)
+9. **ImageEditor** (`image_editor.py`) - Interactive image editing (CLI)
+
+*Async variants*: `AsyncSerperSearchTool` (`async_search_tool.py`), `AsyncWebScraperTool` (`async_web_scraper.py`)
+
+*Other modules (not in `tools/`)*: `SlideConverter` (`slides/converter.py`), language detection/translation (`utils/language_utils.py`)
 
 ### 5. Models Layer
 **Purpose**: Data structures
@@ -307,7 +311,7 @@ Logged to conversation_log.txt (v0.3.6+)
 | **CLI** | Click + Rich + prompt-toolkit | User interface |
 | **Async I/O** | asyncio + httpx + aiofiles | Parallel operations (v0.3.4+) |
 | **Web** | Playwright | Web scraping |
-| **PDF** | PyPDF2 | PDF processing |
+| **PDF** | PyMuPDF (fitz) | PDF text/image extraction |
 | **Images** | PIL/Pillow | Image processing |
 | **Diagrams** | Mermaid | Diagram generation |
 | **Templates** | Jinja2 | HTML templating |

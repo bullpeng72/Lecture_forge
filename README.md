@@ -69,13 +69,12 @@ PDF, 웹페이지, 인터넷 검색에서 정보를 수집하여 고품질 강�
 
 ---
 
-## 🚀 최근 개선사항 (v0.6.1)
+## 🚀 최근 개선사항 (v0.6.2)
 
-- 🔬 **agent-evaluator 계측 통합** (opt-in): `lecture-forge create --eval eval_results/` — Gate A–G 파이프라인 품질 계측 활성화; 미설치 시 경고 후 스킵
-- 📦 **`eval/` 모듈 추가**: `build_lecture_monitor()`, `ContentWriterAdapter` 등 어댑터로 에이전트별 계측 연동
-- 🔧 **openai SDK v2 지원**: 의존성 상한 `<3.0.0`으로 확장
-- 📦 **`pip install "lecture-forge[eval]"`**: agent-evaluator 선택적 의존성 그룹 추가
-- 🐛 **pipx 의존성 해소 수정** (agent-evaluator 0.9.0, 2026-04-27): `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 각 optional extra(`[otel]`/`[serve]`/`[pdf]`)로 이동 — `pipx install "lecture-forge[eval]"` 시 발생하던 `resolution-too-deep` 오류 해결
+- 🐛 **pipx `resolution-too-deep` 수정** (agent-evaluator 0.9.0): `arize-phoenix`·`opentelemetry-*`·`fastapi`·`uvicorn`·`pdfplumber`를 하드 deps에서 각 optional extra(`[otel]`/`[serve]`/`[pdf]`)로 분리 — `pipx install "lecture-forge[eval]"` 정상 동작
+- 📝 **docs/ 오류 수정**: `cli.md` `--eval` 옵션 누락 추가; `agents.md` ContentEnhancer 섹션 신설; `system-overview.md` PyPDF2→PyMuPDF 오표기 수정·도구 목록 실제 코드 기준 정정
+- 🧹 **저장소 정리**: 레거시 `setup.py`·`MANIFEST.in`·`mypy.ini`·`DEPLOYMENT_GUIDE.md`·`config.yaml` 제거; `mypy.ini` per-module 설정 `pyproject.toml [[tool.mypy.overrides]]`로 통합
+- 📝 **의존성 배포 전략 문서화**: CLAUDE.md extras 계층 표 + 핵심 원칙 (`무거운 패키지는 optional extras + lazy import`)
 
 > 전체 변경 이력은 [아래 변경 이력](#-변경-이력) 참조
 

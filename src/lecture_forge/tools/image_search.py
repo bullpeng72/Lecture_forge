@@ -59,7 +59,7 @@ class BaseImageSearchTool:
         img_response.raise_for_status()
 
         image_bytes = img_response.content
-        image_hash = hashlib.md5(image_bytes).hexdigest()
+        image_hash = hashlib.md5(image_bytes, usedforsecurity=False).hexdigest()
 
         pil_image = Image.open(io.BytesIO(image_bytes))
         width, height = pil_image.size

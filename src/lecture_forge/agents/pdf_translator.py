@@ -940,4 +940,4 @@ AI/ML 표준 번역 용어 (반드시 아래 표를 따를 것):
         if slug:
             return slug[:30]
         # 비ASCII 제목(한국어 등): 결정론적 해시로 고유 ID 생성 (section 중복 방지)
-        return "s" + hashlib.md5(text.encode("utf-8", errors="replace")).hexdigest()[:7]
+        return "s" + hashlib.md5(text.encode("utf-8", errors="replace"), usedforsecurity=False).hexdigest()[:7]

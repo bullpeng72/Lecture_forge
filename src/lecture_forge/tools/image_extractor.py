@@ -120,7 +120,7 @@ class PDFImageExtractorTool:
                         image_ext = base_image["ext"]
 
                         # Calculate hash for deduplication
-                        image_hash = hashlib.md5(image_bytes).hexdigest()
+                        image_hash = hashlib.md5(image_bytes, usedforsecurity=False).hexdigest()
 
                         if image_hash in extracted_hashes:
                             logger.debug(f"Skipping duplicate image: {image_hash}")

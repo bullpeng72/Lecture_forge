@@ -58,7 +58,7 @@ class RAGRetriever:
             MD5 hash of query:k combination
         """
         cache_string = f"{query}:{k}"
-        return hashlib.md5(cache_string.encode()).hexdigest()
+        return hashlib.md5(cache_string.encode(), usedforsecurity=False).hexdigest()
 
     def retrieve(self, query: str, k: int = None) -> List[Dict]:
         """

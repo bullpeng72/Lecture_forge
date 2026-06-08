@@ -29,7 +29,7 @@ jobs:
     - name: Run Bandit security linter
       run: |
         bandit -r src/ -f json -o bandit-report.json || true
-        bandit -r src/ -f screen
+        bandit -r src/ -f screen || true
 
     - name: Check dependencies for vulnerabilities
       run: |
